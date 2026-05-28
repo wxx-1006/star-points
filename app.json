@@ -1,0 +1,49 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/records/records",
+    "pages/shop/shop",
+    "pages/settings/settings"
+  ],
+  "tabBar": {
+    "color": "#9CA3AF",
+    "selectedColor": "#FF6B9D",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/tab-home.png",
+        "selectedIconPath": "assets/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/records/records",
+        "text": "记录",
+        "iconPath": "assets/tab-records.png",
+        "selectedIconPath": "assets/tab-records-active.png"
+      },
+      {
+        "pagePath": "pages/shop/shop",
+        "text": "兑换",
+        "iconPath": "assets/tab-shop.png",
+        "selectedIconPath": "assets/tab-shop-active.png"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "text": "设置",
+        "iconPath": "assets/tab-settings.png",
+        "selectedIconPath": "assets/tab-settings-active.png"
+      }
+    ]
+  },
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FF6B9D",
+    "navigationBarTitleText": "星星积分",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#FFF5F9"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

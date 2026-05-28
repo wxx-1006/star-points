@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#3B82F6">
+<title>⭐ 星星积分</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--p:#3B82F6;--pl:#60A5FA;--ps:#93C5FD;--s:#6366F1;--a:#F59E0B;--ok:#10B981;--no:#EF4444;--bg:#EFF6FF;--card:#fff;--tx:#1E293B;--tl:#94A3B8;--bd:#DBEAFE;--sh:0 4px 20px rgba(59,130,246,.12)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding-bottom:70px;-webkit-tap-highlight-color:transparent}
+.header{background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;padding:18px 16px 22px;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(59,130,246,.3)}
+.header h1{font-size:18px;font-weight:700;text-align:center}
+.header .sub{text-align:center;font-size:11px;opacity:.85;margin-top:3px}
+.pc{background:linear-gradient(135deg,#3B82F6,#6366F1,#F59E0B);margin:-14px 14px 14px;border-radius:18px;padding:22px 16px;text-align:center;color:#fff;box-shadow:0 8px 30px rgba(59,130,246,.3);position:relative;z-index:10}
+.pc .lb{font-size:12px;opacity:.9}
+.pc .pts{font-size:52px;font-weight:800;line-height:1.1;text-shadow:0 2px 10px rgba(0,0,0,.15)}
+.pc .td{font-size:12px;margin-top:6px;opacity:.85}
+.pc .td .up{color:#A7F3D0}
+.pc .td .down{color:#FECACA}
+.qs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px;margin-bottom:14px}
+.sc{background:var(--card);border-radius:14px;padding:12px 6px;text-align:center;box-shadow:var(--sh)}
+.sc .si{font-size:20px;margin-bottom:3px}
+.sc .sv{font-size:18px;font-weight:700;color:var(--p)}
+.sc .sl{font-size:10px;color:var(--tl);margin-top:2px}
+.sec{padding:0 14px;margin-bottom:14px}
+.st{font-size:15px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:4px}
+.add-btn{background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;border-radius:16px;padding:14px;font-size:15px;font-weight:600;width:100%;cursor:pointer;box-shadow:0 6px 20px rgba(59,130,246,.3);display:flex;align-items:center;justify-content:center;gap:6px}
+.add-btn:active{transform:scale(.97)}
+.add-btn .ab-icon{font-size:20px}
+.rl{display:flex;flex-direction:column;gap:6px}
+.ri{background:var(--card);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh)}
+.ri:active{transform:scale(.98)}
+.ri .ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ri .ic.u{background:#D1FAE5}
+.ri .ic.d{background:#FEE2E2}
+.ri .ic.e{background:#FEF3C7}
+.ri .inf{flex:1;min-width:0}
+.ri .nm{font-size:13px;font-weight:600}
+.ri .tm{font-size:10px;color:var(--tl);margin-top:1px}
+.ri .sc2{font-size:16px;font-weight:700;flex-shrink:0}
+.ri .sc2.u{color:var(--ok)}
+.ri .sc2.d{color:var(--no)}
+.ri .dl{width:26px;height:26px;border-radius:8px;background:#FEE2E2;border:none;color:var(--no);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ft{display:flex;gap:6px;padding:0 14px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ft::-webkit-scrollbar{display:none}
+.ftb{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;cursor:pointer;background:var(--card);border:1.5px solid var(--bd);color:var(--tl);transition:all .2s;user-select:none}
+.ftb.on{background:var(--p);color:#fff;border-color:var(--p)}
+.dateTrigger{background:var(--card);border-radius:14px;padding:14px 16px;margin:10px 14px 0;box-shadow:var(--sh);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.dateTriggerText{font-size:14px;color:var(--tx);font-weight:500}
+.dateTriggerIcon{font-size:16px;color:var(--tl)}
+.sl2{display:flex;flex-direction:column;gap:8px}
+.si2{background:var(--card);border-radius:14px;padding:14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh)}
+.si2 .ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(135deg,#FEF3C7,#FDE68A);flex-shrink:0}
+.si2 .info{flex:1}
+.si2 .sn{font-size:13px;font-weight:600}
+.si2 .sd{font-size:10px;color:var(--tl);margin-top:1px}
+.si2 .co{font-size:14px;font-weight:700;color:var(--p);margin-top:3px}
+.sb{padding:7px 14px;border-radius:10px;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;box-shadow:0 4px 12px rgba(59,130,246,.3)}
+.sb:active{transform:scale(.94)}
+.sb:disabled{background:#D1D5DB;box-shadow:none;cursor:not-allowed}
+.sg{background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--sh);margin-bottom:10px}
+.sgh{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;border-bottom:1px solid transparent;transition:all .2s}
+.sgh.open{border-bottom-color:var(--bd)}
+.sgh .sgt{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+.sgh .sgt .cnt{font-size:11px;color:var(--tl);font-weight:400}
+.sgh .arr{font-size:12px;color:var(--tl);transition:transform .2s}
+.sgh.open .arr{transform:rotate(180deg)}
+.sgc{padding:0 14px 10px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease}
+.sgc.open{max-height:2000px;padding:10px 14px 14px}
+.sr{background:var(--card);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:6px;box-shadow:var(--sh);margin-bottom:6px}
+.sr .n{flex:1;font-size:12px;word-break:break-all}
+.sr .s{font-size:12px;font-weight:700;width:40px;text-align:center;flex-shrink:0}
+.sr .s.u{color:var(--ok)}
+.sr .s.d{color:var(--no)}
+.sr .x{width:22px;height:22px;border-radius:6px;background:#FEE2E2;border:none;color:var(--no);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sr .ed{width:22px;height:22px;border-radius:6px;background:#DBEAFE;border:none;color:var(--p);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mo{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.mo.show{display:flex}
+.ml{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:0;animation:su .25s ease}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ml-header{padding:18px 16px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.ml-title{font-size:17px;font-weight:700;text-align:center;flex:1}
+.ml-close{width:30px;height:30px;border-radius:50%;background:var(--bg);border:none;font-size:16px;cursor:pointer;color:var(--tl);display:flex;align-items:center;justify-content:center}
+.ml-body{padding:16px}
+.fg{margin-bottom:14px}
+.fl{font-size:12px;font-weight:600;color:var(--tl);margin-bottom:6px;display:block}
+.fi{width:100%;padding:11px 14px;border-radius:12px;border:2px solid var(--bd);font-size:14px;background:var(--card);color:var(--tx);outline:none;transition:border-color .2s}
+.fi:focus{border-color:var(--p)}
+.fs{width:100%;padding:11px 14px;border-radius:12px;border:2px solid var(--bd);font-size:14px;background:var(--card);color:var(--tx);outline:none;appearance:none}
+.fr{display:flex;gap:10px}
+.fr .fg{flex:1}
+.bn{width:100%;padding:13px;border-radius:14px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s}
+.bn:active{transform:scale(.97)}
+.bp{background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;box-shadow:0 4px 15px rgba(59,130,246,.3)}
+.bd2{background:var(--no);color:#fff}
+.bsm{width:auto;padding:8px 16px;font-size:13px;border-radius:12px}
+.ct{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.ctb{padding:7px 14px;border-radius:12px;font-size:13px;cursor:pointer;border:2px solid var(--bd);background:var(--card);transition:all .2s;user-select:none}
+.ctb.on{border-color:var(--p);background:#EFF6FF;color:var(--p);font-weight:600}
+.tb{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;border-top:1px solid var(--bd);z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.ti{flex:1;padding:8px 0 6px;text-align:center;cursor:pointer;user-select:none}
+.ti .ti2{font-size:20px}
+.ti .tl{font-size:9px;color:var(--tl);margin-top:1px}
+.ti.on .tl{color:var(--p);font-weight:600}
+.pg{display:none}
+.pg.on{display:block}
+.es{text-align:center;padding:36px 16px;color:var(--tl)}
+.ei{font-size:44px;margin-bottom:10px}
+.et{font-size:13px;line-height:1.8}
+.to{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;z-index:300;display:none;text-align:center;max-width:80%}
+.to.show{display:block;animation:fi .15s ease}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+.co2{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:250;display:none;align-items:center;justify-content:center}
+.co2.show{display:flex}
+.cb{background:var(--card);border-radius:18px;padding:20px;width:85%;max-width:300px;text-align:center}
+.ct2{font-size:15px;font-weight:700;margin-bottom:6px}
+.cx{font-size:13px;color:var(--tl);margin-bottom:16px}
+.cn{display:flex;gap:8px}
+.cn .bn{flex:1}
+.bg{background:var(--bd);color:var(--tx)}
+.sb2{display:flex;gap:4px;justify-content:center;margin:10px 0;overflow-x:auto;padding-bottom:4px}
+.sbd{min-width:36px;height:40px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;background:var(--card);box-shadow:var(--sh);flex-shrink:0}
+.sbd .sdl{font-size:8px;color:var(--tl)}
+.sbd .sds{font-size:10px;font-weight:700}
+.sbd.hd .sds{color:var(--p)}
+.sbd.tdy{border:2px solid var(--p)}
+.ei2{background:var(--card);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:var(--sh);margin-bottom:6px}
+.ei2 .eic{font-size:18px}
+.ei2 .ein{flex:1}
+.ei2 .enn{font-size:12px;font-weight:600}
+.ei2 .etm{font-size:10px;color:var(--tl)}
+.ei2 .eco{font-size:13px;font-weight:700;color:var(--no)}
+.dp{padding:16px}
+.dp-cal{width:100%}
+.dp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:0 4px}
+.dp-month{font-size:16px;font-weight:600;color:var(--tx)}
+.dp-nav{display:flex;gap:4px}
+.dp-navbtn{width:30px;height:30px;border-radius:8px;background:var(--bg);border:none;font-size:16px;cursor:pointer;color:var(--tx);display:flex;align-items:center;justify-content:center}
+.dp-navbtn:active{background:var(--bd)}
+.dp-week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+.dp-weekday{font-size:11px;color:var(--tl);text-align:center;padding:4px 0}
+.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dp-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;border-radius:8px;transition:all .15s}
+.dp-day:hover{background:var(--bg)}
+.dp-day.other{color:var(--tl)}
+.dp-day.today{color:var(--p);font-weight:600}
+.dp-day.selected{background:var(--p);color:#fff}
+.dp-day.inrange{background:var(--ps);color:#fff}
+::-webkit-scrollbar{width:0}
+/* 登录页 */
+.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#3B82F6,#6366F1);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
+.login-page.show{display:flex}
+.login-logo{font-size:64px;margin-bottom:12px;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.login-title{font-size:28px;font-weight:800;color:#fff;margin-bottom:6px}
+.login-sub{font-size:13px;color:rgba(255,255,255,.8);margin-bottom:36px}
+.login-card{background:#fff;border-radius:24px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.login-card .fg{margin-bottom:18px}
+.login-card .fi{border:2px solid #E5E7EB}
+.login-card .fi:focus{border-color:var(--p)}
+.login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(59,130,246,.3);margin-top:8px}
+.login-btn:active{transform:scale(.97)}
+.login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:var(--tl);font-size:12px}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#E5E7EB}
+.login-quick{display:flex;flex-direction:column;gap:8px}
+.login-quick-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg);cursor:pointer;transition:all .2s;border:2px solid transparent}
+.login-quick-item:active{transform:scale(.97);border-color:var(--p)}
+.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.login-quick-info{flex:1}
+.login-quick-name{font-size:14px;font-weight:600;color:var(--tx)}
+.login-quick-phone{font-size:11px;color:var(--tl);margin-top:2px}
+.login-quick-enter{font-size:18px;color:var(--tl)}
+/* 用户切换 */
+.user-switch{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:5px 12px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;backdrop-filter:blur(8px);transition:all .2s}
+.user-switch:active{transform:scale(.95);background:rgba(255,255,255,.3)}
+.user-switch .us-avatar{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:10px}
+.switch-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.switch-modal.show{display:flex}
+.switch-card{background:#fff;border-radius:20px 20px 0 0;width:100%;max-height:70vh;overflow-y:auto;padding:0;animation:su .25s ease}
+.switch-header{padding:18px 16px 14px;border-bottom:1px solid var(--bd);text-align:center}
+.switch-header h3{font-size:16px;font-weight:700}
+.switch-item{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .2s;border-bottom:1px solid #F3F4F6}
+.switch-item:active{background:var(--bg)}
+.switch-item.current{background:#EFF6FF}
+.switch-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.switch-info{flex:1}
+.switch-name{font-size:14px;font-weight:600}
+.switch-phone{font-size:11px;color:var(--tl);margin-top:2px}
+.switch-check{font-size:18px;color:var(--p)}
+.switch-add{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;color:var(--p);font-size:14px;font-weight:600;border-top:1px solid var(--bd)}
+.switch-add:active{background:var(--bg)}
+/* 登录页 */
+.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#3B82F6,#6366F1);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
+.login-page.show{display:flex}
+.login-logo{font-size:64px;margin-bottom:12px;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.login-title{font-size:28px;font-weight:800;color:#fff;margin-bottom:6px}
+.login-sub{font-size:13px;color:rgba(255,255,255,.8);margin-bottom:36px}
+.login-card{background:#fff;border-radius:24px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.login-card .fg{margin-bottom:18px}
+.login-card .fi{border:2px solid #E5E7EB}
+.login-card .fi:focus{border-color:var(--p)}
+.login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(59,130,246,.3);margin-top:8px}
+.login-btn:active{transform:scale(.97)}
+.login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:var(--tl);font-size:12px}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#E5E7EB}
+.login-quick{display:flex;flex-direction:column;gap:8px}
+.login-quick-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg);cursor:pointer;transition:all .2s;border:2px solid transparent}
+.login-quick-item:active{transform:scale(.97);border-color:var(--p)}
+.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.login-quick-info{flex:1}
+.login-quick-name{font-size:14px;font-weight:600;color:var(--tx)}
+.login-quick-phone{font-size:11px;color:var(--tl);margin-top:2px}
+.login-quick-enter{font-size:18px;color:var(--tl)}
+/* 用户切换 */
+.user-switch{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:5px 12px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;backdrop-filter:blur(8px);transition:all .2s}
+.user-switch:active{transform:scale(.95);background:rgba(255,255,255,.3)}
+.user-switch .us-avatar{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:10px}
+.switch-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.switch-modal.show{display:flex}
+.switch-card{background:#fff;border-radius:20px 20px 0 0;width:100%;max-height:70vh;overflow-y:auto;padding:0;animation:su .25s ease}
+.switch-header{padding:18px 16px 14px;border-bottom:1px solid var(--bd);text-align:center}
+.switch-header h3{font-size:16px;font-weight:700}
+.switch-item{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .2s;border-bottom:1px solid #F3F4F6}
+.switch-item:active{background:var(--bg)}
+.switch-item.current{background:#EFF6FF}
+.switch-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.switch-info{flex:1}
+.switch-name{font-size:14px;font-weight:600}
+.switch-phone{font-size:11px;color:var(--tl);margin-top:2px}
+.switch-check{font-size:18px;color:var(--p)}
+.switch-add{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;color:var(--p);font-size:14px;font-weight:600;border-top:1px solid var(--bd)}
+.switch-add:active{background:var(--bg)}
+/* 登录页 */
+.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#3B82F6,#6366F1);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
+.login-page.show{display:flex}
+.login-logo{font-size:64px;margin-bottom:12px;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.login-title{font-size:28px;font-weight:800;color:#fff;margin-bottom:6px}
+.login-sub{font-size:13px;color:rgba(255,255,255,.8);margin-bottom:36px}
+.login-card{background:#fff;border-radius:24px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.login-card .fg{margin-bottom:18px}
+.login-card .fi{border:2px solid #E5E7EB}
+.login-card .fi:focus{border-color:var(--p)}
+.login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(59,130,246,.3);margin-top:8px}
+.login-btn:active{transform:scale(.97)}
+.login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:var(--tl);font-size:12px}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#E5E7EB}
+.login-quick{display:flex;flex-direction:column;gap:8px}
+.login-quick-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg);cursor:pointer;transition:all .2s;border:2px solid transparent}
+.login-quick-item:active{transform:scale(.97);border-color:var(--p)}
+.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.login-quick-info{flex:1}
+.login-quick-name{font-size:14px;font-weight:600;color:var(--tx)}
+.login-quick-phone{font-size:11px;color:var(--tl);margin-top:2px}
+.login-quick-enter{font-size:18px;color:var(--tl)}
+/* 用户切换按钮 */
+.user-switch{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:5px 12px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;backdrop-filter:blur(8px);transition:all .2s}
+.user-switch:active{transform:scale(.95);background:rgba(255,255,255,.3)}
+.user-switch .us-avatar{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:10px}
+</style>
+</head>
+<body>
+
+<div class="header" id="mainHeader">
+  <h1>⭐ 星星积分</h1>
+  <div class="sub" id="hd"></div>
+  <button class="user-switch" id="userSwitch" onclick="showSwitchModal()" style="display:none">
+    <span id="syncStatus" style="font-size:11px;margin-right:4px"></span>
+    <span class="us-avatar" id="usAvatar"></span>
+    <span id="usName"></span>
+    <span>▾</span>
+  </button>
+  <button class="user-switch" id="syncBtn" onclick="doSync()" style="display:none;left:14px;right:auto" title="同步数据">
+    🔄
+  </button>
+</div>
+
+<!-- 首页 -->
+<div class="pg on" id="p-home">
+  <div class="pc">
+    <div class="lb">✨ 总积分</div>
+    <div class="pts" id="tp">0</div>
+    <div class="td" id="tdp">今日：+0</div>
+  </div>
+  <div class="qs">
+    <div class="sc"><div class="si">📈</div><div class="sv" id="tu">0</div><div class="sl">今日加分</div></div>
+    <div class="sc"><div class="si">📉</div><div class="sv" id="td">0</div><div class="sl">今日扣分</div></div>
+    <div class="sc"><div class="si">🔥</div><div class="sv" id="ts">0</div><div class="sl">连续天数</div></div>
+  </div>
+  <div class="sec"><div class="st">📊 本周概览</div><div class="sb2" id="wb"></div></div>
+  <div class="sec" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <button class="add-btn" onclick="openScore()"><span class="ab-icon">📝</span> 记录分数</button>
+    <button class="add-btn" onclick="openExchange()" style="background:linear-gradient(135deg,#F59E0B,#F97316)"><span class="ab-icon">🎁</span> 兑换积分</button>
+  </div>
+  <div class="sec"><div class="st">📝 今日记录</div><div class="rl" id="tr"></div></div>
+</div>
+
+<!-- 记录 -->
+<div class="pg" id="p-records">
+  <div style="padding-top:10px">
+    <div class="dateTrigger" onclick="openDatePicker()">
+      <span class="dateTriggerText" id="dateTriggerText">📅 选择日期范围</span>
+      <span class="dateTriggerIcon">▼</span>
+    </div>
+    <div class="ft" id="typeFilter"></div>
+    <div class="rl" id="ar"></div>
+  </div>
+</div>
+
+<!-- 设置 -->
+<div class="pg" id="p-settings">
+  <div style="padding-top:10px">
+    <div class="sec">
+      <div class="sg">
+        <div class="sgh" onclick="toggleSection(this,'up_main')">
+          <div class="sgt">➕ 加分项管理 <span class="cnt" id="upCnt"></span></div>
+          <span class="arr">▼</span>
+        </div>
+        <div class="sgc open" id="sui"></div>
+      </div>
+      <button class="bn bp bsm" onclick="sam('up')">+ 添加加分项</button>
+    </div>
+    <div class="sec">
+      <div class="sg">
+        <div class="sgh" onclick="toggleSection(this,'down_main')">
+          <div class="sgt">⚠️ 扣分项管理 <span class="cnt" id="downCnt"></span></div>
+          <span class="arr">▼</span>
+        </div>
+        <div class="sgc" id="sdi"></div>
+      </div>
+      <button class="bn bp bsm" onclick="sam('down')">+ 添加扣分项</button>
+    </div>
+    <div class="sec">
+      <div class="sg">
+        <div class="sgh" onclick="toggleSection(this,'shop_main')">
+          <div class="sgt">🛒 兑换项管理 <span class="cnt" id="shopCnt"></span></div>
+          <span class="arr">▼</span>
+        </div>
+        <div class="sgc" id="ssi"></div>
+      </div>
+      <button class="bn bp bsm" onclick="sam('shop')">+ 添加兑换项</button>
+    </div>
+    <div class="sec"><div class="st">🗑️ 数据管理</div><button class="bn bd2 bsm" onclick="ccd()">清除所有数据</button></div>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tb">
+  <div class="ti on" onclick="st('home')"><div class="ti2">🏠</div><div class="tl">首页</div></div>
+  <div class="ti" onclick="st('records')"><div class="ti2">📋</div><div class="tl">记录</div></div>
+  <div class="ti" onclick="st('settings')"><div class="ti2">⚙️</div><div class="tl">设置</div></div>
+</div>
+
+<!-- 记录分数弹窗 -->
+<div class="mo" id="ms">
+  <div class="ml">
+    <div class="ml-header">
+      <div class="ml-title">📝 记录分数</div>
+      <button class="ml-close" onclick="cm('ms')">✕</button>
+    </div>
+    <div class="ml-body">
+      <div class="fg"><label class="fl">加分/扣分</label>
+        <div class="ct" id="scoreType">
+          <div class="ctb on" onclick="setScoreType('up')">➕ 加分</div>
+          <div class="ctb" onclick="setScoreType('down')">⚠️ 扣分</div>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">分类</label><div class="ct" id="scat"></div></div>
+      <div class="fg"><label class="fl">具体项目</label><select class="fs" id="sis"></select></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">分值</label><input type="number" class="fi" id="sv" value="5"></div>
+        <div class="fg"><label class="fl">备注</label><input type="text" class="fi" id="sn" placeholder="可选"></div>
+      </div>
+      <button class="bn bp" onclick="ss()">✅ 确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 兑换积分弹窗 -->
+<div class="mo" id="ms2">
+  <div class="ml">
+    <div class="ml-header">
+      <div class="ml-title">🎁 兑换积分</div>
+      <button class="ml-close" onclick="cm('ms2')">✕</button>
+    </div>
+    <div class="ml-body">
+      <div class="fg">
+        <label class="fl">当前积分：<span id="exScore" style="color:var(--p);font-weight:700">0</span></label>
+        <select class="fs" id="exSelect" onchange="onExSelectChange()"></select>
+      </div>
+      <div class="fg"><label class="fl">需消耗积分</label><div id="exCost" style="font-size:15px;font-weight:700;color:var(--p)"></div></div>
+      <button class="bn bp" onclick="confirmExchange()">✅ 确认兑换</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加/编辑项目弹窗 -->
+<div class="mo" id="ma">
+  <div class="ml">
+    <div class="ml-header">
+      <div class="ml-title" id="amt">添加项目</div>
+      <button class="ml-close" onclick="cm('ma')">✕</button>
+    </div>
+    <div class="ml-body">
+      <input type="hidden" id="editId">
+      <div class="fg"><label class="fl">项目名称</label><input type="text" class="fi" id="an" placeholder="如：完成额外作业"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">分值</label><input type="number" class="fi" id="asc" value="5"></div>
+        <div class="fg"><label class="fl">分类</label><select class="fs" id="acat"><option value="学习">📚 学习</option><option value="生活">🏠 生活</option><option value="饮食">🍽️ 饮食</option><option value="品德">❤️ 品德</option><option value="运动">🏃 运动</option><option value="电子产品">📱 电子产品</option><option value="兴趣">🎨 兴趣</option><option value="家务">🧹 家务</option></select></div>
+      </div>
+      <button class="bn bp" onclick="sai()">✅ 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加/编辑兑换项弹窗 -->
+<div class="mo" id="ms3">
+  <div class="ml">
+    <div class="ml-header">
+      <div class="ml-title" id="amt3">添加兑换项</div>
+      <button class="ml-close" onclick="cm('ms3')">✕</button>
+    </div>
+    <div class="ml-body">
+      <input type="hidden" id="editShopId">
+      <div class="fg"><label class="fl">名称</label><input type="text" class="fi" id="s3n" placeholder="如：买一本喜欢的书"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">所需积分</label><input type="number" class="fi" id="s3c" value="50"></div>
+        <div class="fg"><label class="fl">图标</label><input type="text" class="fi" id="s3i" placeholder="🎁" value="🎁"></div>
+      </div>
+      <div class="fg"><label class="fl">描述</label><input type="text" class="fi" id="s3d" placeholder="如：书店自选"></div>
+      <button class="bn bp" onclick="sasi()">✅ 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 日期选择器 -->
+<div class="mo" id="datePicker">
+  <div class="ml">
+    <div class="ml-header">
+      <div class="ml-title">选择日期范围</div>
+      <button class="ml-close" onclick="closeDatePicker()">✕</button>
+    </div>
+    <div class="dp">
+      <div class="dp-cal" id="singleCalendar"></div>
+    </div>
+  </div>
+</div>
+
+<div class="to" id="toast"></div>
+<div class="co2" id="cd2">
+  <div class="cb">
+    <div class="ct2" id="ct2t">确认</div>
+    <div class="cx" id="ct2x">确定要执行此操作吗？</div>
+    <div class="cn">
+      <button class="bn bg" onclick="cc()">取消</button>
+      <button class="bn bd2" id="ct2b" onclick="ec()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 登录页 -->
+<div class="login-page" id="loginPage">
+  <div class="login-logo">⭐</div>
+  <div class="login-title">星星积分</div>
+  <div class="login-sub">记录成长，兑换惊喜</div>
+  <div class="login-card">
+    <div class="fg"><label class="fl">手机号</label><input type="tel" class="fi" id="loginPhone" placeholder="请输入手机号" maxlength="11"></div>
+    <div class="fg"><label class="fl">姓名</label><input type="text" class="fi" id="loginName" placeholder="请输入姓名"></div>
+    <button class="login-btn" onclick="doLogin()">🚀 开始使用</button>
+    <div class="login-divider">快速登录</div>
+    <div class="login-quick" id="loginQuick"></div>
+  </div>
+</div>
+
+<!-- 用户切换弹窗 -->
+<div class="switch-modal" id="switchModal">
+  <div class="switch-card" onclick="event.stopPropagation()">
+    <div class="switch-header"><h3>👤 切换用户</h3></div>
+    <div id="switchList"></div>
+  </div>
+</div>
+
+<script>
+var SK='***';
+var USER_KEY='star_users';
+var CURR_KEY='star_current';
+var SYNC_API=location.origin;
+var currentUser=null;
+var syncStatus='idle'; // idle | loading | synced | error
+function getUsers(){try{var r=localStorage.getItem(USER_KEY);if(r)return JSON.parse(r)}catch(e){}return[]}
+function saveUsers(u){try{localStorage.setItem(USER_KEY,JSON.stringify(u))}catch(e){}}
+function getCurrentPhone(){try{return localStorage.getItem(CURR_KEY)||null}catch(e){}return null}
+function setCurrentPhone(p){try{localStorage.setItem(CURR_KEY,p)}catch(e){}}
+function userKey(phone){return SK+'_'+phone}
+function ld(){var phone=currentUser;if(!phone)return gd();try{var r=localStorage.getItem(userKey(phone));if(r)return JSON.parse(r)}catch(e){}return gd()}
+function sd(d){var phone=currentUser;if(!phone)return;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
+function migrateOldData(phone){try{var old=localStorage.getItem(SK);if(old&&phone){var parsed=JSON.parse(old);if(parsed.records&&parsed.records.length>0){localStorage.setItem(userKey(phone),JSON.stringify(parsed));toast('已迁移历史数据')}}}catch(e){}}
+
+// ===== 数据同步 =====
+function syncPull(phone){
+  syncStatus='loading';
+  updateSyncUI();
+  return fetch(SYNC_API+'/sync?phone='+encodeURIComponent(phone))
+    .then(function(r){return r.json()})
+    .then(function(res){
+      if(res.data){
+        localStorage.setItem(userKey(phone),JSON.stringify(res.data));
+        syncStatus='synced';
+      }else{
+        syncStatus='synced';
+      }
+      updateSyncUI();
+      return ld();
+    })
+    .catch(function(e){
+      syncStatus='error';
+      updateSyncUI();
+      console.log('同步失败，使用本地数据',e);
+      return ld();
+    });
+}
+function syncPush(data){
+  if(!currentUser)return;
+  fetch(SYNC_API+'/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:currentUser,data:data})})
+    .then(function(r){return r.json()})
+    .then(function(){syncStatus='synced';updateSyncUI()})
+    .catch(function(){syncStatus='error';updateSyncUI()});
+}
+function updateSyncUI(){
+  var el=document.getElementById('syncStatus');
+  if(!el)return;
+  if(syncStatus==='loading')el.textContent='⏳';
+  else if(syncStatus==='synced')el.textContent='☁️';
+  else if(syncStatus==='error')el.textContent='⚠️';
+  else el.textContent='';
+}
+function doSync(){
+  if(!currentUser)return;
+  syncPull(currentUser).then(function(data){
+    ad=data;
+    render();
+  });
+}
+var ci={'学习':'📚','生活':'🏠','饮食':'🍽️','品德':'❤️','运动':'🏃','电子产品':'📱','兴趣':'🎨','家务':'🧹'};
+var du=[
+{id:'up_1',name:'按时完成作业',score:5,category:'学习'},
+{id:'up_2',name:'完成额外作业',score:5,category:'学习',unit:'项'},
+{id:'up_3',name:'作业全对/优秀',score:10,category:'学习'},
+{id:'up_4',name:'被老师表扬',score:10,category:'学习'},
+{id:'up_5',name:'主动预习',score:5,category:'学习'},
+{id:'up_6',name:'主动复习',score:5,category:'学习'},
+{id:'up_7',name:'阅读课外书(≥20分钟)',score:8,category:'学习'},
+{id:'up_8',name:'读完一本书并分享',score:15,category:'学习'},
+{id:'up_9',name:'学会新技能并分享',score:10,category:'学习'},
+{id:'up_10',name:'考试进步',score:15,category:'学习'},
+{id:'up_11',name:'考试满分/前3名',score:20,category:'学习'},
+{id:'up_12',name:'背课文/单词达标',score:5,category:'学习'},
+{id:'up_13',name:'练字认真(≥15分钟)',score:5,category:'学习'},
+{id:'up_14',name:'整理错题本',score:8,category:'学习'},
+{id:'up_15',name:'按时起床(不赖床)',score:3,category:'生活'},
+{id:'up_16',name:'自己穿衣',score:5,category:'生活'},
+{id:'up_17',name:'自己刷牙洗脸',score:3,category:'生活'},
+{id:'up_18',name:'自己整理书包',score:5,category:'生活'},
+{id:'up_19',name:'整理书桌',score:5,category:'生活'},
+{id:'up_20',name:'收拾玩具/房间',score:5,category:'生活'},
+{id:'up_21',name:'自己叠被子',score:3,category:'生活'},
+{id:'up_22',name:'按时上床睡觉',score:3,category:'生活'},
+{id:'up_23',name:'独立睡觉',score:10,category:'生活'},
+{id:'up_24',name:'好好吃饭(不挑食)',score:5,category:'饮食'},
+{id:'up_25',name:'主动喝水(≥4杯)',score:3,category:'饮食'},
+{id:'up_26',name:'光盘行动',score:3,category:'饮食'},
+{id:'up_27',name:'尝试新食物',score:8,category:'饮食'},
+{id:'up_28',name:'饭后收拾碗筷',score:3,category:'饮食'},
+{id:'up_29',name:'主动说礼貌用语',score:3,category:'品德'},
+{id:'up_30',name:'分享玩具/食物',score:5,category:'品德'},
+{id:'up_31',name:'诚实承认错误',score:10,category:'品德'},
+{id:'up_32',name:'帮助家人',score:5,category:'品德'},
+{id:'up_33',name:'帮助同学/朋友',score:8,category:'品德'},
+{id:'up_34',name:'耐心等待不插队',score:3,category:'品德'},
+{id:'up_35',name:'控制情绪不哭闹',score:10,category:'品德'},
+{id:'up_36',name:'遵守约定/规则',score:5,category:'品德'},
+{id:'up_37',name:'主动道歉',score:5,category:'品德'},
+{id:'up_38',name:'爱护公共物品',score:5,category:'品德'},
+{id:'up_39',name:'户外运动≥30分钟',score:8,category:'运动'},
+{id:'up_40',name:'户外运动≥1小时',score:12,category:'运动'},
+{id:'up_41',name:'认真做眼保健操',score:3,category:'运动'},
+{id:'up_42',name:'注意护眼',score:3,category:'运动'},
+{id:'up_43',name:'学会新运动技能',score:15,category:'运动'},
+{id:'up_44',name:'按约定时间使用电子产品',score:3,category:'电子产品'},
+{id:'up_45',name:'到点主动关掉平板',score:5,category:'电子产品'},
+{id:'up_46',name:'练习乐器≥20分钟',score:8,category:'兴趣'},
+{id:'up_47',name:'练习乐器≥40分钟',score:12,category:'兴趣'},
+{id:'up_48',name:'完成一幅画',score:10,category:'兴趣'},
+{id:'up_49',name:'完成手工/搭建作品',score:15,category:'兴趣'},
+{id:'up_50',name:'兴趣班表现积极',score:5,category:'兴趣'},
+{id:'up_51',name:'兴趣班获奖/表扬',score:15,category:'兴趣'},
+{id:'up_52',name:'主动创作',score:10,category:'兴趣'},
+{id:'up_53',name:'帮忙摆碗筷',score:3,category:'家务'},
+{id:'up_54',name:'帮忙收碗筷/擦桌子',score:5,category:'家务'},
+{id:'up_55',name:'帮忙择菜/洗菜',score:5,category:'家务'},
+{id:'up_56',name:'帮忙扫地/拖地',score:8,category:'家务'},
+{id:'up_57',name:'帮忙倒垃圾',score:3,category:'家务'},
+{id:'up_58',name:'帮忙晾/收衣服',score:5,category:'家务'},
+{id:'up_59',name:'帮忙浇花',score:3,category:'家务'},
+{id:'up_60',name:'照顾宠物',score:8,category:'家务'},
+{id:'up_61',name:'整理衣柜/叠衣服',score:10,category:'家务'},
+{id:'up_62',name:'帮忙洗车',score:10,category:'家务'}
+];
+var dwn=[
+{id:'down_1',name:'赖床/叫多次不起',score:3,category:'生活'},
+{id:'down_2',name:'挑食/只吃喜欢的菜',score:3,category:'饮食'},
+{id:'down_3',name:'吃饭拖拉(>40分钟)',score:5,category:'饮食'},
+{id:'down_4',name:'浪费食物',score:5,category:'饮食'},
+{id:'down_5',name:'饭前吃零食',score:5,category:'饮食'},
+{id:'down_6',name:'不做眼保健操',score:3,category:'运动'},
+{id:'down_7',name:'一整天不运动',score:5,category:'运动'},
+{id:'down_8',name:'坐姿不对提醒不改',score:3,category:'运动'},
+{id:'down_9',name:'电子产品超时',score:5,category:'电子产品'},
+{id:'down_10',name:'到点不关还讨价还价',score:8,category:'电子产品'},
+{id:'down_11',name:'偷玩电子产品',score:10,category:'电子产品'},
+{id:'down_12',name:'发脾气/摔东西',score:8,category:'品德'},
+{id:'down_13',name:'说粗话/骂人',score:8,category:'品德'},
+{id:'down_14',name:'撒谎/隐瞒',score:10,category:'品德'},
+{id:'down_15',name:'未经允许拿别人东西',score:8,category:'品德'},
+{id:'down_16',name:'欺负弟弟妹妹/同学',score:10,category:'品德'},
+{id:'down_17',name:'缺勤兴趣班(无正当理由)',score:5,category:'兴趣'}
+];
+var dsh=[
+{id:'shop_1',name:'看动画片30分钟',cost:15,icon:'📺',desc:'周末可用'},
+{id:'shop_2',name:'选今晚的晚餐菜',cost:20,icon:'🍳',desc:'有一定决定权'},
+{id:'shop_3',name:'多玩15分钟平板',cost:20,icon:'📱',desc:'在基础时间上加'},
+{id:'shop_4',name:'买小零食/小玩具(≤10元)',cost:25,icon:'🍬',desc:'超市自选'},
+{id:'shop_5',name:'选睡前故事',cost:10,icon:'📖',desc:'从书架上自己选'},
+{id:'shop_6',name:'决定周末早餐',cost:15,icon:'🥐',desc:'披萨/煎饼/三明治等'},
+{id:'shop_7',name:'晚睡30分钟(周末)',cost:20,icon:'🌙',desc:'周末特例'},
+{id:'shop_8',name:'选全家电影',cost:25,icon:'🎬',desc:'家庭电影夜'},
+{id:'shop_9',name:'买一本喜欢的书',cost:50,icon:'📚',desc:'书店/网店自选'},
+{id:'shop_10',name:'买小玩具(≤30元)',cost:80,icon:'🧸',desc:'生日/节日除外'},
+{id:'shop_11',name:'去游乐场玩一次',cost:100,icon:'🎢',desc:'周末家庭活动'},
+{id:'shop_12',name:'邀请好朋友来玩',cost:60,icon:'👫',desc:'需要提前约定'},
+{id:'shop_13',name:'买贴纸/盲盒',cost:40,icon:'🎯',desc:'文具店自选'},
+{id:'shop_14',name:'去肯德基/麦当劳',cost:70,icon:'🍟',desc:'全家一起'},
+{id:'shop_15',name:'买彩笔/画具',cost:60,icon:'🎨',desc:'美术用品'},
+{id:'shop_16',name:'去儿童乐园',cost:90,icon:'🏰',desc:'室内蹦床/淘气堡'},
+{id:'shop_17',name:'买大玩具(≤100元)',cost:300,icon:'🎁',desc:'需要提前申请'},
+{id:'shop_18',name:'去动物园/科技馆',cost:200,icon:'🦁',desc:'全家出行'},
+{id:'shop_19',name:'去水上乐园',cost:250,icon:'🏊',desc:'夏季限定'},
+{id:'shop_20',name:'买乐高/拼装玩具',cost:350,icon:'🧩',desc:'按预算调整'},
+{id:'shop_21',name:'旅行选择权',cost:500,icon:'✈️',desc:'参与目的地决策'},
+{id:'shop_22',name:'实现一个小愿望',cost:400,icon:'🌟',desc:'合理范围内'},
+{id:'shop_23',name:'买运动鞋/新衣服',cost:280,icon:'👟',desc:'商场自选'},
+{id:'shop_24',name:'参加付费体验课',cost:200,icon:'🔬',desc:'陶艺/烘焙/科学实验'}
+];
+
+function gd(){return{totalPoints:0,records:[],exchanges:[],upItems:JSON.parse(JSON.stringify(du)),downItems:JSON.parse(JSON.stringify(dwn)),shopItems:JSON.parse(JSON.stringify(dsh))}}
+function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function fd(ds){var d=new Date(ds);var m=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];var w=['周日','周一','周二','周三','周四','周五','周六'];return d.getFullYear()+'年'+m[d.getMonth()]+d.getDate()+'日 '+w[d.getDay()]}
+function fdt(ts){var d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2000)}
+var pc=null;
+function sc2(t,x,c){document.getElementById('ct2t').textContent=t;document.getElementById('ct2x').textContent=x;pc=c;document.getElementById('cd2').classList.add('show')}
+function cc(){document.getElementById('cd2').classList.remove('show');pc=null}
+function ec(){if(pc)pc();cc()}
+
+// ===== 登录管理 =====
+function doLogin(){
+  var phone=document.getElementById('loginPhone').value.trim();
+  var name=document.getElementById('loginName').value.trim();
+  if(!phone||phone.length<11){toast('请输入正确的手机号');return}
+  if(!name){toast('请输入姓名');return}
+  var users=getUsers();
+  var exist=users.find(function(u){return u.phone===phone});
+  if(!exist){
+    if(users.length>=3){toast('最多支持3个账号');return}
+    users.push({phone:phone,name:name});
+    saveUsers(users);
+  }
+  setCurrentPhone(phone);
+  currentUser=phone;
+  migrateOldData(phone);
+  enterApp();
+}
+function quickLogin(phone){
+  currentUser=phone;
+  setCurrentPhone(phone);
+  migrateOldData(phone);
+  enterApp();
+}
+function enterApp(){
+  document.getElementById('loginPage').classList.remove('show');
+  document.getElementById('mainHeader').style.display='';
+  document.getElementById('userSwitch').style.display='';
+  document.getElementById('syncBtn').style.display='';
+  var users=getUsers();
+  var u=users.find(function(x){return x.phone===currentUser});
+  if(u){
+    document.getElementById('usAvatar').textContent=u.name.charAt(0);
+    document.getElementById('usName').textContent=u.name;
+  }
+  // 从服务端拉取数据
+  syncPull(currentUser).then(function(data){
+    ad=data;
+    renderAll(ad);
+  });
+}
+function showSwitchModal(){
+  var users=getUsers();
+  var html='';
+  for(var i=0;i<users.length;i++){
+    var u=users[i];
+    var isCur=u.phone===currentUser;
+    html+='<div class="switch-item'+(isCur?' current':'')+'" onclick="switchUser(\''+u.phone+'\')">';
+    html+='<div class="switch-avatar">'+u.name.charAt(0)+'</div>';
+    html+='<div class="switch-info"><div class="switch-name">'+u.name+'</div><div class="switch-phone">'+u.phone.replace(/(\d{3})\d{4}(\d{4})/,'$1****$2')+'</div></div>';
+    if(isCur)html+='<div class="switch-check">✓</div>';
+    html+='</div>';
+  }
+  if(users.length<3)html+='<div class="switch-add" onclick="closeSwitchModal();showLoginPage()">➕ 添加新用户</div>';
+  html+='<div class="switch-add" style="color:var(--no)" onclick="doLogout()">🚪 退出登录</div>';
+  document.getElementById('switchList').innerHTML=html;
+  document.getElementById('switchModal').classList.add('show');
+}
+document.getElementById('switchModal').addEventListener('click',function(e){
+  if(e.target===this)closeSwitchModal();
+});
+function closeSwitchModal(){document.getElementById('switchModal').classList.remove('show')}
+function switchUser(phone){
+  currentUser=phone;
+  setCurrentPhone(phone);
+  var users=getUsers();
+  var u=users.find(function(x){return x.phone===phone});
+  if(u){
+    document.getElementById('usAvatar').textContent=u.name.charAt(0);
+    document.getElementById('usName').textContent=u.name;
+  }
+  closeSwitchModal();
+  syncPull(phone).then(function(data){
+    ad=data;
+    renderAll(ad);
+  });
+}
+function doLogout(){
+  closeSwitchModal();
+  currentUser=null;
+  setCurrentPhone('');
+  document.getElementById('userSwitch').style.display='none';
+  document.getElementById('syncBtn').style.display='none';
+  showLoginPage();
+}
+function showLoginPage(){
+  document.getElementById('loginPage').classList.add('show');
+  document.getElementById('mainHeader').style.display='none';
+  document.getElementById('userSwitch').style.display='none';
+  document.getElementById('syncBtn').style.display='none';
+  renderQuickLogin();
+}
+function renderQuickLogin(){
+  var users=getUsers();
+  var html='';
+  for(var i=0;i<users.length;i++){
+    var u=users[i];
+    html+='<div class="login-quick-item" onclick="quickLogin(\''+u.phone+'\')">';
+    html+='<div class="login-quick-avatar">'+u.name.charAt(0)+'</div>';
+    html+='<div class="login-quick-info"><div class="login-quick-name">'+u.name+'</div><div class="login-quick-phone">'+u.phone.replace(/(\d{3})\d{4}(\d{4})/,'$1****$2')+'</div></div>';
+    html+='<div class="login-quick-enter">›</div>';
+    html+='</div>';
+  }
+  document.getElementById('loginQuick').innerHTML=html;
+}
+function renderAll(data){
+  ad=data;
+  renderHome();
+  renderRecords();
+  renderSettings();
+}
+
+var curTab='home';
+var sectionState={};
+var scoreType='up';
+var dateRangeStart=today();
+var dateRangeEnd=today();
+var curTypeFilter='所有';
+
+// Date picker state
+var dpMonth=new Date();
+var dpSelectedStart=null;
+var dpSelectedEnd=null;
+
+function st(tab){
+  var pages=document.querySelectorAll('.pg');
+  for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
+  var tabs=document.querySelectorAll('.ti');
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('on');
+  document.getElementById('p-'+tab).classList.add('on');
+  curTab=tab;
+  // 切换页签时同步
+  if(currentUser){
+    syncPull(currentUser).then(function(data){
+      ad=data;
+      render();
+    });
+  }else{
+    render();
+  }
+}
+
+function render(){
+  document.getElementById('hd').textContent=fd(today());
+  renderHome();
+  renderRecords();
+  renderSettings();
+}
+
+function renderHome(){
+  document.getElementById('tp').textContent=ad.totalPoints;
+  var tr=ad.records.filter(function(r){return r.date===today()});
+  var tu=tr.filter(function(r){return r.score>0}).reduce(function(s,r){return s+r.score},0);
+  var td2=tr.filter(function(r){return r.score<0}).reduce(function(s,r){return s+Math.abs(r.score)},0);
+  var tn=tu-td2;
+  document.getElementById('tu').textContent='+'+tu;
+  document.getElementById('td').textContent='-'+td2;
+  var tpe=document.getElementById('tdp');
+  if(tn>0) tpe.innerHTML='今日：<span class="up">+'+tn+'</span>';
+  else if(tn<0) tpe.innerHTML='今日：<span class="down">'+tn+'</span>';
+  else tpe.textContent='今日：0';
+
+  var sk=0;var dc=new Date();
+  while(true){
+    var ds=dc.getFullYear()+'-'+String(dc.getMonth()+1).padStart(2,'0')+'-'+String(dc.getDate()).padStart(2,'0');
+    if(ad.records.some(function(r){return r.date===ds})){sk++;dc.setDate(dc.getDate()-1)}
+    else break;
+  }
+  document.getElementById('ts').textContent=sk;
+
+  var wb=document.getElementById('wb');wb.innerHTML='';
+  var dl=['一','二','三','四','五','六','日'];
+  var nw=new Date();var dow=nw.getDay()||7;var mon=new Date(nw);
+  mon.setDate(nw.getDate()-dow+1);
+  for(var i=0;i<7;i++){
+    var dd2=new Date(mon);dd2.setDate(mon.getDate()+i);
+    var ds2=dd2.getFullYear()+'-'+String(dd2.getMonth()+1).padStart(2,'0')+'-'+String(dd2.getDate()).padStart(2,'0');
+    var dr2=ad.records.filter(function(r){return r.date===ds2});
+    var dn=dr2.reduce(function(s,r){return s+r.score},0);
+    var d=document.createElement('div');
+    d.className='sbd'+(dr2.length>0?' hd':'')+(ds2===today()?' tdy':'');
+    d.innerHTML='<span class="sdl">'+dl[i]+'</span><span class="sds">'+(dn>0?'+':'')+dn+'</span>';
+    wb.appendChild(d);
+  }
+
+  // 合并今日记录和兑换记录
+  var todayExchanges=ad.exchanges.filter(function(e){return e.date===today()});
+  var allToday=[];
+  for(var i=0;i<tr.length;i++) allToday.push({type:'record',data:tr[i]});
+  for(var i=0;i<todayExchanges.length;i++) allToday.push({type:'exchange',data:todayExchanges[i]});
+  allToday.sort(function(a,b){return b.data.timestamp-a.data.timestamp});
+
+  var trl=document.getElementById('tr');
+  if(allToday.length===0) trl.innerHTML='<div class="es"><div class="ei">📝</div><div class="et">今天还没有记录哦<br>点击上方按钮开始加分吧！</div></div>';
+  else{
+    var html2='';
+    for(var i=0;i<allToday.length;i++){
+      if(allToday[i].type==='record') html2+=renderRecord(allToday[i].data,today());
+      else html2+=renderExchange(allToday[i].data,today());
+    }
+    trl.innerHTML=html2;
+  }
+}
+
+function renderRecord(r,currentDay){
+  var u=r.score>0;
+  var cls=u?'u':'d';
+  var ico=u?'✅':'⚠️';
+  var sign=u?'+':'';
+  var noteStr=r.note?(' · '+r.note):'';
+  var timeStr=(r.date===currentDay)?fdt(r.timestamp):fd(r.date)+' '+fdt(r.timestamp);
+  return '<div class="ri"><div class="ic '+cls+'">'+ico+'</div><div class="inf"><div class="nm">'+r.name+'</div><div class="tm">'+timeStr+noteStr+'</div></div><div class="sc2 '+cls+'">'+sign+r.score+'</div><button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button></div>';
+}
+
+function renderExchange(e,currentDay){
+  var timeStr=(e.date===currentDay)?fdt(e.timestamp):fd(e.date)+' '+fdt(e.timestamp);
+  return '<div class="ri"><div class="ic e">🎁</div><div class="inf"><div class="nm">'+e.name+'</div><div class="tm">'+timeStr+' · 兑换</div></div><div class="sc2 d">-'+e.cost+'</div></div>';
+}
+
+function renderRecords(){
+  if(!dateRangeStart) dateRangeStart=today();
+  if(!dateRangeEnd) dateRangeEnd=today();
+  document.getElementById('dateTriggerText').textContent='📅 '+dateRangeStart.replace(/-/g,'/')+' 至 '+dateRangeEnd.replace(/-/g,'/');
+
+  // 类型筛选按钮
+  var types=['所有','得分','扣分','兑换'];
+  var typeHtml='';
+  for(var i=0;i<types.length;i++){
+    typeHtml+='<div class="ftb'+(curTypeFilter===types[i]?' on':'')+'" onclick="setTypeFilter(\''+types[i]+'\')">'+types[i]+'</div>';
+  }
+  document.getElementById('typeFilter').innerHTML=typeHtml;
+
+  var allItems=[];
+  for(var i=0;i<ad.records.length;i++){
+    allItems.push({type:'record',data:ad.records[i]});
+  }
+  for(var i=0;i<ad.exchanges.length;i++){
+    allItems.push({type:'exchange',data:ad.exchanges[i]});
+  }
+
+  if(curTypeFilter==='得分') allItems=allItems.filter(function(item){return item.type==='record'&&item.data.score>0});
+  else if(curTypeFilter==='扣分') allItems=allItems.filter(function(item){return item.type==='record'&&item.data.score<0});
+  else if(curTypeFilter==='兑换') allItems=allItems.filter(function(item){return item.type==='exchange'});
+
+  if(dateRangeStart) allItems=allItems.filter(function(item){return item.data.date>=dateRangeStart});
+  if(dateRangeEnd) allItems=allItems.filter(function(item){return item.data.date<=dateRangeEnd});
+
+  allItems.sort(function(a,b){return b.data.timestamp-a.data.timestamp});
+
+  var ar=document.getElementById('ar');
+  if(allItems.length===0) ar.innerHTML='<div class="es"><div class="ei">📭</div><div class="et">这个时间段还没有记录</div></div>';
+  else{
+    var html='';
+    for(var i=0;i<allItems.length;i++){
+      if(allItems[i].type==='record') html+=renderRecord(allItems[i].data,today());
+      else html+=renderExchange(allItems[i].data,today());
+    }
+    ar.innerHTML=html;
+  }
+}
+
+function renderSettings(){
+  document.getElementById('upCnt').textContent='('+ad.upItems.length+'项)';
+  document.getElementById('downCnt').textContent='('+ad.downItems.length+'项)';
+  document.getElementById('shopCnt').textContent='('+ad.shopItems.length+'项)';
+
+  document.getElementById('sui').innerHTML=renderGroupedItems(ad.upItems,'up','up_main');
+  document.getElementById('sdi').innerHTML=renderGroupedItems(ad.downItems,'down','down_main');
+
+  var html='';
+  for(var i=0;i<ad.shopItems.length;i++){
+    var it=ad.shopItems[i];
+    html+='<div class="sr"><span class="n">'+it.icon+' '+it.name+'</span><span class="s">'+it.cost+'分</span><button class="ed" onclick="editShopItem(\''+it.id+'\')">✎</button><button class="x" onclick="deleteItem(\'shop\',\''+it.id+'\')">✕</button></div>';
+  }
+  document.getElementById('ssi').innerHTML=html;
+
+  // 恢复主section展开状态
+  var sections=[
+    {idx:1,stateKey:'up_main'},
+    {idx:2,stateKey:'down_main'},
+    {idx:3,stateKey:'shop_main'}
+  ];
+  for(var i=0;i<sections.length;i++){
+    var sec=sections[i];
+    var sgh=document.querySelector('#p-settings .sec:nth-child('+sec.idx+') .sg .sgh');
+    var sgc=document.querySelector('#p-settings .sec:nth-child('+sec.idx+') .sg .sgc');
+    if(sgh&&sgc){
+      var isOpen=sectionState[sec.stateKey]===true;
+      if(isOpen){sgh.classList.add('open');sgc.classList.add('open')}
+      else{sgh.classList.remove('open');sgc.classList.remove('open')}
+    }
+  }
+}
+
+function renderGroupedItems(items,type,stateKey){
+  var groups={};
+  var order=[];
+  for(var i=0;i<items.length;i++){
+    var c=items[i].category;
+    if(!groups[c]){groups[c]=[];order.push(c)}
+    groups[c].push(items[i]);
+  }
+  var html='';
+  for(var j=0;j<order.length;j++){
+    var cat=order[j];
+    var icon=ci[cat]||'📌';
+    var isOpen=sectionState[stateKey+'_'+cat]===true;
+    html+='<div class="sg" style="margin-bottom:8px;box-shadow:none;border:1px solid var(--bd)">';
+    html+='<div class="sgh'+(isOpen?' open':'')+'" onclick="toggleSection(this,\''+stateKey+'_'+cat+'\')" style="padding:10px 12px">';
+    html+='<div class="sgt" style="font-size:13px">'+icon+' '+cat+' <span class="cnt">('+groups[cat].length+'项)</span></div>';
+    html+='<span class="arr">▼</span>';
+    html+='</div>';
+    html+='<div class="sgc'+(isOpen?' open':'')+'">';
+    for(var k=0;k<groups[cat].length;k++){
+      var it=groups[cat][k];
+      var sign=type==='up'?'+':'-';
+      html+='<div class="sr"><span class="n">'+it.name+'</span><span class="s '+(type==='up'?'u':'d')+'">'+sign+it.score+'</span><button class="ed" onclick="editItem(\''+type+'\',\''+it.id+'\')">✎</button><button class="x" onclick="deleteItem(\''+type+'\',\''+it.id+'\')">✕</button></div>';
+    }
+    html+='</div></div>';
+  }
+  return html;
+}
+
+function toggleSection(header,stateKey){
+  var content=header.nextElementSibling;
+  header.classList.toggle('open');
+  content.classList.toggle('open');
+  if(stateKey){
+    sectionState[stateKey]=header.classList.contains('open');
+  }
+}
+
+function setTypeFilter(t){curTypeFilter=t;renderRecords()}
+
+function openScore(){
+  scoreType='up';
+  document.getElementById('scoreType').innerHTML='<div class="ctb on" onclick="setScoreType(\'up\')">➕ 加分</div><div class="ctb" onclick="setScoreType(\'down\')">⚠️ 扣分</div>';
+  populateCats();
+  document.getElementById('sn').value='';
+  document.getElementById('ms').classList.add('show');
+}
+
+function setScoreType(type){
+  scoreType=type;
+  document.getElementById('scoreType').innerHTML='<div class="ctb'+(type==='up'?' on':'')+'" onclick="setScoreType(\'up\')">➕ 加分</div><div class="ctb'+(type==='down'?' on':'')+'" onclick="setScoreType(\'down\')">⚠️ 扣分</div>';
+  populateCats();
+}
+
+function populateCats(){
+  var items=scoreType==='up'?ad.upItems:ad.downItems;
+  var cats=[];var catSet={};
+  for(var i=0;i<items.length;i++){
+    if(!catSet[items[i].category]){catSet[items[i].category]=true;cats.push(items[i].category)}
+  }
+  var catHtml='';
+  for(var i=0;i<cats.length;i++){
+    catHtml+='<div class="ctb" onclick="selectCat(\''+cats[i]+'\')">'+(ci[cats[i]]||'')+' '+cats[i]+'</div>';
+  }
+  document.getElementById('scat').innerHTML=catHtml;
+  if(cats.length>0) selectCat(cats[0]);
+}
+
+function selectCat(cat){
+  var tags=document.getElementById('scat').querySelectorAll('.ctb');
+  for(var i=0;i<tags.length;i++){
+    if(tags[i].textContent.indexOf(cat)>=0) tags[i].classList.add('on');
+    else tags[i].classList.remove('on');
+  }
+  var items=scoreType==='up'?ad.upItems:ad.downItems;
+  var html='';
+  for(var i=0;i<items.length;i++){
+    if(items[i].category===cat){
+      var unitStr=(items[i].unit)?('/'+items[i].unit):'';
+      html+='<option value="'+items[i].id+'" data-score="'+items[i].score+'">'+items[i].name+' ('+items[i].score+'分'+unitStr+')</option>';
+    }
+  }
+  document.getElementById('sis').innerHTML=html;
+  if(items.length>0){
+    for(var i=0;i<items.length;i++){
+      if(items[i].category===cat){document.getElementById('sv').value=items[i].score;break}
+    }
+  }
+}
+
+document.addEventListener('change',function(e){
+  if(e.target.id==='sis'){
+    var o=e.target.options[e.target.selectedIndex];
+    if(o) document.getElementById('sv').value=o.dataset.score||5;
+  }
+});
+
+function ss(){
+  var sis=document.getElementById('sis');
+  var items=scoreType==='up'?ad.upItems:ad.downItems;
+  var it=null;
+  for(var i=0;i<items.length;i++){if(items[i].id===sis.value){it=items[i];break}}
+  if(!it){toast('请选择项目');return}
+  var sv=parseInt(document.getElementById('sv').value)||0;
+  var sn=document.getElementById('sn').value.trim();
+  if(sv<=0){toast('分值必须大于0');return}
+  var rec={id:'r_'+Date.now(),date:today(),timestamp:Date.now(),type:scoreType,itemId:it.id,name:it.name,category:it.category,score:scoreType==='up'?sv:-sv,note:sn};
+  ad.records.push(rec);
+  ad.totalPoints+=rec.score;
+  sd(ad);
+  document.getElementById('ms').classList.remove('show');
+  toast(scoreType==='up'?('✅ +'+sv+'分！'):'⚠️ -'+sv+'分');
+  render();
+}
+
+function openExchange(){
+  document.getElementById('exScore').textContent=ad.totalPoints;
+  var html='';
+  for(var i=0;i<ad.shopItems.length;i++){
+    var it=ad.shopItems[i];
+    var ca=ad.totalPoints>=it.cost;
+    html+='<option value="'+it.id+'" data-cost="'+it.cost+'" '+(ca?'': 'disabled')+'>'+it.name+' (-'+it.cost+'分)</option>';
+  }
+  if(!html) html='<option value="">没有可兑换项</option>';
+  document.getElementById('exSelect').innerHTML=html;
+  document.getElementById('exCost').textContent='';
+  document.getElementById('ms2').classList.add('show');
+}
+
+function onExSelectChange(){
+  var sel=document.getElementById('exSelect');
+  var opt=sel.options[sel.selectedIndex];
+  if(opt&&opt.dataset.cost) document.getElementById('exCost').textContent=opt.dataset.cost+' 分';
+  else document.getElementById('exCost').textContent='';
+}
+
+function confirmExchange(){
+  var sel=document.getElementById('exSelect');
+  var itemId=sel.value;
+  if(!itemId){toast('请选择兑换项');return}
+  var it=null;
+  for(var i=0;i<ad.shopItems.length;i++){if(ad.shopItems[i].id===itemId){it=ad.shopItems[i];break}}
+  if(!it||ad.totalPoints<it.cost){toast('积分不足！');return}
+  sc2('确认兑换','用 '+it.cost+' 积分兑换「'+it.name+'」？',function(){
+    ad.totalPoints-=it.cost;
+    ad.exchanges.push({id:'ex_'+Date.now(),date:today(),timestamp:Date.now(),shopItemId:itemId,name:it.name,icon:it.icon,cost:it.cost});
+    sd(ad);
+    toast('🎉 兑换成功！剩余 '+ad.totalPoints+' 分');
+    document.getElementById('ms2').classList.remove('show');
+    render();
+  });
+}
+
+function deleteRecord(id){
+  var r=null;
+  for(var i=0;i<ad.records.length;i++){if(ad.records[i].id===id){r=ad.records[i];break}}
+  if(!r)return;
+  var sign=r.score>0?'+':'';
+  var action=r.score>0?'减少':'增加';
+  sc2('删除记录','删除「'+r.name+'」('+sign+r.score+'分)？总分将'+action+Math.abs(r.score)+'分。',function(){
+    ad.totalPoints-=r.score;
+    ad.records=ad.records.filter(function(x){return x.id!==id});
+    sd(ad);
+    toast('已删除');
+    render();
+  });
+}
+
+function sam(type){
+  if(type==='shop'){
+    document.getElementById('amt3').textContent='添加兑换项';
+    document.getElementById('editShopId').value='';
+    document.getElementById('s3n').value='';
+    document.getElementById('s3c').value='50';
+    document.getElementById('s3i').value='🎁';
+    document.getElementById('s3d').value='';
+    document.getElementById('ms3').classList.add('show');
+  }else{
+    document.getElementById('amt').textContent=type==='up'?'添加加分项':'添加扣分项';
+    document.getElementById('editId').value='';
+    document.getElementById('an').value='';
+    document.getElementById('asc').value='5';
+    document.getElementById('ma').classList.add('show');
+  }
+}
+
+function editItem(type,id){
+  var items=type==='up'?ad.upItems:ad.downItems;
+  var it=null;
+  for(var i=0;i<items.length;i++){if(items[i].id===id){it=items[i];break}}
+  if(!it)return;
+  document.getElementById('amt').textContent='编辑项目';
+  document.getElementById('editId').value=id;
+  document.getElementById('an').value=it.name;
+  document.getElementById('asc').value=it.score;
+  document.getElementById('acat').value=it.category;
+  document.getElementById('ma').classList.add('show');
+}
+
+function editShopItem(id){
+  var it=null;
+  for(var i=0;i<ad.shopItems.length;i++){if(ad.shopItems[i].id===id){it=ad.shopItems[i];break}}
+  if(!it)return;
+  document.getElementById('amt3').textContent='编辑兑换项';
+  document.getElementById('editShopId').value=id;
+  document.getElementById('s3n').value=it.name;
+  document.getElementById('s3c').value=it.cost;
+  document.getElementById('s3i').value=it.icon;
+  document.getElementById('s3d').value=it.desc||'';
+  document.getElementById('ms3').classList.add('show');
+}
+
+function sai(){
+  var n=document.getElementById('an').value.trim();
+  var scv=parseInt(document.getElementById('asc').value)||0;
+  var cat=document.getElementById('acat').value;
+  if(!n){toast('请输入名称');return}
+  if(scv<=0){toast('分值必须大于0');return}
+  var editId=document.getElementById('editId').value;
+  if(editId){
+    // 编辑模式
+    var items=ad.upItems.concat(ad.downItems);
+    for(var i=0;i<items.length;i++){
+      if(items[i].id===editId){
+        items[i].name=n;items[i].score=scv;items[i].category=cat;break;
+      }
+    }
+  }else{
+    var isUp=document.getElementById('amt').textContent.indexOf('加分')>=0;
+    var t=isUp?ad.upItems:ad.downItems;
+    t.push({id:(isUp?'up_':'down_')+Date.now(),name:n,score:scv,category:cat});
+  }
+  sd(ad);
+  document.getElementById('ma').classList.remove('show');
+  toast('✅ 保存成功');
+  render();
+}
+
+function sasi(){
+  var n=document.getElementById('s3n').value.trim();
+  var c=parseInt(document.getElementById('s3c').value)||0;
+  var ic=document.getElementById('s3i').value.trim()||'🎁';
+  var d=document.getElementById('s3d').value.trim();
+  if(!n){toast('请输入名称');return}
+  if(c<=0){toast('积分必须大于0');return}
+  var editId=document.getElementById('editShopId').value;
+  if(editId){
+    for(var i=0;i<ad.shopItems.length;i++){
+      if(ad.shopItems[i].id===editId){
+        ad.shopItems[i].name=n;ad.shopItems[i].cost=c;ad.shopItems[i].icon=ic;ad.shopItems[i].desc=d;break;
+      }
+    }
+  }else{
+    ad.shopItems.push({id:'shop_'+Date.now(),name:n,cost:c,icon:ic,desc:d});
+  }
+  sd(ad);
+  document.getElementById('ms3').classList.remove('show');
+  toast('✅ 保存成功');
+  render();
+}
+
+function deleteItem(type,id){
+  var lb={up:'加分项',down:'扣分项',shop:'兑换项'};
+  sc2('删除','确定删除这个'+lb[type]+'吗？',function(){
+    if(type==='up') ad.upItems=ad.upItems.filter(function(i){return i.id!==id});
+    else if(type==='down') ad.downItems=ad.downItems.filter(function(i){return i.id!==id});
+    else ad.shopItems=ad.shopItems.filter(function(i){return i.id!==id});
+    sd(ad);
+    toast('已删除');
+    render();
+  });
+}
+
+function ccd(){
+  sc2('⚠️ 清除所有数据','这将删除所有积分记录、兑换记录和自定义项目，总分归零。确定要继续吗？',function(){
+    ad=gd();sd(ad);toast('数据已清除');render();
+  });
+}
+
+function cm(id){document.getElementById(id).classList.remove('show')}
+var overlays=document.querySelectorAll('.mo');
+for(var i=0;i<overlays.length;i++){
+  overlays[i].addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')});
+}
+
+// Date picker functions
+function openDatePicker(){
+  dpMonth=new Date();
+  dpSelectedStart=null;
+  dpSelectedEnd=null;
+  renderCalendars();
+  document.getElementById('datePicker').classList.add('show');
+}
+
+function closeDatePicker(){
+  document.getElementById('datePicker').classList.remove('show');
+}
+
+function renderCalendars(){
+  document.getElementById('singleCalendar').innerHTML=renderMonthCalendar(dpMonth);
+}
+
+function renderMonthCalendar(month){
+  var year=month.getFullYear();
+  var m=month.getMonth();
+  var months=['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+  var weekDays=['日','一','二','三','四','五','六'];
+  var firstDay=new Date(year,m,1);
+  var startDay=firstDay.getDay();
+  var daysInMonth=new Date(year,m+1,0).getDate();
+  var daysInPrevMonth=new Date(year,m,0).getDate();
+  var todayStr=today();
+  var html='<div class="dp-header"><div class="dp-month">'+year+'年 '+months[m]+'</div><div class="dp-nav">';
+  html+='<button class="dp-navbtn" onclick="prevMonth()">‹</button>';
+  html+='<button class="dp-navbtn" onclick="nextMonth()">›</button>';
+  html+='</div></div>';
+  html+='<div class="dp-week">';
+  for(var i=0;i<7;i++) html+='<div class="dp-weekday">'+weekDays[i]+'</div>';
+  html+='</div>';
+  html+='<div class="dp-days">';
+  var totalCells=Math.ceil((startDay+daysInMonth)/7)*7;
+  for(var i=0;i<totalCells;i++){
+    var dayNum=i-startDay+1;
+    var cellMonth=m;
+    var cellYear=year;
+    if(dayNum<=0){cellMonth=m-1;if(cellMonth<0){cellMonth=11;cellYear++}dayNum=daysInPrevMonth+dayNum}
+    else if(dayNum>daysInMonth){cellMonth=m+1;if(cellMonth>11){cellMonth=0;cellYear++}dayNum=dayNum-daysInMonth}
+    var dateStr=cellYear+'-'+String(cellMonth+1).padStart(2,'0')+'-'+String(dayNum).padStart(2,'0');
+    var classes='dp-day';
+    if(cellMonth!==m) classes+=' other';
+    if(dateStr===todayStr) classes+=' today';
+    if(dpSelectedStart&&dateStr===dpSelectedStart) classes+=' selected';
+    if(dpSelectedEnd&&dateStr===dpSelectedEnd) classes+=' selected';
+    if(dpSelectedStart&&dpSelectedEnd&&dateStr>dpSelectedStart&&dateStr<dpSelectedEnd) classes+=' inrange';
+    else if(dpSelectedStart&&!dpSelectedEnd&&dateStr>dpSelectedStart) classes+=' inrange';
+    html+='<div class="'+classes+'" onclick="selectDate(\''+dateStr+'\')">'+dayNum+'</div>';
+  }
+  html+='</div>';
+  return html;
+}
+
+function prevMonth(){dpMonth.setMonth(dpMonth.getMonth()-1);renderCalendars()}
+function nextMonth(){dpMonth.setMonth(dpMonth.getMonth()+1);renderCalendars()}
+
+function selectDate(dateStr){
+  if(!dpSelectedStart||(dpSelectedStart&&dpSelectedEnd)){
+    dpSelectedStart=dateStr;
+    dpSelectedEnd=null;
+  }else{
+    if(dateStr<dpSelectedStart){dpSelectedEnd=dpSelectedStart;dpSelectedStart=dateStr}
+    else{dpSelectedEnd=dateStr}
+    dateRangeStart=dpSelectedStart;
+    dateRangeEnd=dpSelectedEnd;
+    closeDatePicker();
+    renderRecords();
+    return;
+  }
+  renderCalendars();
+}
+
+// 初始化：检查登录状态
+(function init(){
+  var phone=getCurrentPhone();
+  if(phone){
+    var users=getUsers();
+    var u=users.find(function(x){return x.phone===phone});
+    if(u){
+      currentUser=phone;
+      document.getElementById('userSwitch').style.display='';
+      document.getElementById('usAvatar').textContent=u.name.charAt(0);
+      document.getElementById('usName').textContent=u.name;
+    }
+  }
+  if(!currentUser){
+    showLoginPage();
+    ad=gd();
+    render();
+    return;
+  }
+  // 已登录，从服务端拉取数据
+  syncPull(currentUser).then(function(data){
+    ad=data;
+    render();
+  });
+})();
+</script>
+</body>
+</html>

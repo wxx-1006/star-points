@@ -1,0 +1,12 @@
+{
+  "name": "star-points-server",
+  "version": "1.0.0",
+  "description": "星星积分数据同步服务",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}
