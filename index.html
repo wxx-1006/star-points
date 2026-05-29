@@ -493,6 +493,12 @@ var SK='***';
 var USER_KEY='star_users';
 var CURR_KEY='star_current';
 var SYNC_API=location.origin;
+var GH_TOKEN='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';
+var GH_OWNER='wxx-1006';
+var GH_REPO='star-points';
+var GH_FILE='sync-data.json';
+var GH_API='https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/contents/'+GH_FILE;
+var syncSHA='';
 var currentUser=null;
 var syncStatus='idle'; // idle | loading | synced | error
 function getUsers(){try{var r=localStorage.getItem(USER_KEY);if(r)return JSON.parse(r)}catch(e){}return[]}
@@ -504,19 +510,29 @@ function ld(){var phone=currentUser;if(!phone)return gd();try{var r=localStorage
 function sd(d){var phone=currentUser;if(!phone)return;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
 function migrateOldData(phone){try{var old=localStorage.getItem(SK);if(old&&phone){var parsed=JSON.parse(old);if(parsed.records&&parsed.records.length>0){localStorage.setItem(userKey(phone),JSON.stringify(parsed));toast('已迁移历史数据')}}}catch(e){}}
 
-// ===== 数据同步 =====
+// ===== 数据同步 (GitHub API) =====
+function utf8ToB64(str){return btoa(unescape(encodeURIComponent(str)))}
+function b64ToUtf8(b64){return decodeURIComponent(escape(atob(b64)))}
 function syncPull(phone){
   syncStatus='loading';
   updateSyncUI();
-  return fetch(SYNC_API+'/sync?phone='+encodeURIComponent(phone))
-    .then(function(r){return r.json()})
-    .then(function(res){
-      if(res.data){
-        localStorage.setItem(userKey(phone),JSON.stringify(res.data));
-        syncStatus='synced';
-      }else{
-        syncStatus='synced';
+  return fetch(GH_API,{headers:{'Authorization':'token '+GH_TOKEN}})
+    .then(function(r){
+      if(!r.ok) return {sha:'',content:null};
+      return r.json();
+    })
+    .then(function(meta){
+      syncSHA=meta.sha||'';
+      if(meta.content){
+        try{
+          var content=b64ToUtf8(meta.content);
+          var allData=JSON.parse(content);
+          if(allData && allData[phone]){
+            localStorage.setItem(userKey(phone),JSON.stringify(allData[phone]));
+          }
+        }catch(e){}
       }
+      syncStatus='synced';
       updateSyncUI();
       return ld();
     })
@@ -528,9 +544,22 @@ function syncPull(phone){
 }
 function syncPush(data){
   if(!currentUser)return;
-  fetch(SYNC_API+'/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:currentUser,data:data})})
+  fetch(GH_API,{headers:{'Authorization':'token '+GH_TOKEN}})
     .then(function(r){return r.json()})
-    .then(function(){syncStatus='synced';updateSyncUI()})
+    .then(function(meta){
+      syncSHA=meta.sha||'';
+      var allData={};
+      if(meta.content){
+        try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
+      }
+      allData[currentUser]=data;
+      var content=utf8ToB64(JSON.stringify(allData));
+      return fetch(GH_API,{method:'PUT',headers:{'Authorization':'token '+GH_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({message:'sync:'+currentUser,content:content,sha:syncSHA})});
+    })
+    .then(function(r){
+      if(r.ok){syncStatus='synced';updateSyncUI()}
+      else{syncStatus='error';updateSyncUI()}
+    })
     .catch(function(){syncStatus='error';updateSyncUI()});
 }
 function updateSyncUI(){
