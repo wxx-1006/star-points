@@ -262,7 +262,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .login-quick-phone{font-size:11px;color:var(--tl);margin-top:2px}
 .login-quick-enter{font-size:18px;color:var(--tl)}
 /* 用户切换按钮 */
-.user-switch{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:5px 12px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;backdrop-filter:blur(8px);transition:all .2s}
+.user-switch{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);border-radius:20px;padding:5px 12px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;backdrop-filter:blur(8px);transition:all .2s;z-index:50}
+#syncBtn{left:14px;right:auto;z-index:60}
 .user-switch:active{transform:scale(.95);background:rgba(255,255,255,.3)}
 .user-switch .us-avatar{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:10px}
 </style>
@@ -493,7 +494,7 @@ var SK='***';
 var USER_KEY='star_users';
 var CURR_KEY='star_current';
 var SYNC_API=location.origin;
-var GH_TOKEN='ghp_4U…4jur';
+var GH_TOKEN='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';
 var GH_OWNER='wxx-1006';
 var GH_REPO='star-points';
 var GH_FILE='sync-data.json';
