@@ -131,6 +131,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .sbd .sds{font-size:10px;font-weight:700}
 .sbd.hd .sds{color:var(--p)}
 .sbd.tdy{border:2px solid var(--p)}
+.sbd{cursor:pointer}
+.sbd:active{transform:scale(.92)}
 .ei2{background:var(--card);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:var(--sh);margin-bottom:6px}
 .ei2 .eic{font-size:18px}
 .ei2 .ein{flex:1}
@@ -301,7 +303,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
     <button class="add-btn" onclick="openScore()"><span class="ab-icon">📝</span> 记录分数</button>
     <button class="add-btn" onclick="openExchange()" style="background:linear-gradient(135deg,#F59E0B,#F97316)"><span class="ab-icon">🎁</span> 兑换积分</button>
   </div>
-  <div class="sec"><div class="st">📝 今日记录</div><div class="rl" id="tr"></div></div>
+  <div class="sec"><div class="st"><span id="trTitle">📝 今日记录</span><span class="ftb" id="backToday" style="display:none;padding:3px 10px;font-size:11px" onclick="goToday()">回到今天</span></div><div class="rl" id="tr"></div></div>
 </div>
 
 <!-- 记录 -->
@@ -369,13 +371,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
     </div>
     <div class="ml-body">
       <div class="fg"><label class="fl">加分/扣分</label>
-        <div class="ct" id="scoreType">
-          <div class="ctb on" onclick="setScoreType('up')">➕ 加分</div>
-          <div class="ctb" onclick="setScoreType('down')">⚠️ 扣分</div>
-        </div>
+        <select class="fs" id="scoreType" onchange="setScoreType(this.value)">
+          <option value="up">➕ 加分</option>
+          <option value="down">⚠️ 扣分</option>
+        </select>
       </div>
-      <div class="fg"><label class="fl">分类</label><div class="ct" id="scat"></div></div>
+      <div class="fg"><label class="fl">分类</label><select class="fs" id="scat" onchange="selectCat(this.value)"></select></div>
       <div class="fg"><label class="fl">具体项目</label><select class="fs" id="sis"></select></div>
+      <div class="fg"><label class="fl">日期（可补录最近7天）</label><input type="date" class="fi" id="sdate"></div>
       <div class="fr">
         <div class="fg"><label class="fl">分值</label><input type="number" class="fi" id="sv" value="5"></div>
         <div class="fg"><label class="fl">备注</label><input type="text" class="fi" id="sn" placeholder="可选"></div>
@@ -817,6 +820,7 @@ var scoreType='up';
 var dateRangeStart=today();
 var dateRangeEnd=today();
 var curTypeFilter='所有';
+var selectedDay=null;   // 周概览选中的日期：联动记录分数默认日期 & 首页当日记录视图（null=今天）
 
 // Date picker state
 var dpMonth=new Date();
@@ -881,26 +885,44 @@ function renderHome(){
     var d=document.createElement('div');
     d.className='sbd'+(dr2.length>0?' hd':'')+(ds2===today()?' tdy':'');
     d.innerHTML='<span class="sdl">'+dl[i]+'</span><span class="sds">'+(dn>0?'+':'')+dn+'</span>';
+    d.onclick=(function(ds){return function(){openDayDetail(ds)}})(ds2);
     wb.appendChild(d);
   }
 
-  // 合并今日记录和兑换记录
-  var todayExchanges=ad.exchanges.filter(function(e){return e.date===today()});
-  var allToday=[];
-  for(var i=0;i<tr.length;i++) allToday.push({type:'record',data:tr[i]});
-  for(var i=0;i<todayExchanges.length;i++) allToday.push({type:'exchange',data:todayExchanges[i]});
-  allToday.sort(function(a,b){return b.data.timestamp-a.data.timestamp});
+  // 当日记录列表：视图日 = selectedDay || 今天，点击周概览某格即就地切换到那天的记录
+  var vd=selectedDay||today();
+  var vrecs=ad.records.filter(function(r){return r.date===vd});
+  var vexs=ad.exchanges.filter(function(e){return e.date===vd});
+  var vitems=[];
+  for(var i=0;i<vrecs.length;i++) vitems.push({type:'record',data:vrecs[i]});
+  for(var i=0;i<vexs.length;i++) vitems.push({type:'exchange',data:vexs[i]});
+  vitems.sort(function(a,b){return b.data.timestamp-a.data.timestamp});
+
+  document.getElementById('trTitle').textContent=dayTitle(vd);
+  document.getElementById('backToday').style.display=(vd!==today())?'':'none';
 
   var trl=document.getElementById('tr');
-  if(allToday.length===0) trl.innerHTML='<div class="es"><div class="ei">📝</div><div class="et">今天还没有记录哦<br>点击上方按钮开始加分吧！</div></div>';
-  else{
+  if(vitems.length===0){
+    trl.innerHTML=(vd===today())
+      ?'<div class="es"><div class="ei">📝</div><div class="et">今天还没有记录哦<br>点击上方按钮开始加分吧！</div></div>'
+      :'<div class="es"><div class="ei">📭</div><div class="et">该日暂无记录</div></div>';
+  }else{
     var html2='';
-    for(var i=0;i<allToday.length;i++){
-      if(allToday[i].type==='record') html2+=renderRecord(allToday[i].data,today());
-      else html2+=renderExchange(allToday[i].data,today());
+    for(var i=0;i<vitems.length;i++){
+      if(vitems[i].type==='record') html2+=renderRecord(vitems[i].data,vd);
+      else html2+=renderExchange(vitems[i].data,vd);
     }
     trl.innerHTML=html2;
   }
+}
+
+// 当日记录区块标题：视图日为今天 →「今日记录」；其他日子 →「当日记录 · X月X日 周X」
+function dayTitle(ds){
+  if(ds===today())return'📝 今日记录';
+  var p=ds.split('-');
+  var d=new Date(ds);
+  var w=['周日','周一','周二','周三','周四','周五','周六'];
+  return '📝 当日记录 · '+parseInt(p[1],10)+'月'+parseInt(p[2],10)+'日 '+w[d.getDay()];
 }
 
 function renderRecord(r,currentDay){
@@ -1035,7 +1057,14 @@ function setTypeFilter(t){curTypeFilter=t;renderRecords()}
 
 function openScore(){
   scoreType='up';
-  document.getElementById('scoreType').innerHTML='<div class="ctb on" onclick="setScoreType(\'up\')">➕ 加分</div><div class="ctb" onclick="setScoreType(\'down\')">⚠️ 扣分</div>';
+  document.getElementById('scoreType').value='up';
+  var dateInput=document.getElementById('sdate');
+  // 选中日联动：点击过周概览某天且不晚于今天 → 默认该天（补签）；未来日子或未点击 → 默认今天
+  var dv=today();
+  if(selectedDay && selectedDay<=today()) dv=selectedDay;
+  dateInput.value=dv;
+  dateInput.min=minRecordDate();
+  dateInput.max=today();
   populateCats();
   document.getElementById('sn').value='';
   document.getElementById('ms').classList.add('show');
@@ -1043,8 +1072,15 @@ function openScore(){
 
 function setScoreType(type){
   scoreType=type;
-  document.getElementById('scoreType').innerHTML='<div class="ctb'+(type==='up'?' on':'')+'" onclick="setScoreType(\'up\')">➕ 加分</div><div class="ctb'+(type==='down'?' on':'')+'" onclick="setScoreType(\'down\')">⚠️ 扣分</div>';
+  document.getElementById('scoreType').value=type;
   populateCats();
+}
+
+// 补签最早可选日期：今天往前 6 天（含今天共 7 天）
+function minRecordDate(){
+  var d=new Date();
+  d.setDate(d.getDate()-6);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
 function populateCats(){
@@ -1055,18 +1091,14 @@ function populateCats(){
   }
   var catHtml='';
   for(var i=0;i<cats.length;i++){
-    catHtml+='<div class="ctb" onclick="selectCat(\''+cats[i]+'\')">'+(ci[cats[i]]||'')+' '+cats[i]+'</div>';
+    catHtml+='<option value="'+cats[i]+'">'+(ci[cats[i]]||'')+' '+cats[i]+'</option>';
   }
   document.getElementById('scat').innerHTML=catHtml;
   if(cats.length>0) selectCat(cats[0]);
 }
 
 function selectCat(cat){
-  var tags=document.getElementById('scat').querySelectorAll('.ctb');
-  for(var i=0;i<tags.length;i++){
-    if(tags[i].textContent.indexOf(cat)>=0) tags[i].classList.add('on');
-    else tags[i].classList.remove('on');
-  }
+  document.getElementById('scat').value=cat;
   var items=scoreType==='up'?ad.upItems:ad.downItems;
   var html='';
   for(var i=0;i<items.length;i++){
@@ -1076,7 +1108,7 @@ function selectCat(cat){
     }
   }
   document.getElementById('sis').innerHTML=html;
-  if(items.length>0){
+  if(html){
     for(var i=0;i<items.length;i++){
       if(items[i].category===cat){document.getElementById('sv').value=items[i].score;break}
     }
@@ -1099,7 +1131,11 @@ function ss(){
   var sv=parseInt(document.getElementById('sv').value)||0;
   var sn=document.getElementById('sn').value.trim();
   if(sv<=0){toast('分值必须大于0');return}
-  var rec={id:'r_'+Date.now(),date:today(),timestamp:Date.now(),type:scoreType,itemId:it.id,name:it.name,category:it.category,score:scoreType==='up'?sv:-sv,note:sn};
+  var dateInput=document.getElementById('sdate');
+  var recDate=dateInput.value||today();
+  if(recDate>today()){toast('日期不能晚于今天');return}
+  if(recDate<minRecordDate()){toast('只能补录最近7天内的记录');return}
+  var rec={id:'r_'+Date.now(),date:recDate,timestamp:Date.now(),type:scoreType,itemId:it.id,name:it.name,category:it.category,score:scoreType==='up'?sv:-sv,note:sn};
   ad.records.push(rec);
   ad.totalPoints+=rec.score;
   sd(ad);
@@ -1159,6 +1195,19 @@ function deleteRecord(id){
     toast('已删除');
     render();
   });
+}
+
+// ===== 周概览点击 → 首页「当日记录」就地切换 =====
+function openDayDetail(ds){
+  // 点「今天」的格子即回到今天视图（清除选中）
+  selectedDay=(ds===today())?null:ds;
+  renderHome();
+}
+
+// 回到今天：清除选中日并恢复今日视图
+function goToday(){
+  selectedDay=null;
+  renderHome();
 }
 
 function sam(type){
