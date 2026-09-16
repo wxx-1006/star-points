@@ -128,6 +128,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .sb2{display:flex;gap:4px;justify-content:center;margin:10px 0;overflow-x:auto;padding-bottom:4px}
 .sbd{min-width:36px;height:40px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;background:var(--card);box-shadow:var(--sh);flex-shrink:0}
 .sbd .sdl{font-size:8px;color:var(--tl)}
+.sbd .sdd{font-size:7px;color:var(--tl);line-height:1}
 .sbd .sds{font-size:10px;font-weight:700}
 .sbd.hd .sds{color:var(--p)}
 .sbd.tdy{border:2px solid var(--p)}
@@ -298,7 +299,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
     <div class="sc"><div class="si">📉</div><div class="sv" id="td">0</div><div class="sl">今日扣分</div></div>
     <div class="sc"><div class="si">🔥</div><div class="sv" id="ts">0</div><div class="sl">连续天数</div></div>
   </div>
-  <div class="sec"><div class="st">📊 本周概览</div><div class="sb2" id="wb"></div></div>
+  <div class="sec"><div class="st">📊 近一周概览</div><div class="sb2" id="wb"></div></div>
   <div class="sec" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
     <button class="add-btn" onclick="openScore()"><span class="ab-icon">📝</span> 记录分数</button>
     <button class="add-btn" onclick="openExchange()" style="background:linear-gradient(135deg,#F59E0B,#F97316)"><span class="ab-icon">🎁</span> 兑换积分</button>
@@ -817,7 +818,7 @@ function renderAll(data){
 var curTab='home';
 var sectionState={};
 var scoreType='up';
-var dateRangeStart=today();
+var dateRangeStart=minRecordDate(); // 记录页默认筛选：近一周（今天-6 ~ 今天），仅初始化一次，用户改后以用户为准
 var dateRangeEnd=today();
 var curTypeFilter='所有';
 var selectedDay=null;   // 周概览选中的日期：联动记录分数默认日期 & 首页当日记录视图（null=今天）
@@ -874,18 +875,20 @@ function renderHome(){
   document.getElementById('ts').textContent=sk;
 
   var wb=document.getElementById('wb');wb.innerHTML='';
-  var dl=['一','二','三','四','五','六','日'];
-  var nw=new Date();var dow=nw.getDay()||7;var mon=new Date(nw);
-  mon.setDate(nw.getDate()-dow+1);
+  var dl=['日','一','二','三','四','五','六'];
+  // 近一周概览：滚动 7 天窗口（今天-6 ~ 今天），按时间正序排列，最右为今天
+  var ws=new Date();ws.setDate(ws.getDate()-6);
   for(var i=0;i<7;i++){
-    var dd2=new Date(mon);dd2.setDate(mon.getDate()+i);
+    var dd2=new Date(ws);dd2.setDate(ws.getDate()+i);
     var ds2=dd2.getFullYear()+'-'+String(dd2.getMonth()+1).padStart(2,'0')+'-'+String(dd2.getDate()).padStart(2,'0');
     var dr2=ad.records.filter(function(r){return r.date===ds2});
     var dn=dr2.reduce(function(s,r){return s+r.score},0);
     var d=document.createElement('div');
     var vd2=selectedDay||today(); // 视图日：蓝框跟随选中格，未选中时停在今天
+    var lbl=(ds2===today())?'今天':dl[dd2.getDay()];
+    var dstr=(dd2.getMonth()+1)+'/'+dd2.getDate(); // 小字日期，跨自然周/跨月时可区分
     d.className='sbd'+(dr2.length>0?' hd':'')+(vd2===ds2?' tdy':'');
-    d.innerHTML='<span class="sdl">'+dl[i]+'</span><span class="sds">'+(dn>0?'+':'')+dn+'</span>';
+    d.innerHTML='<span class="sdl">'+lbl+'</span><span class="sdd">'+dstr+'</span><span class="sds">'+(dn>0?'+':'')+dn+'</span>';
     d.onclick=(function(ds){return function(){openDayDetail(ds)}})(ds2);
     wb.appendChild(d);
   }
