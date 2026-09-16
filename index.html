@@ -900,7 +900,7 @@ function renderHome(){
   var vitems=[];
   for(var i=0;i<vrecs.length;i++) vitems.push({type:'record',data:vrecs[i]});
   for(var i=0;i<vexs.length;i++) vitems.push({type:'exchange',data:vexs[i]});
-  vitems.sort(function(a,b){return b.data.timestamp-a.data.timestamp});
+  vitems.sort(cmpTimeDesc);
 
   document.getElementById('trTitle').textContent=dayTitle(vd);
   document.getElementById('backToday').style.display=(vd!==today())?'':'none';
@@ -927,6 +927,14 @@ function dayTitle(ds){
   var d=new Date(ds);
   var w=['周日','周一','周二','周三','周四','周五','周六'];
   return '📝 当日记录 · '+parseInt(p[1],10)+'月'+parseInt(p[2],10)+'日 '+w[d.getDay()];
+}
+
+// 记录列表通用排序：按发生日期(data.date)降序，同日期内按录入时间(timestamp)降序。
+// 补签记录的 timestamp 是录入时刻而非发生日期，故必须先比 date 才符合用户视角的时间倒序；
+// timestamp 缺失（旧版迁移数据）按 0 处理，避免 NaN 导致排序错乱。
+function cmpTimeDesc(a,b){
+  if(a.data.date!==b.data.date) return a.data.date<b.data.date?1:-1;
+  return (b.data.timestamp||0)-(a.data.timestamp||0);
 }
 
 function renderRecord(r,currentDay){
@@ -972,7 +980,7 @@ function renderRecords(){
   if(dateRangeStart) allItems=allItems.filter(function(item){return item.data.date>=dateRangeStart});
   if(dateRangeEnd) allItems=allItems.filter(function(item){return item.data.date<=dateRangeEnd});
 
-  allItems.sort(function(a,b){return b.data.timestamp-a.data.timestamp});
+  allItems.sort(cmpTimeDesc);
 
   var ar=document.getElementById('ar');
   if(allItems.length===0) ar.innerHTML='<div class="es"><div class="ei">📭</div><div class="et">这个时间段还没有记录</div></div>';
