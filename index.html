@@ -883,7 +883,8 @@ function renderHome(){
     var dr2=ad.records.filter(function(r){return r.date===ds2});
     var dn=dr2.reduce(function(s,r){return s+r.score},0);
     var d=document.createElement('div');
-    d.className='sbd'+(dr2.length>0?' hd':'')+(ds2===today()?' tdy':'');
+    var vd2=selectedDay||today(); // 视图日：蓝框跟随选中格，未选中时停在今天
+    d.className='sbd'+(dr2.length>0?' hd':'')+(vd2===ds2?' tdy':'');
     d.innerHTML='<span class="sdl">'+dl[i]+'</span><span class="sds">'+(dn>0?'+':'')+dn+'</span>';
     d.onclick=(function(ds){return function(){openDayDetail(ds)}})(ds2);
     wb.appendChild(d);
