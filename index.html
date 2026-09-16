@@ -5,25 +5,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#3B82F6">
-<title>⭐ 星星积分</title>
+<meta name="theme-color" content="#E3000B">
+<title>🧱 乐高积分</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧱</text></svg>">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧱</text></svg>">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--p:#3B82F6;--pl:#60A5FA;--ps:#93C5FD;--s:#6366F1;--a:#F59E0B;--ok:#10B981;--no:#EF4444;--bg:#EFF6FF;--card:#fff;--tx:#1E293B;--tl:#94A3B8;--bd:#DBEAFE;--sh:0 4px 20px rgba(59,130,246,.12)}
+:root{--p:#E3000B;--pl:#FF6B6E;--ps:#FF9AA0;--s:#0057A8;--a:#FFB500;--ok:#00852B;--no:#D50000;--bg:#FDF6E9;--card:#fff;--tx:#33322E;--tl:#8C867A;--bd:#F0E4C8;--sh:0 2px 0 rgba(146,116,44,.10),0 5px 10px rgba(93,64,28,.10)}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding-bottom:70px;-webkit-tap-highlight-color:transparent}
-.header{background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;padding:18px 16px 22px;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(59,130,246,.3)}
+.header{background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;padding:18px 16px 22px;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(227,0,11,.25)}
 .header h1{font-size:18px;font-weight:700;text-align:center}
 .header .sub{text-align:center;font-size:11px;opacity:.85;margin-top:3px}
-.pc{background:linear-gradient(135deg,#3B82F6,#6366F1,#F59E0B);margin:-14px 14px 14px;border-radius:18px;padding:22px 16px;text-align:center;color:#fff;box-shadow:0 8px 30px rgba(59,130,246,.3);position:relative;z-index:10}
+.pc{background:linear-gradient(135deg,#E3000B,#FFB500);margin:-14px 14px 14px;border-radius:10px;padding:22px 16px;text-align:center;color:#fff;box-shadow:0 3px 0 rgba(146,116,44,.25),0 8px 18px rgba(227,0,11,.25);position:relative;z-index:10}
 .pc .lb{font-size:12px;opacity:.9}
 .pc .pts{font-size:52px;font-weight:800;line-height:1.1;text-shadow:0 2px 10px rgba(0,0,0,.15)}
 .pc .td{font-size:12px;margin-top:6px;opacity:.85}
-.pc .td .up{color:#A7F3D0}
-.pc .td .down{color:#FECACA}
+.pc .td .up{color:#FFE082}
+.pc .td .down{color:#FFC9C9}
 .qs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px;margin-bottom:14px}
 .sc{background:var(--card);border-radius:14px;padding:12px 6px;text-align:center;box-shadow:var(--sh)}
 .sc .si{font-size:20px;margin-bottom:3px}
@@ -31,7 +31,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .sc .sl{font-size:10px;color:var(--tl);margin-top:2px}
 .sec{padding:0 14px;margin-bottom:14px}
 .st{font-size:15px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:4px}
-.add-btn{background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;border-radius:16px;padding:14px;font-size:15px;font-weight:600;width:100%;cursor:pointer;box-shadow:0 6px 20px rgba(59,130,246,.3);display:flex;align-items:center;justify-content:center;gap:6px}
+.add-btn{background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;border:none;border-radius:16px;padding:14px;font-size:15px;font-weight:600;width:100%;cursor:pointer;box-shadow:0 6px 20px rgba(227,0,11,.25);display:flex;align-items:center;justify-content:center;gap:6px}
 .add-btn:active{transform:scale(.97)}
 .add-btn .ab-icon{font-size:20px}
 .rl{display:flex;flex-direction:column;gap:6px}
@@ -62,7 +62,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .si2 .sn{font-size:13px;font-weight:600}
 .si2 .sd{font-size:10px;color:var(--tl);margin-top:1px}
 .si2 .co{font-size:14px;font-weight:700;color:var(--p);margin-top:3px}
-.sb{padding:7px 14px;border-radius:10px;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;box-shadow:0 4px 12px rgba(59,130,246,.3)}
+.sb{padding:7px 14px;border-radius:10px;background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;box-shadow:0 4px 12px rgba(227,0,11,.25)}
 .sb:active{transform:scale(.94)}
 .sb:disabled{background:#D1D5DB;box-shadow:none;cursor:not-allowed}
 .sg{background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--sh);margin-bottom:10px}
@@ -98,12 +98,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .fr .fg{flex:1}
 .bn{width:100%;padding:13px;border-radius:14px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s}
 .bn:active{transform:scale(.97)}
-.bp{background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;box-shadow:0 4px 15px rgba(59,130,246,.3)}
+.bp{background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;box-shadow:0 4px 15px rgba(227,0,11,.25)}
 .bd2{background:var(--no);color:#fff}
 .bsm{width:auto;padding:8px 16px;font-size:13px;border-radius:12px}
 .ct{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .ctb{padding:7px 14px;border-radius:12px;font-size:13px;cursor:pointer;border:2px solid var(--bd);background:var(--card);transition:all .2s;user-select:none}
-.ctb.on{border-color:var(--p);background:#EFF6FF;color:var(--p);font-weight:600}
+.ctb.on{border-color:var(--p);background:#FFF3D6;color:var(--p);font-weight:600}
 .tb{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;border-top:1px solid var(--bd);z-index:100;padding-bottom:env(safe-area-inset-bottom)}
 .ti{flex:1;padding:8px 0 6px;text-align:center;cursor:pointer;user-select:none}
 .ti .ti2{font-size:20px}
@@ -158,7 +158,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .dp-day.inrange{background:var(--ps);color:#fff}
 ::-webkit-scrollbar{width:0}
 /* 登录页 */
-.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#3B82F6,#6366F1);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
+.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#E3000B,#B00008);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
 .login-page.show{display:flex}
 .login-logo{font-size:64px;margin-bottom:12px;animation:bounce 2s infinite}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
@@ -168,14 +168,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .login-card .fg{margin-bottom:18px}
 .login-card .fi{border:2px solid #E5E7EB}
 .login-card .fi:focus{border-color:var(--p)}
-.login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(59,130,246,.3);margin-top:8px}
+.login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(227,0,11,.25);margin-top:8px}
 .login-btn:active{transform:scale(.97)}
 .login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:var(--tl);font-size:12px}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#E5E7EB}
 .login-quick{display:flex;flex-direction:column;gap:8px}
 .login-quick-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg);cursor:pointer;transition:all .2s;border:2px solid transparent}
 .login-quick-item:active{transform:scale(.97);border-color:var(--p)}
-.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
 .login-quick-info{flex:1}
 .login-quick-name{font-size:14px;font-weight:600;color:var(--tx)}
 .login-quick-phone{font-size:11px;color:var(--tl);margin-top:2px}
@@ -191,8 +191,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .switch-header h3{font-size:16px;font-weight:700}
 .switch-item{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .2s;border-bottom:1px solid #F3F4F6}
 .switch-item:active{background:var(--bg)}
-.switch-item.current{background:#EFF6FF}
-.switch-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.switch-item.current{background:#FFF3D6}
+.switch-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
 .switch-info{flex:1}
 .switch-name{font-size:14px;font-weight:600}
 .switch-phone{font-size:11px;color:var(--tl);margin-top:2px}
@@ -200,7 +200,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .switch-add{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;color:var(--p);font-size:14px;font-weight:600;border-top:1px solid var(--bd)}
 .switch-add:active{background:var(--bg)}
 /* 登录页 */
-.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#3B82F6,#6366F1);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
+.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#E3000B,#B00008);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
 .login-page.show{display:flex}
 .login-logo{font-size:64px;margin-bottom:12px;animation:bounce 2s infinite}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
@@ -210,14 +210,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .login-card .fg{margin-bottom:18px}
 .login-card .fi{border:2px solid #E5E7EB}
 .login-card .fi:focus{border-color:var(--p)}
-.login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(59,130,246,.3);margin-top:8px}
+.login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(227,0,11,.25);margin-top:8px}
 .login-btn:active{transform:scale(.97)}
 .login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:var(--tl);font-size:12px}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#E5E7EB}
 .login-quick{display:flex;flex-direction:column;gap:8px}
 .login-quick-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg);cursor:pointer;transition:all .2s;border:2px solid transparent}
 .login-quick-item:active{transform:scale(.97);border-color:var(--p)}
-.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
 .login-quick-info{flex:1}
 .login-quick-name{font-size:14px;font-weight:600;color:var(--tx)}
 .login-quick-phone{font-size:11px;color:var(--tl);margin-top:2px}
@@ -233,8 +233,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .switch-header h3{font-size:16px;font-weight:700}
 .switch-item{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .2s;border-bottom:1px solid #F3F4F6}
 .switch-item:active{background:var(--bg)}
-.switch-item.current{background:#EFF6FF}
-.switch-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.switch-item.current{background:#FFF3D6}
+.switch-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
 .switch-info{flex:1}
 .switch-name{font-size:14px;font-weight:600}
 .switch-phone{font-size:11px;color:var(--tl);margin-top:2px}
@@ -242,7 +242,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .switch-add{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;color:var(--p);font-size:14px;font-weight:600;border-top:1px solid var(--bd)}
 .switch-add:active{background:var(--bg)}
 /* 登录页 */
-.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#3B82F6,#6366F1);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
+.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#E3000B,#B00008);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
 .login-page.show{display:flex}
 .login-logo{font-size:64px;margin-bottom:12px;animation:bounce 2s infinite}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
@@ -252,14 +252,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .login-card .fg{margin-bottom:18px}
 .login-card .fi{border:2px solid #E5E7EB}
 .login-card .fi:focus{border-color:var(--p)}
-.login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(59,130,246,.3);margin-top:8px}
+.login-btn{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(227,0,11,.25);margin-top:8px}
 .login-btn:active{transform:scale(.97)}
 .login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:var(--tl);font-size:12px}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#E5E7EB}
 .login-quick{display:flex;flex-direction:column;gap:8px}
 .login-quick-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--bg);cursor:pointer;transition:all .2s;border:2px solid transparent}
 .login-quick-item:active{transform:scale(.97);border-color:var(--p)}
-.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#6366F1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#E3000B,#B00008);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
 .login-quick-info{flex:1}
 .login-quick-name{font-size:14px;font-weight:600;color:var(--tx)}
 .login-quick-phone{font-size:11px;color:var(--tl);margin-top:2px}
@@ -269,12 +269,45 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 #syncBtn{left:14px;right:auto;z-index:60}
 .user-switch:active{transform:scale(.95);background:rgba(255,255,255,.3)}
 .user-switch .us-avatar{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:10px}
+/* ===== 乐高主题装饰（仅视觉，无功能逻辑） ===== */
+/* 页面底纹：淡淡的积木圆点 */
+body{background-image:radial-gradient(circle at 12px 12px,#F3E7CC 2px,transparent 2.6px);background-size:30px 30px}
+/* 顶栏改方正塑料感：硬阴影 + 小圆角 */
+.header{border-radius:0 0 10px 10px;box-shadow:0 3px 0 rgba(146,116,44,.25),0 6px 14px rgba(227,0,11,.25)}
+/* 总积分卡片顶部凸点 studs */
+.pc::before{content:'';position:absolute;top:7px;left:16px;right:16px;height:9px;background-image:radial-gradient(circle at 50% 45%,rgba(255,255,255,.5) 3px,rgba(0,0,0,.12) 3.7px,transparent 4.3px);background-size:20px 9px;background-repeat:repeat-x;pointer-events:none}
+/* tabBar 底栏：顶部一排凸点 */
+.tb::before{content:'';position:absolute;top:2px;left:10px;right:10px;height:5px;background-image:radial-gradient(circle at 50% 55%,rgba(0,0,0,.07) 2.2px,transparent 2.8px);background-size:18px 5px;background-repeat:repeat-x;pointer-events:none}
+.ti{padding-top:10px}
+/* 主按钮/弹窗按钮：乐高砖块（方正 + 顶部凸点 + 按压下沉） */
+.add-btn,.login-btn,.bn{position:relative;border-radius:10px}
+.add-btn{box-shadow:0 4px 0 rgba(80,50,10,.28),0 6px 12px rgba(80,50,10,.15)}
+.add-btn::before{content:'';position:absolute;top:3px;left:50%;transform:translateX(-50%);width:76px;height:7px;background-image:radial-gradient(circle at 50% 50%,rgba(255,255,255,.45) 2.6px,rgba(0,0,0,.14) 3.2px,transparent 3.8px);background-size:26px 7px;background-repeat:repeat-x;pointer-events:none}
+.login-btn{box-shadow:0 4px 0 rgba(122,0,5,.35),0 6px 12px rgba(227,0,11,.2)}
+.login-btn::before{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:76px;height:7px;background-image:radial-gradient(circle at 50% 50%,rgba(255,255,255,.45) 2.6px,rgba(0,0,0,.14) 3.2px,transparent 3.8px);background-size:26px 7px;background-repeat:repeat-x;pointer-events:none}
+.bn.bp{box-shadow:0 3px 0 rgba(122,0,5,.3),0 4px 8px rgba(227,0,11,.15)}
+.bn.bp::before{content:'';position:absolute;top:3px;left:50%;transform:translateX(-50%);width:58px;height:6px;background-image:radial-gradient(circle at 50% 50%,rgba(255,255,255,.4) 2.2px,rgba(0,0,0,.12) 2.8px,transparent 3.4px);background-size:20px 6px;background-repeat:repeat-x;pointer-events:none}
+/* 按压 = 积木按下去（覆盖此前的 scale 效果，仅视觉） */
+.add-btn:active{transform:translateY(2px)}
+.login-btn:active{transform:translateY(2px)}
+.bn:active{transform:translateY(2px)}
+/* 卡片方正化 + 塑料描边 */
+.sc,.ri,.si2,.dateTrigger{border-radius:10px;border:1px solid rgba(146,116,44,.10)}
+.sg,.sbd,.sr,.ei2{border-radius:8px}
+.sr,.ei2{border:1px solid rgba(146,116,44,.10)}
+.ri .ic{border-radius:8px}
+.ftb{border-radius:10px}
+.ml,.switch-card{border-radius:16px 16px 0 0}
+.cb{border-radius:12px;border:1px solid rgba(146,116,44,.12)}
+.login-card{border-radius:16px;border:2px solid #FFB500}
+/* 周概览小砖块 */
+.sbd{border:1px solid rgba(146,116,44,.12);box-shadow:0 2px 0 rgba(146,116,44,.10)}
 </style>
 </head>
 <body>
 
 <div class="header" id="mainHeader">
-  <h1>⭐ 星星积分</h1>
+  <h1>🧱 乐高积分</h1>
   <div class="sub" id="hd"></div>
   <button class="user-switch" id="userSwitch" onclick="showSwitchModal()" style="display:none">
     <span id="syncStatus" style="font-size:11px;margin-right:4px"></span>
@@ -290,7 +323,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <!-- 首页 -->
 <div class="pg on" id="p-home">
   <div class="pc">
-    <div class="lb">✨ 总积分</div>
+    <div class="lb">🧱 总积分</div>
     <div class="pts" id="tp">0</div>
     <div class="td" id="tdp">今日：+0</div>
   </div>
@@ -299,12 +332,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
     <div class="sc"><div class="si">📉</div><div class="sv" id="td">0</div><div class="sl">今日扣分</div></div>
     <div class="sc"><div class="si">🔥</div><div class="sv" id="ts">0</div><div class="sl">连续天数</div></div>
   </div>
-  <div class="sec"><div class="st">📊 近一周概览</div><div class="sb2" id="wb"></div></div>
+  <div class="sec"><div class="st">🧱 近一周概览</div><div class="sb2" id="wb"></div></div>
   <div class="sec" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
     <button class="add-btn" onclick="openScore()"><span class="ab-icon">📝</span> 记录分数</button>
-    <button class="add-btn" onclick="openExchange()" style="background:linear-gradient(135deg,#F59E0B,#F97316)"><span class="ab-icon">🎁</span> 兑换积分</button>
+    <button class="add-btn" onclick="openExchange()" style="background:linear-gradient(135deg,#0057A8,#0072CE)"><span class="ab-icon">🎁</span> 兑换积分</button>
   </div>
-  <div class="sec"><div class="st"><span id="trTitle">📝 今日记录</span><span class="ftb" id="backToday" style="display:none;padding:3px 10px;font-size:11px" onclick="goToday()">回到今天</span></div><div class="rl" id="tr"></div></div>
+  <div class="sec"><div class="st"><span id="trTitle">🏗️ 今日记录</span><span class="ftb" id="backToday" style="display:none;padding:3px 10px;font-size:11px" onclick="goToday()">回到今天</span></div><div class="rl" id="tr"></div></div>
 </div>
 
 <!-- 记录 -->
@@ -473,8 +506,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 
 <!-- 登录页 -->
 <div class="login-page" id="loginPage">
-  <div class="login-logo">⭐</div>
-  <div class="login-title">星星积分</div>
+  <div class="login-logo">🧱</div>
+  <div class="login-title">乐高积分</div>
   <div class="login-sub">记录成长，兑换惊喜</div>
   <div class="login-card">
     <div class="fg"><label class="fl">手机号</label><input type="tel" class="fi" id="loginPhone" placeholder="请输入手机号" maxlength="11"></div>
@@ -908,7 +941,7 @@ function renderHome(){
   var trl=document.getElementById('tr');
   if(vitems.length===0){
     trl.innerHTML=(vd===today())
-      ?'<div class="es"><div class="ei">📝</div><div class="et">今天还没有记录哦<br>点击上方按钮开始加分吧！</div></div>'
+      ?'<div class="es"><div class="ei">🏗️</div><div class="et">今天还没有记录哦<br>点击上方按钮开始加分吧！</div></div>'
       :'<div class="es"><div class="ei">📭</div><div class="et">该日暂无记录</div></div>';
   }else{
     var html2='';
@@ -922,11 +955,11 @@ function renderHome(){
 
 // 当日记录区块标题：视图日为今天 →「今日记录」；其他日子 →「当日记录 · X月X日 周X」
 function dayTitle(ds){
-  if(ds===today())return'📝 今日记录';
+  if(ds===today())return'🏗️ 今日记录';
   var p=ds.split('-');
   var d=new Date(ds);
   var w=['周日','周一','周二','周三','周四','周五','周六'];
-  return '📝 当日记录 · '+parseInt(p[1],10)+'月'+parseInt(p[2],10)+'日 '+w[d.getDay()];
+  return '🏗️ 当日记录 · '+parseInt(p[1],10)+'月'+parseInt(p[2],10)+'日 '+w[d.getDay()];
 }
 
 // 记录列表通用排序：按发生日期(data.date)降序，同日期内按录入时间(timestamp)降序。
