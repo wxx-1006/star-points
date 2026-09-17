@@ -111,10 +111,11 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 
 /* —— 周概览条：7 格，今日红描边，有记录格底部色条 —— */
 .wb{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.sbd{position:relative;height:48px;border:var(--bd);border-radius:var(--r-s);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
+.sbd{position:relative;height:62px;border:var(--bd);border-radius:var(--r-s);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
 .sbd:active{transform:scale(.94)}
-.sdl{font:var(--f-mini);color:var(--ink2)}
-.sdd{font:var(--f-item);font-weight:600;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+.sdl{font:500 9px/1.2 var(--ff);color:var(--ink2)}
+.sdd{font:600 11px/1.2 var(--ff);color:var(--ink);font-variant-numeric:tabular-nums;margin-top:1px}
+.sds{font:600 13px/1.2 var(--ff);margin-top:3px;font-variant-numeric:tabular-nums}
 .sbd.tdy{border:1.5px solid var(--red);background:var(--red-l)}
 .sbd.tdy .sdl,.sbd.tdy .sdd{color:var(--red-deep)}
 .sdbar{position:absolute;left:0;right:0;bottom:0;height:3px}
@@ -970,11 +971,15 @@ function renderHome(){
     if(upN>0&&dnN>0)bar='var(--yellow)';
     else if(dn>0)bar='var(--green)';
     else if(dn<0)bar='var(--red)';
+    // 净分数字：正分绿 / 负分红 / 0（含无记录日）次级灰，成为格子视觉主体
+    var sTxt='0',sClr='var(--ink2)';
+    if(dn>0){sTxt='+'+dn;sClr='var(--grn-deep)'}
+    else if(dn<0){sTxt=String(dn);sClr='var(--red-deep)'}
     var d=document.createElement('div');
     var vd2=selectedDay||today(); // 视图日：红框跟随选中格，未选中时停在今天
     var lbl=(ds2===today())?'今天':dl[dd2.getDay()];
     d.className='sbd'+(vd2===ds2?' tdy':'');
-    d.innerHTML='<span class="sdl">'+lbl+'</span><span class="sdd">'+dd2.getDate()+'</span>'+(bar?'<i class="sdbar" style="background:'+bar+'"></i>':'');
+    d.innerHTML='<span class="sdl">'+lbl+'</span><span class="sdd">'+dd2.getDate()+'</span><span class="sds" style="color:'+sClr+'">'+sTxt+'</span>'+(bar?'<i class="sdbar" style="background:'+bar+'"></i>':'');
     d.onclick=(function(ds){return function(){openDayDetail(ds)}})(ds2);
     wb.appendChild(d);
   }
