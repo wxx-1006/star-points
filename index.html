@@ -412,7 +412,7 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
       <div class="sg">
         <div class="sgh" style="cursor:default"><div class="sgt"><span class="gh-dot" style="background:var(--blue)" aria-hidden="true"></span>云端同步</div></div>
         <div style="padding:12px 16px 16px">
-          <div class="sync-hint">填入仅授权 star-points-data 仓库的 GitHub token，多设备填同一 token 即可同步</div>
+          <div class="sync-hint">填入仅授权 star-points-data 仓库的 GitHub token，多设备填同一 token 即可同步；新仓库首次使用时云端为空属正常，记分后自动创建</div>
           <div class="fg" style="margin:10px 0 0"><label class="fl">GitHub Token</label><input type="password" class="fi" id="syncTokenInput" placeholder="github_pat_ 开头" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
           <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="saveSyncToken()">保存</button>
           <div class="sync-line" id="syncStateLine"></div>
@@ -607,8 +607,9 @@ function migrateOldData(phone){try{var old=localStorage.getItem(SK);if(old&&phon
 // 状态机（用户胶囊 6px 色点 + 设置页状态行）：
 //   off    灰 = 未配置 token，同步静默跳过，本地照常
 //   loading 黄 = 同步请求进行中
+//   empty  灰 = 已配置，但云端暂无数据文件（新仓库首次使用，正常态），本地照常
 //   synced  绿 = 最近一次同步成功
-//   error   红 = token 无效(401/404)/无权限 或 网络失败；本地数据不受影响
+//   error   红 = token 无效(401)/无权限 或 网络失败；本地数据不受影响
 // 冲突策略：last-write-wins（后保存整体覆盖），家庭场景够用。
 function utf8ToB64(str){return btoa(unescape(encodeURIComponent(str)))}
 function b64ToUtf8(b64){return decodeURIComponent(escape(atob(b64)))}
@@ -623,8 +624,13 @@ function syncPull(phone){
   updateSyncUI();
   return fetch(GH_API,{headers:{'Authorization':'token '+token}})
     .then(function(r){
-      if(r.status===401||r.status===404){ // token 无效或无权限（私有仓库无权限 GET 返回 404）
+      if(r.status===401){ // token 无效
         syncStatus='error';syncErr='token 无效或无权限，请到设置页重新填写';
+        updateSyncUI();
+        return ld();
+      }
+      if(r.status===404){ // 云端数据文件尚未创建（新仓库首次使用，正常态）：不报错，本地照常
+        syncStatus='empty';syncErr='';
         updateSyncUI();
         return ld();
       }
@@ -690,8 +696,11 @@ function syncPush(data){
       var content=utf8ToB64(JSON.stringify(allData));
       return fetch(GH_API,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:JSON.stringify({message:'sync:'+currentUser,content:content,sha:syncSHA})})
         .then(function(r){
-          if(r.status===401||r.status===403){
+          if(r.status===401){
             syncStatus='error';syncErr='token 无效或无权限，请到设置页重新填写';
+          }else if(r.status===403||r.status===404){
+            // 推送被拒：多半是 token 未勾选该仓库或 Contents 权限不足，给出具体排查指引
+            syncStatus='error';syncErr='token 权限不足：请检查是否勾选了 star-points-data 仓库且 Contents 为 Read and write';
           }else if(r.ok){
             syncStatus='synced';syncErr='';
           }else{
@@ -735,6 +744,8 @@ function renderSyncSettings(){
     dot='wait';txt='已配置 · 同步中…';
   }else if(syncStatus==='synced'){
     dot='ok';txt='已配置 · 最近同步成功';
+  }else if(syncStatus==='empty'){
+    dot='off';txt='已配置 · 云端暂无数据，首次记分后自动创建';
   }else if(syncStatus==='error'){
     dot='err';txt=syncErr||'同步失败';
   }else{
