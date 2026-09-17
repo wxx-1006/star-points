@@ -5,292 +5,317 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#FAF1DF">
-<title>🧱 乐高积分</title>
+<meta name="theme-color" content="#FBF7EF">
+<title>乐高积分</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧱</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='36' width='84' height='56' rx='14' fill='%23EE6F5F'/><circle cx='34' cy='36' r='13' fill='%23EE6F5F'/><circle cx='66' cy='36' r='13' fill='%23EE6F5F'/></svg>">
 <style>
-/* ===== v3：奶油底 + 马卡龙积木色设计系统 =====
-   规则：所有颜色一律走 :root token；gradient 只允许 token 组合；
-   功能域固定积木色：加分=绿 / 扣分&主操作=红 / 兑换&连续=黄 / 记录筛选&日期=蓝 */
+/* ===== v4：安静温暖的绘本底子 + 少而精的积木玩具感 =====
+   纪律：颜色/字号/圆角/间距一律走 token；无 emoji；凸点只存在于
+   总积分卡徽章、登录 logo、tabBar 首页图标、空状态插画 4 处；
+   凸点画法 = inset 阴影 + 白点高光（禁止 radial-gradient）。 */
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  /* —— 中性底色 —— */
-  --cream:#FAF1DF;          /* 页面奶油底 */
-  --cream-hi:#FDF8EC;       /* 奶油高光（渐变起点） */
-  --card:#FFFFFF;           /* 卡片纯白 */
-  --tx:#3D3A34;             /* 主文字：深暖灰 */
-  --tx2:#8A8478;            /* 次文字 */
-  --bd:#EFE6D6;             /* 描边/分隔线（暖） */
-  --gray-l:#F0EBE0;         /* 灰色系底（编辑/删除/取消） */
-  --overlay:rgba(61,58,52,.45);
-  /* —— 四大积木色（马卡龙化） —— */
-  --red:#E45A50;            /* 品牌/主按钮/选中态 */
-  --yellow:#F5B840;         /* 兑换/连续天数 */
-  --blue:#5B9BD5;           /* 记录筛选/日期选择 */
-  --green:#6BBF8A;          /* 加分 */
-  /* —— 积木色深色变体（文字/按钮） —— */
-  --red-deep:#C94B42;
-  --yellow-deep:#8A5F0A;
-  --blue-deep:#3E7CAD;
-  --green-deep:#3D8B5F;
-  /* —— 积木色浅底衍生（色块底衬） —— */
-  --red-l:#FDEAE8;
-  --yellow-l:#FCF1D8;
-  --blue-l:#E8F1FA;
-  --green-l:#E9F5EE;
-  --red-l2:#F7D4D0;
-  --yellow-l2:#F5E2B4;
-  --blue-l2:#D3E5F5;
-  --green-l2:#D5EBDF;
-  /* —— 凸点高光/暗边（砖块画法用） —— */
-  --red-hi:#F4968E;  --red-lo:#C94840;
-  --yellow-hi:#FFE18C; --yellow-lo:#DDA123;
-  --blue-hi:#8FC0E8; --blue-lo:#4784B8;
-  --green-hi:#94D6AE; --green-lo:#54A871;
-  /* —— 圆角 —— */
-  --r-card:16px; --r-btn:12px; --r-sm:10px;
-  /* —— 阴影（统一 soft） —— */
-  --sh:0 2px 8px rgba(61,58,52,.06),0 8px 24px rgba(61,58,52,.08);
-  --sh-sm:0 1px 3px rgba(61,58,52,.06);
-  --sh-red:0 3px 10px rgba(228,90,80,.25);
-  --sh-yellow:0 3px 10px rgba(245,184,64,.35);
-  /* —— v2 token 别名（遗留内联样式/JS 字符串引用，统一映射到新体系） —— */
-  --p:var(--red); --pd:var(--red-deep); --s:var(--blue); --a:var(--yellow);
-  --ok:var(--green-deep); --no:var(--red-deep); --bg:var(--cream); --tl:var(--tx2);
+  /* —— 中性（占页面 ~60%）—— */
+  --bg:#FBF7EF;
+  --card:#FFFFFF;
+  --ink:#4A4238;
+  --ink2:#8F8578;
+  --ink3:#BDB3A4;
+  --line:#F0EADC;
+  --fill:#F6F1E7;
+  --overlay:rgba(74,66,56,.4);
+  /* —— 四积木色（马卡龙化，占页面 ~10%）—— */
+  --red:#EE6F5F;   --red-deep:#C9503F;  --red-l:#FCEDE9;
+  --yellow:#F4B942;--yel-deep:#8F6210;  --yellow-l:#FCF3DC;
+  --blue:#6FA6D8;  --blue-deep:#3C72A4; --blue-l:#EAF2FA;
+  --green:#63BD87; --grn-deep:#337E55;  --green-l:#E8F5EC;
+  /* —— 品牌主色别名 —— */
+  --primary:var(--red);--primary-deep:var(--red-deep);--primary-l:var(--red-l);
+  /* —— 字号阶梯（8 级）—— */
+  --ff:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  --f-hero:800 44px/1.1 var(--ff);
+  --f-title:700 20px/1.3 var(--ff);
+  --f-h2:700 17px/1.4 var(--ff);
+  --f-body:400 15px/1.5 var(--ff);
+  --f-item:400 13px/1.5 var(--ff);
+  --f-cap:400 11px/1.4 var(--ff);
+  --f-mini:500 10px/1.2 var(--ff);
+  --f-display:800 26px/1.3 var(--ff); /* 登录页标题（§4.15：f-title 放大至 26px 800） */
+  /* —— 圆角（3 档 + 胶囊）—— */
+  --r-s:10px;--r-m:16px;--r-l:22px;--r-full:999px;
+  /* —— 阴影与描边 —— */
+  --sh-card:0 1px 2px rgba(74,66,56,.04),0 4px 14px rgba(74,66,56,.05);
+  --sh-cta:0 4px 14px rgba(238,111,95,.28);
+  --bd:1px solid var(--line);
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--cream);color:var(--tx);min-height:100vh;padding-bottom:70px;-webkit-tap-highlight-color:transparent}
-/* —— 顶栏：奶油底延续，品牌靠标题 + 左侧小红砖 logo —— */
-.header{background:linear-gradient(180deg,var(--cream-hi),var(--cream));color:var(--tx);padding:16px 16px 14px;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--bd)}
-.header h1{font-size:18px;font-weight:800;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
-.header .sub{text-align:center;font-size:11px;color:var(--tx2);margin-top:3px}
-.logo-brick{display:inline-block;width:24px;height:17px;border-radius:4px;background-color:var(--red);background-image:radial-gradient(circle at 32% 24%,rgba(255,255,255,.55) 0 2.4px,transparent 3px),radial-gradient(circle at 68% 24%,rgba(255,255,255,.55) 0 2.4px,transparent 3px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.25),var(--sh-red)}
-/* —— 顶栏用户/同步按钮：奶油底上的白胶囊 —— */
-.user-switch{position:absolute;top:12px;right:14px;background:var(--card);border:1.5px solid var(--bd);border-radius:20px;padding:5px 12px;color:var(--tx);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;box-shadow:var(--sh-sm);transition:all .2s;z-index:50}
-#syncBtn{left:14px;right:auto;z-index:60}
-.user-switch:active{transform:scale(.95);background:var(--cream)}
-.user-switch .us-avatar{width:20px;height:20px;border-radius:50%;background:var(--red-l);color:var(--red-deep);display:flex;align-items:center;justify-content:center;font-size:10px}
-/* —— 总积分卡：白卡为主 + 右上角黄红双色积木角标 —— */
-.pc{background:var(--card);margin:12px 14px 14px;border-radius:var(--r-card);padding:20px 16px 18px;text-align:center;box-shadow:var(--sh);position:relative;z-index:10}
-.pc .lb{font-size:12px;color:var(--tx2);font-weight:600;letter-spacing:1px}
-.pc .pts{font-size:48px;font-weight:800;line-height:1.15;color:var(--tx);margin-top:2px}
-.pc .td{font-size:12px;margin-top:4px;color:var(--tx2)}
-.pc .td .up{color:var(--green-deep);font-weight:700}
-.pc .td .down{color:var(--red-deep);font-weight:700}
-.pc-brick{position:absolute;top:18px;right:16px;display:grid;grid-template-columns:repeat(4,11px);gap:3px;padding:5px;border-radius:6px;background:linear-gradient(90deg,var(--yellow) 0 50%,var(--red) 50% 100%);box-shadow:inset 0 -2px 0 rgba(0,0,0,.14),var(--sh)}
-.pc-brick i{display:block;width:11px;height:11px;border-radius:50%;box-shadow:inset 0 -1.5px 1.5px rgba(0,0,0,.22),inset 0 1.5px 1.5px rgba(255,255,255,.45)}
-.pc-brick i:nth-child(-n+4){background:radial-gradient(circle at 35% 28%,var(--yellow-hi) 0%,var(--yellow) 58%,var(--yellow-lo) 100%)}
-.pc-brick i:nth-child(n+5){background:radial-gradient(circle at 35% 28%,var(--red-hi) 0%,var(--red) 58%,var(--red-lo) 100%)}
-/* —— 三宫格统计：浅底色块 + 深色数字（绿/红/黄） —— */
-.qs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 14px;margin-bottom:16px}
-.sc{background:var(--card);border-radius:var(--r-card);padding:12px 6px;text-align:center;box-shadow:var(--sh)}
-.sc .si{font-size:18px;width:34px;height:34px;margin:0 auto 5px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center}
-.qs .sc:nth-child(1) .si{background:var(--green-l)}
-.qs .sc:nth-child(2) .si{background:var(--red-l)}
-.qs .sc:nth-child(3) .si{background:var(--yellow-l)}
-.sc .sv{font-size:18px;font-weight:700;color:var(--tx)}
-.qs .sc:nth-child(1) .sv{color:var(--green-deep)}
-.qs .sc:nth-child(2) .sv{color:var(--red-deep)}
-.qs .sc:nth-child(3) .sv{color:var(--yellow-deep)}
-.sc .sl{font-size:10px;color:var(--tx2);margin-top:2px}
-/* —— 区块标题：左侧小砖块图标 —— */
-.sec{padding:0 14px;margin-bottom:16px}
-.st{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.st::before{content:'';width:16px;height:11px;border-radius:3px;background-color:var(--red);background-image:radial-gradient(circle at 30% 30%,rgba(255,255,255,.5) 0 2px,transparent 2.6px),radial-gradient(circle at 70% 30%,rgba(255,255,255,.5) 0 2px,transparent 2.6px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.12);flex-shrink:0}
-/* —— 主操作按钮：记录分数=红砖（顶部凸点），兑换积分=黄砖 —— */
-.add-btn{position:relative;overflow:hidden;background:var(--red);color:#fff;border:none;border-radius:var(--r-btn);padding:13px 8px;font-size:15px;font-weight:700;width:100%;cursor:pointer;box-shadow:var(--sh-red);display:flex;align-items:center;justify-content:center;gap:6px;transition:transform .15s,box-shadow .15s}
-.add-btn::before{content:'';position:absolute;top:0;left:0;right:0;height:8px;background-image:radial-gradient(circle at 9px 0,rgba(255,255,255,.32) 0 4px,transparent 4.8px);background-size:18px 8px;background-position:center top;background-repeat:repeat-x;pointer-events:none}
-.add-btn:active{transform:scale(.97)}
-.add-btn .ab-icon{font-size:18px}
-.add-btn.ex{background:var(--yellow);color:var(--yellow-deep);box-shadow:var(--sh-yellow)}
-.add-btn.ex::before{background-image:radial-gradient(circle at 9px 0,rgba(255,255,255,.4) 0 4px,transparent 4.8px)}
-/* —— 记录列表 —— */
-.rl{display:flex;flex-direction:column;gap:8px}
-.ri{background:var(--card);border-radius:var(--r-card);padding:11px 12px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh)}
-.ri:active{transform:scale(.985)}
-.ri .ic{width:36px;height:36px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.ri .ic.u{background:var(--green-l)}
-.ri .ic.d{background:var(--red-l)}
-.ri .ic.e{background:var(--yellow-l)}
-.ri .inf{flex:1;min-width:0}
-.ri .nm{font-size:13px;font-weight:600}
-.ri .tm{font-size:10px;color:var(--tx2);margin-top:1px}
-.ri .sc2{font-size:16px;font-weight:700;flex-shrink:0}
-.ri .sc2.u{color:var(--green-deep)}
-.ri .sc2.d{color:var(--red-deep)}
-.ri .dl{width:26px;height:26px;border-radius:8px;background:var(--red-l);border:none;color:var(--red-deep);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-/* —— 记录页筛选 tabs：选中=蓝 —— */
-.ft{display:flex;gap:6px;padding:0 14px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.ft::-webkit-scrollbar{display:none}
-.ftb{padding:6px 14px;border-radius:18px;font-size:12px;font-weight:500;white-space:nowrap;cursor:pointer;background:var(--card);border:1px solid var(--bd);color:var(--tx2);transition:all .2s;user-select:none}
-.ftb.on{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:600}
-/* —— 记录页日期触发条：蓝浅底 —— */
-.dateTrigger{background:var(--blue-l);border:1px solid var(--blue-l2);border-radius:var(--r-btn);padding:14px 16px;margin:10px 14px 0;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
-.dateTriggerText{font-size:14px;color:var(--blue-deep);font-weight:600}
-.dateTriggerIcon{font-size:14px;color:var(--blue-deep)}
-/* —— 兑换列表：黄砖域 —— */
-.sl2{display:flex;flex-direction:column;gap:8px}
-.si2{background:var(--card);border-radius:var(--r-card);padding:14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh)}
-.si2 .ico{width:44px;height:44px;border-radius:var(--r-btn);display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--yellow-l);flex-shrink:0}
-.si2 .info{flex:1}
-.si2 .sn{font-size:13px;font-weight:600}
-.si2 .sd{font-size:10px;color:var(--tx2);margin-top:1px}
-.si2 .co{font-size:14px;font-weight:700;color:var(--yellow-deep);margin-top:3px}
-.sb{padding:7px 14px;border-radius:var(--r-sm);background:var(--yellow);color:var(--yellow-deep);border:none;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;box-shadow:var(--sh-yellow)}
-.sb:active{transform:scale(.94)}
-.sb:disabled{background:var(--gray-l);color:var(--tx2);box-shadow:none;cursor:not-allowed}
-/* —— 设置页：分组卡 + 组标题左侧色砖（红/蓝/绿） —— */
-.sg{background:var(--card);border-radius:var(--r-card);overflow:hidden;box-shadow:var(--sh);margin-bottom:10px}
-.sgh{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;border-bottom:1px solid transparent;transition:all .2s}
-.sgh.open{border-bottom-color:var(--bd)}
-.sgh .sgt{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
-.sgh .sgt .cnt{font-size:11px;color:var(--tx2);font-weight:400}
-.sgh .arr{font-size:12px;color:var(--tx2);transition:transform .2s}
-.sgh.open .arr{transform:rotate(180deg)}
-.sgt.brick-red::before,.sgt.brick-blue::before,.sgt.brick-green::before{content:'';width:14px;height:10px;border-radius:3px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12);background-image:radial-gradient(circle at 30% 30%,rgba(255,255,255,.5) 0 1.8px,transparent 2.4px),radial-gradient(circle at 70% 30%,rgba(255,255,255,.5) 0 1.8px,transparent 2.4px);flex-shrink:0}
-.sgt.brick-red::before{background-color:var(--red)}
-.sgt.brick-blue::before{background-color:var(--blue)}
-.sgt.brick-green::before{background-color:var(--green)}
-.sgc{padding:0 14px 10px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease}
-.sgc.open{max-height:2000px;padding:10px 14px 14px}
-.sr{background:var(--card);border-radius:var(--r-sm);padding:8px 10px;display:flex;align-items:center;gap:6px;box-shadow:var(--sh-sm);margin-bottom:6px}
-.sr .n{flex:1;font-size:12px;word-break:break-all}
-.sr .s{font-size:12px;font-weight:700;width:40px;text-align:center;flex-shrink:0}
-.sr .s.u{color:var(--green-deep)}
-.sr .s.d{color:var(--red-deep)}
-.sr .x,.sr .ed{width:22px;height:22px;border-radius:6px;background:var(--gray-l);border:none;color:var(--tx2);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-/* —— 弹窗 —— */
-.mo{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay);z-index:200;display:none;align-items:flex-end;justify-content:center}
-.mo.show{display:flex}
-.ml{background:var(--card);border-radius:18px 18px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:0;animation:su .25s ease}
-@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.ml-header{padding:18px 16px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
-.ml-title{font-size:17px;font-weight:700;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;gap:7px}
-.ml-title::before{content:'';width:18px;height:12px;border-radius:3px;background-color:var(--red);background-image:radial-gradient(circle at 30% 28%,rgba(255,255,255,.5) 0 2.2px,transparent 2.9px),radial-gradient(circle at 70% 28%,rgba(255,255,255,.5) 0 2.2px,transparent 2.9px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.12);flex-shrink:0}
-#ms2 .ml-title::before{background-color:var(--yellow)}
-#datePicker .ml-title::before{background-color:var(--blue)}
-.ml-close{width:30px;height:30px;border-radius:50%;background:var(--cream);border:none;font-size:16px;cursor:pointer;color:var(--tx2);display:flex;align-items:center;justify-content:center}
-.ml-body{padding:16px}
-/* —— 表单 —— */
-.fg{margin-bottom:14px}
-.fl{font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px;display:block}
-.fi{width:100%;padding:11px 14px;border-radius:var(--r-btn);border:1.5px solid var(--bd);font-size:14px;background:var(--card);color:var(--tx);outline:none;transition:border-color .2s}
-.fi:focus{border-color:var(--red)}
-.fs{width:100%;padding:11px 14px;border-radius:var(--r-btn);border:1.5px solid var(--bd);font-size:14px;background:var(--card);color:var(--tx);outline:none;appearance:none}
-.fr{display:flex;gap:10px}
-.fr .fg{flex:1}
-.bn{width:100%;padding:13px;border-radius:var(--r-btn);border:none;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s}
-.bn:active{transform:scale(.97)}
-.bn.bp{background:var(--red);color:#fff;box-shadow:var(--sh-red)}
-#ms2 .bn.bp{background:var(--yellow);color:var(--yellow-deep);box-shadow:var(--sh-yellow)}
-.bn.bd2{background:var(--red-deep);color:#fff}
-.bsm{width:auto;padding:8px 16px;font-size:13px;border-radius:var(--r-sm)}
-/* —— 分类 chip：记录弹窗内选中=红域 —— */
-.ct{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.ctb{padding:7px 14px;border-radius:var(--r-btn);font-size:13px;cursor:pointer;border:1.5px solid var(--bd);background:var(--card);transition:all .2s;user-select:none}
-.ctb.on{border-color:var(--red);background:var(--red-l);color:var(--red-deep);font-weight:600}
-/* —— 底部 tabBar：选中=红 + 砖块凸点装饰 —— */
-.tb{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;border-top:1px solid var(--bd);z-index:100;padding-bottom:env(safe-area-inset-bottom)}
-.ti{flex:1;padding:8px 0 6px;text-align:center;cursor:pointer;user-select:none;position:relative}
-.ti .ti2{font-size:20px}
-.ti .tl{font-size:9px;color:var(--tx2);margin-top:1px}
-.ti.on .tl{color:var(--red);font-weight:700}
-.ti.on::before{content:'';position:absolute;top:-1px;left:50%;transform:translateX(-50%);width:30px;height:5px;border-radius:0 0 5px 5px;background-color:var(--red);background-image:radial-gradient(circle at 9px 0,rgba(255,255,255,.45) 0 1.8px,transparent 2.4px),radial-gradient(circle at 21px 0,rgba(255,255,255,.45) 0 1.8px,transparent 2.4px);background-repeat:no-repeat}
+body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:72px;-webkit-tap-highlight-color:transparent}
+.num{font-variant-numeric:tabular-nums}
+::-webkit-scrollbar{width:0}
+
+/* —— 通用积木凸点画法：inset 阴影 + ::after 白点高光 —— */
+.studi{display:block;width:10px;height:10px;border-radius:var(--r-full);position:relative;background:var(--red);box-shadow:inset 0 -2px 2px rgba(0,0,0,.18),inset 0 2px 2px rgba(255,255,255,.35)}
+.studi::after{content:'';position:absolute;top:1px;right:1px;width:2px;height:2px;border-radius:var(--r-full);background:var(--card);opacity:.5}
+.studi.y{background:var(--yellow)}
+.studi.b{background:var(--blue)}
+
+/* —— 顶栏：与页面同底色，滚动才浮现描边 —— */
+.header{background:var(--bg);color:var(--ink);padding:12px 16px;position:sticky;top:0;z-index:100;border-bottom:1px solid transparent;transition:background .2s,border-color .2s}
+.header.scrolled{background:var(--card);border-bottom-color:var(--line)}
+.header h1{font:var(--f-title);text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+.header .sub{text-align:center;font:var(--f-cap);color:var(--ink2);margin-top:2px}
+.logo-brick{position:relative;display:inline-block;width:12px;height:9px;border-radius:var(--r-s);background:var(--red);box-shadow:inset 0 -2px 0 rgba(0,0,0,.10)}
+.logo-brick::before,.logo-brick::after{content:'';position:absolute;top:1px;width:3px;height:3px;border-radius:var(--r-full);background:var(--red);box-shadow:inset 0 -1px 1px rgba(0,0,0,.18),inset 0 1px 1px rgba(255,255,255,.35)}
+.logo-brick::before{left:2px}
+.logo-brick::after{right:2px}
+/* —— 用户切换胶囊：白底描边，同步状态合并为 6px 色点 —— */
+.user-switch{position:absolute;top:10px;right:16px;background:var(--card);border:var(--bd);border-radius:var(--r-full);padding:4px 12px;color:var(--ink);font:var(--f-item);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:transform .15s;z-index:50}
+.user-switch:active{transform:scale(.95)}
+.sync-dot{width:6px;height:6px;height:6px;border-radius:var(--r-full);background:var(--line);flex-shrink:0}
+.sync-dot.ok{background:var(--green)}
+.sync-dot.wait{background:var(--yellow)}
+.sync-dot.err{background:var(--red)}
+.sync-dot.off{background:var(--line)}
+.us-avatar{width:20px;height:20px;border-radius:var(--r-full);background:var(--blue-l);color:var(--blue-deep);display:flex;align-items:center;justify-content:center;font:var(--f-mini)}
+
+/* —— 页面区块节奏 —— */
 .pg{display:none}
 .pg.on{display:block}
-/* —— 空状态 / toast：奶油白底 + 彩色文字 —— */
-.es{text-align:center;padding:36px 16px;color:var(--tx2)}
-.ei{font-size:44px;margin-bottom:10px}
-.et{font-size:13px;line-height:1.8}
-.to{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);color:var(--red-deep);padding:12px 20px;border-radius:var(--r-btn);font-size:13px;font-weight:700;z-index:300;display:none;text-align:center;max-width:80%;box-shadow:var(--sh);border:1.5px solid var(--bd)}
-.to.show{display:block;animation:fi .15s ease}
-@keyframes fi{from{opacity:0}to{opacity:1}}
-/* —— 确认弹窗：确定=红砖 —— */
-.co2{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay);z-index:250;display:none;align-items:center;justify-content:center}
-.co2.show{display:flex}
-.cb{background:var(--card);border-radius:var(--r-card);padding:20px;width:85%;max-width:300px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.18)}
-.ct2{font-size:15px;font-weight:700;margin-bottom:6px}
-.cx{font-size:13px;color:var(--tx2);margin-bottom:16px}
-.cn{display:flex;gap:8px}
-.cn .bn{flex:1}
-.bg{background:var(--gray-l);color:var(--tx)}
-/* —— 周概览小卡：白格；选中格=红描边+红浅底+黄点 —— */
-.sb2{display:flex;gap:5px;justify-content:center;margin:10px 0;overflow-x:auto;padding-bottom:4px}
-.sbd{position:relative;min-width:38px;height:42px;border-radius:var(--r-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;background:var(--card);border:1px solid var(--bd);box-shadow:var(--sh-sm);flex-shrink:0;cursor:pointer}
-.sbd .sdl{font-size:8px;color:var(--tx2)}
-.sbd .sdd{font-size:7px;color:var(--tx2);line-height:1}
-.sbd .sds{font-size:10px;font-weight:700;color:var(--tx)}
-.sbd.hd .sds{color:var(--blue-deep)}
-.sbd.tdy{border:2px solid var(--red);background:var(--red-l)}
+.sec{padding:0 16px;margin-top:24px}
+.sec-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.st-t{flex:1;font:var(--f-cap);font-weight:500;color:var(--ink2)}
+
+/* —— 总积分卡：首页唯一大彩点 —— */
+.pc{background:var(--card);border:var(--bd);border-radius:var(--r-l);box-shadow:var(--sh-card);margin:12px 16px 0;padding:24px 16px 20px;text-align:center;position:relative}
+.pc .lb{font:var(--f-cap);font-weight:500;color:var(--ink2);letter-spacing:2px}
+.pc .pts{font:var(--f-hero);font-variant-numeric:tabular-nums;color:var(--ink);margin-top:4px}
+.pc .pts.zero{color:var(--ink3)}
+.pc .td{font:var(--f-cap);margin-top:4px;color:var(--ink2)}
+.pc .td .up{color:var(--grn-deep);font-weight:700}
+.pc .td .down{color:var(--red-deep);font-weight:700}
+/* 右上角积木徽章：全 App 唯一「精致凸点」装饰 */
+.pc-brick{position:absolute;top:16px;right:16px;display:grid;grid-template-columns:repeat(2,10px);grid-template-rows:repeat(2,10px);gap:4px 8px;padding:4px 8px;border-radius:var(--r-s);background:var(--red);box-shadow:inset 0 -3px 0 rgba(0,0,0,.10)}
+.pc-brick.y{background:var(--yellow)}
+.pc-brick.b{background:var(--blue)}
+.pc-brick .studi{width:10px;height:10px}
+.pc-brick.y .studi{background:var(--yellow)}
+.pc-brick.b .studi{background:var(--blue)}
+
+/* —— 统计三宫格：数字即信息，无图标块、无阴影 —— */
+.qs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-top:12px}
+.sc{background:var(--card);border:var(--bd);border-radius:var(--r-m);padding:12px 8px;text-align:center}
+.sc .sv{font:var(--f-h2);font-variant-numeric:tabular-nums;color:var(--ink)}
+.qs .sc:nth-child(1) .sv{color:var(--grn-deep)}
+.qs .sc:nth-child(2) .sv{color:var(--red-deep)}
+.sc .sl{font:var(--f-cap);color:var(--ink2);margin-top:4px}
+
+/* —— 周概览条：7 格，今日红描边，有记录格底部色条 —— */
+.wb{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.sbd{position:relative;height:48px;border:var(--bd);border-radius:var(--r-s);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
+.sbd:active{transform:scale(.94)}
+.sdl{font:var(--f-mini);color:var(--ink2)}
+.sdd{font:var(--f-item);font-weight:600;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+.sbd.tdy{border:1.5px solid var(--red);background:var(--red-l)}
 .sbd.tdy .sdl,.sbd.tdy .sdd{color:var(--red-deep)}
-.sbd.tdy::after{content:'';position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--yellow);box-shadow:inset 0 -1px 0 rgba(0,0,0,.18)}
-.sbd:active{transform:scale(.92)}
-.ei2{background:var(--card);border-radius:var(--r-sm);padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:var(--sh-sm);margin-bottom:6px}
-.ei2 .eic{font-size:18px}
-.ei2 .ein{flex:1}
-.ei2 .enn{font-size:12px;font-weight:600}
-.ei2 .etm{font-size:10px;color:var(--tx2)}
-.ei2 .eco{font-size:13px;font-weight:700;color:var(--red-deep)}
-/* —— 日期选择器：白卡 + 蓝色系选中 —— */
+.sdbar{position:absolute;left:0;right:0;bottom:0;height:3px}
+
+/* —— 主操作区：记录+兑换同行并排（v3 交互结构）——
+   用户要求恢复 v3 的两按钮同一行；样式仍走 v4 token：
+   记录 = 红主按钮（--sh-cta），兑换 = 黄次按钮，半宽同高 48px。 */
+.cta-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cta{display:block;width:100%;height:48px;border:none;border-radius:var(--r-m);background:var(--red);color:var(--card);font:var(--f-body);font-weight:700;cursor:pointer;box-shadow:var(--sh-cta);transition:transform .15s}
+.cta:active{transform:scale(.97)}
+.cta2{display:block;width:100%;height:48px;border:none;border-radius:var(--r-m);background:var(--yellow-l);color:var(--yel-deep);font:var(--f-body);font-weight:700;cursor:pointer;transition:transform .15s}
+.cta2:active{transform:scale(.97)}
+
+/* —— 记录列表行：类别色点 + 名称/时间 + 分值 —— */
+.rl{display:flex;flex-direction:column;gap:8px}
+.ri{background:var(--card);border:var(--bd);border-radius:var(--r-m);padding:12px 16px;display:flex;align-items:center;gap:12px}
+.ri:active{transform:scale(.985)}
+.cat-dot{width:8px;height:8px;border-radius:var(--r-full);flex-shrink:0}
+.ri .inf{flex:1;min-width:0}
+.ri .nm{font:var(--f-item);font-weight:600;color:var(--ink)}
+.ri .tm{font:var(--f-cap);color:var(--ink3);margin-top:2px}
+.sc2{font:var(--f-body);font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+.sc2.u{color:var(--grn-deep)}
+.sc2.d{color:var(--red-deep)}
+.sc2.e{color:var(--yel-deep)}
+.ex-chip{font:var(--f-cap);font-weight:500;color:var(--yel-deep);background:var(--yellow-l);border-radius:var(--r-full);padding:4px 8px;flex-shrink:0}
+.dl{width:32px;height:32px;border:none;border-radius:var(--r-s);background:transparent;color:var(--ink3);font:var(--f-item);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:-8px}
+.dl:active{background:var(--fill);color:var(--red-deep)}
+
+/* —— 记录页：日期条（白卡中性）+ 筛选 tabs（蓝浅底选中）—— */
+.dtrig{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:var(--bd);border-radius:var(--r-m);padding:12px 16px;margin:12px 16px 0;cursor:pointer}
+.dtrig-t{font:var(--f-item);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.dtrig-c{color:var(--ink2);font:var(--f-body)}
+.ft{display:flex;gap:8px;padding:12px 16px 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ft::-webkit-scrollbar{display:none}
+.ftb{padding:8px 16px;border-radius:var(--r-full);font:var(--f-item);white-space:nowrap;cursor:pointer;background:var(--card);border:var(--bd);color:var(--ink2);transition:all .2s;user-select:none}
+.ftb.on{background:var(--blue-l);border-color:var(--blue-l);color:var(--blue-deep);font-weight:600}
+.ftb.sm{padding:4px 12px;font:var(--f-cap)}
+
+/* —— 设置页：三组直接平铺（v3 结构），组头=小色砖+组名+计数 —— */
+.sg{background:var(--card);border:var(--bd);border-radius:var(--r-m);margin-bottom:12px;overflow:hidden}
+.sgh{padding:16px 16px 10px;display:flex;align-items:center;gap:8px}
+.sgt{flex:1;font:var(--f-item);font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px}
+.gh-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;box-shadow:inset 0 -2px 0 rgba(0,0,0,.10)}
+.cnt{font:var(--f-cap);font-weight:500;color:var(--ink2);background:var(--fill);border-radius:var(--r-full);padding:4px 8px}
+.sg-list{padding:0 16px}
+.add-inline{display:block;width:calc(100% - 32px);margin:8px 16px 16px;height:40px;background:var(--fill);border:1.5px dashed var(--line);border-radius:var(--r-s);color:var(--ink);font:var(--f-item);font-weight:600;cursor:pointer}
+.add-inline:active{background:var(--blue-l)}
+.sr{display:flex;align-items:center;gap:8px;background:var(--fill);border-radius:var(--r-s);padding:8px 12px;margin-bottom:8px}
+.sr .n{flex:1;font:var(--f-item);color:var(--ink);word-break:break-all}
+.sr .s{font:var(--f-item);font-weight:600;font-variant-numeric:tabular-nums;width:44px;text-align:right;flex-shrink:0}
+.sr .s.u{color:var(--grn-deep)}
+.sr .s.d{color:var(--red-deep)}
+.sr .s.e{color:var(--yel-deep)}
+.sr .x,.sr .ed{width:32px;height:32px;border-radius:var(--r-s);background:var(--card);border:none;color:var(--ink2);font:var(--f-item);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sr .x:active{color:var(--red-deep)}
+.bn-danger{display:block;width:100%;height:44px;background:var(--card);border:1px solid var(--red);border-radius:var(--r-s);color:var(--red-deep);font:var(--f-body);font-weight:600;cursor:pointer}
+.bn-danger:active{background:var(--red-l)}
+
+/* —— 底部弹窗：把手 + 居中标题 + ✕ —— */
+.mo{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.mo.show{display:flex;animation:fdin .2s ease}
+@keyframes fdin{from{opacity:0}to{opacity:1}}
+.ml{background:var(--card);border-radius:var(--r-l) var(--r-l) 0 0;width:100%;max-height:85vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);animation:su .25s ease-out}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ml-handle{display:block;width:32px;height:4px;border-radius:var(--r-full);background:var(--line);margin:8px auto 0}
+.ml-header{padding:12px 16px 0;display:flex;align-items:center;gap:8px}
+.ml-title{flex:1;text-align:center;font:var(--f-h2);color:var(--ink)}
+.ml-close{width:28px;height:28px;border-radius:var(--r-full);background:var(--fill);border:none;color:var(--ink2);font:var(--f-item);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ml-body{padding:16px}
+
+/* —— 表单控件 —— */
+.fg{margin-bottom:16px}
+.fl{font:var(--f-cap);font-weight:600;color:var(--ink2);display:block;margin-bottom:6px}
+.fi,.fs{width:100%;height:46px;padding:0 12px;border-radius:var(--r-s);border:1.5px solid transparent;background:var(--fill);font:var(--f-item);color:var(--ink);outline:none;appearance:none;-webkit-appearance:none;transition:background .2s,border-color .2s}
+.fi:focus,.fs:focus{background:var(--card);border-color:var(--blue)}
+.fr{display:flex;gap:12px}
+.fr .fg{flex:1;min-width:0}
+/* 分段胶囊（加分/扣分）：v4 保留控件（非下拉框），切换时刷新分类/项目数据源 */
+.seg{display:flex;gap:8px}
+.seg-b{flex:1;height:44px;border:none;border-radius:var(--r-full);background:var(--fill);color:var(--ink2);font:var(--f-body);cursor:pointer;transition:all .2s}
+#segUp.on{background:var(--green-l);color:var(--grn-deep);font-weight:600}
+#segDown.on{background:var(--red-l);color:var(--red-deep);font-weight:600}
+/* 弹窗内确认按钮 */
+.bn{display:block;width:100%;height:48px;border:none;border-radius:var(--r-m);font:var(--f-body);font-weight:700;cursor:pointer;transition:transform .15s}
+.bn:active{transform:scale(.97)}
+.bn:disabled{background:var(--fill);color:var(--ink2);box-shadow:none;cursor:not-allowed;transform:none}
+.bn-p{background:var(--red);color:var(--card);box-shadow:var(--sh-cta)}
+.bn-q{background:var(--fill);color:var(--ink);font-weight:600}
+.bn-dg{background:var(--red-deep);color:var(--card)}
+/* 兑换弹窗 */
+.ex-now{font:var(--f-item);color:var(--ink2)}
+.ex-now b{color:var(--yel-deep);font-variant-numeric:tabular-nums}
+.ex-cost{font:var(--f-h2);color:var(--yel-deep);font-variant-numeric:tabular-nums;min-height:24px}
+
+/* —— 底部 tabBar：CSS 图标 + 选中 4px 红点 —— */
+.tb{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;border-top:1px solid var(--line);z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.ti{flex:1;padding:8px 0 4px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;user-select:none;color:var(--ink3)}
+.t-ico{height:22px;display:flex;align-items:center;justify-content:center;position:relative}
+.ti .tl{font:var(--f-mini);color:var(--ink2)}
+.ti.on{color:var(--red)}
+.ti.on .tl{color:var(--red);font-weight:600}
+.ti.on .t-ico::before{content:'';position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:var(--r-full);background:var(--red)}
+.tico-brick{position:relative;width:18px;height:13px;border-radius:var(--r-s);background:currentColor;box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
+.tico-brick::before,.tico-brick::after{content:'';position:absolute;top:2px;width:4px;height:4px;border-radius:var(--r-full);background:currentColor;box-shadow:inset 0 -1px 1px rgba(0,0,0,.25)}
+.tico-brick::before{left:3px}
+.tico-brick::after{right:3px}
+.tico-list{display:flex;flex-direction:column;gap:4px;width:18px}
+.tico-list i{display:block;height:2px;border-radius:var(--r-full);background:currentColor}
+.tico-list i:nth-child(2){width:14px}
+.tico-sliders{display:flex;flex-direction:column;gap:4px;width:18px}
+.tico-sliders i{position:relative;display:block;height:2px;border-radius:var(--r-full);background:currentColor}
+.tico-sliders i::after{content:'';position:absolute;top:-2px;width:6px;height:6px;border-radius:var(--r-full);background:currentColor}
+.tico-sliders i:first-child::after{left:3px}
+.tico-sliders i:last-child::after{right:3px}
+
+/* —— 空状态：CSS 积木插画 —— */
+.es{padding:40px 16px;text-align:center}
+.es-bricks{position:relative;width:40px;height:36px;margin:0 auto 16px;transform:rotate(-4deg)}
+.es-bricks .b{position:absolute;border-radius:var(--r-s);box-shadow:inset 0 -3px 0 rgba(0,0,0,.10)}
+.es-bricks .b::before{content:'';position:absolute;top:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:var(--r-full);background:var(--card);opacity:.5}
+.es-bricks .b1{width:30px;height:15px;background:var(--blue);left:6px;bottom:0}
+.es-bricks .b2{width:26px;height:13px;background:var(--yellow);left:0;bottom:11px;opacity:.85}
+.es-bricks .b3{width:22px;height:11px;background:var(--red);left:9px;bottom:20px;opacity:.7}
+.et{font:var(--f-item);color:var(--ink2)}
+.eg{font:var(--f-cap);color:var(--ink3);margin-top:4px}
+
+/* —— toast：深底白字 + 状态色点 —— */
+.to{position:fixed;top:20%;left:50%;transform:translate(-50%,-12px);background:var(--ink);color:var(--card);padding:12px 20px;border-radius:var(--r-full);font:var(--f-item);font-weight:600;z-index:400;display:none;align-items:center;gap:8px;max-width:80%}
+.to.show{display:flex;animation:fdin .2s ease}
+.to-dot{display:none;width:8px;height:8px;border-radius:var(--r-full);flex-shrink:0}
+.to.ok .to-dot{display:block;background:var(--green)}
+.to.err .to-dot{display:block;background:var(--red)}
+
+/* —— 确认框 —— */
+.co2{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay);z-index:250;display:none;align-items:center;justify-content:center}
+.co2.show{display:flex;animation:fdin .2s ease}
+.cb{background:var(--card);border-radius:var(--r-m);padding:20px;width:85%;max-width:300px;text-align:center}
+.ct2{font:var(--f-h2);color:var(--ink)}
+.cx{font:var(--f-item);color:var(--ink2);margin:8px 0 20px}
+.cn{display:flex;gap:8px}
+.cn .bn{flex:1;height:44px}
+
+/* —— 日历：蓝 = 日期/筛选域 —— */
 .dp{padding:16px}
-.dp-cal{width:100%}
-.dp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:0 4px}
-.dp-month{font-size:16px;font-weight:600;color:var(--tx)}
-.dp-nav{display:flex;gap:4px}
-.dp-navbtn{width:30px;height:30px;border-radius:8px;background:var(--cream);border:none;font-size:16px;cursor:pointer;color:var(--tx);display:flex;align-items:center;justify-content:center}
-.dp-navbtn:active{background:var(--bd)}
-.dp-week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
-.dp-weekday{font-size:11px;color:var(--tx2);text-align:center;padding:4px 0}
-.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.dp-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;border-radius:8px;transition:all .15s}
-.dp-day:hover{background:var(--blue-l)}
-.dp-day.other{color:var(--tx2)}
+.dp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding:0 4px}
+.dp-month{font:var(--f-h2);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.dp-nav{display:flex;gap:8px}
+.dp-navbtn{width:36px;height:36px;border-radius:var(--r-full);background:var(--fill);border:none;font:var(--f-h2);cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center}
+.dp-navbtn:active{background:var(--blue-l);color:var(--blue-deep)}
+.dp-week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+.dp-weekday{font:var(--f-cap);color:var(--ink2);text-align:center;padding:4px 0}
+.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dp-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font:var(--f-item);font-variant-numeric:tabular-nums;cursor:pointer;border-radius:var(--r-full);transition:background .15s}
+.dp-day:active{background:var(--blue-l)}
+.dp-day.other{color:var(--ink3)}
 .dp-day.today{color:var(--blue-deep);font-weight:700}
-.dp-day.selected{background:var(--blue);color:#fff}
+.dp-day.selected{background:var(--blue);color:var(--card)}
 .dp-day.inrange{background:var(--blue-l);color:var(--blue-deep)}
-::-webkit-scrollbar{width:0}
-/* —— 登录页：奶油底 + 彩砖漂浮装饰 —— */
-.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(170deg,var(--cream-hi) 0%,var(--cream) 55%,var(--yellow-l) 100%);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px}
+
+/* —— 登录页 —— */
+.login-page{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px}
 .login-page.show{display:flex}
-.login-page::before{content:'';position:absolute;top:11%;left:9%;width:46px;height:32px;border-radius:6px;background-color:var(--red);background-image:radial-gradient(circle at 22% 20%,rgba(255,255,255,.5) 0 4px,transparent 5px),radial-gradient(circle at 52% 20%,rgba(255,255,255,.5) 0 4px,transparent 5px),radial-gradient(circle at 80% 20%,rgba(255,255,255,.5) 0 4px,transparent 5px);box-shadow:inset 0 -4px 0 rgba(0,0,0,.12),var(--sh);transform:rotate(-9deg)}
-.login-page::after{content:'';position:absolute;bottom:12%;right:10%;width:36px;height:26px;border-radius:5px;background-color:var(--blue);background-image:radial-gradient(circle at 28% 22%,rgba(255,255,255,.5) 0 3.4px,transparent 4.4px),radial-gradient(circle at 66% 22%,rgba(255,255,255,.5) 0 3.4px,transparent 4.4px);box-shadow:inset 0 -4px 0 rgba(0,0,0,.12),var(--sh);transform:rotate(9deg)}
-.login-logo{font-size:64px;margin-bottom:12px;animation:bounce 2s infinite}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.login-title{font-size:28px;font-weight:800;color:var(--tx);margin-bottom:6px}
-.login-sub{font-size:13px;color:var(--tx2);margin-bottom:36px}
-.login-card{background:var(--card);border-radius:20px;padding:26px 22px;width:100%;max-width:340px;box-shadow:var(--sh);border:1px solid var(--bd)}
-.login-card .fg{margin-bottom:18px}
-.login-card .fi{border:1.5px solid var(--bd)}
-.login-card .fi:focus{border-color:var(--red)}
-.login-btn{position:relative;overflow:hidden;width:100%;padding:14px;border-radius:14px;background:var(--red);color:#fff;border:none;font-size:17px;font-weight:700;cursor:pointer;box-shadow:var(--sh-red);margin-top:8px}
-.login-btn::before{content:'';position:absolute;top:0;left:0;right:0;height:8px;background-image:radial-gradient(circle at 9px 0,rgba(255,255,255,.32) 0 4px,transparent 4.8px);background-size:18px 8px;background-position:center top;background-repeat:repeat-x;pointer-events:none}
-.login-btn:active{transform:scale(.97)}
-.login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:var(--tx2);font-size:12px}
-.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--bd)}
+.fbrick{position:absolute;width:32px;height:22px;border-radius:var(--r-s);opacity:.5;box-shadow:inset 0 -3px 0 rgba(0,0,0,.10);display:flex;justify-content:space-evenly;padding-top:3px}
+.fbrick i{width:6px;height:6px;border-radius:var(--r-full);box-shadow:inset 0 -1px 1px rgba(0,0,0,.18),inset 0 1px 1px rgba(255,255,255,.35)}
+.fbrick.red{top:10%;left:8%;background:var(--red);transform:rotate(-12deg)}
+.fbrick.red i{background:var(--red)}
+.fbrick.blu{bottom:12%;right:10%;background:var(--blue);transform:rotate(10deg)}
+.fbrick.blu i{background:var(--blue)}
+.login-logo{width:72px;height:52px;border-radius:var(--r-s);background:var(--red);box-shadow:inset 0 -3px 0 rgba(0,0,0,.10);display:grid;grid-template-columns:repeat(3,10px);grid-template-rows:repeat(2,10px);justify-content:space-between;align-content:space-between;padding:8px 16px;margin-bottom:16px;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.login-title{font:var(--f-display);color:var(--ink);margin-bottom:4px}
+.login-sub{font:var(--f-item);color:var(--ink2);margin-bottom:32px}
+.login-card{background:var(--card);border:var(--bd);border-radius:var(--r-l);box-shadow:var(--sh-card);padding:20px;width:100%;max-width:340px}
+.login-card .cta{margin-top:8px}
+.login-divider{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:var(--ink2);font:var(--f-cap)}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--line)}
 .login-quick{display:flex;flex-direction:column;gap:8px}
-.login-quick-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--card);box-shadow:var(--sh-sm);cursor:pointer;transition:all .2s;border:2px solid transparent}
-.login-quick-item:active{transform:scale(.97);border-color:var(--red)}
-.login-quick-avatar{width:40px;height:40px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.login-quick-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--r-m);background:var(--card);border:var(--bd);cursor:pointer;transition:transform .15s}
+.login-quick-item:active{transform:scale(.97)}
+.login-quick-avatar{width:40px;height:40px;border-radius:var(--r-full);color:var(--card);display:flex;align-items:center;justify-content:center;font:var(--f-h2);flex-shrink:0}
 .login-quick-info{flex:1}
-.login-quick-name{font-size:14px;font-weight:600;color:var(--tx)}
-.login-quick-phone{font-size:11px;color:var(--tx2);margin-top:2px}
-.login-quick-enter{font-size:18px;color:var(--tx2)}
-/* —— 用户切换弹窗 —— */
+.login-quick-name{font:var(--f-item);font-weight:600;color:var(--ink)}
+.login-quick-phone{font:var(--f-cap);color:var(--ink2);margin-top:2px}
+.login-quick-enter{font:var(--f-body);color:var(--ink3)}
+
+/* —— 用户切换弹窗（底部弹窗规范）—— */
 .switch-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay);z-index:300;display:none;align-items:flex-end;justify-content:center}
-.switch-modal.show{display:flex}
-.switch-card{background:var(--card);border-radius:18px 18px 0 0;width:100%;max-height:70vh;overflow-y:auto;padding:0;animation:su .25s ease}
-.switch-header{padding:18px 16px 14px;border-bottom:1px solid var(--bd);text-align:center}
-.switch-header h3{font-size:16px;font-weight:700}
-.switch-item{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .2s;border-bottom:1px solid var(--bd)}
-.switch-item:active{background:var(--cream)}
+.switch-modal.show{display:flex;animation:fdin .2s ease}
+.switch-card{background:var(--card);border-radius:var(--r-l) var(--r-l) 0 0;width:100%;max-height:70vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);animation:su .25s ease-out}
+.switch-item{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;transition:background .15s}
+.switch-item:active{background:var(--fill)}
 .switch-item.current{background:var(--red-l)}
-.switch-avatar{width:42px;height:42px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
+.switch-avatar{width:40px;height:40px;border-radius:var(--r-full);color:var(--card);display:flex;align-items:center;justify-content:center;font:var(--f-h2);flex-shrink:0}
 .switch-info{flex:1}
-.switch-name{font-size:14px;font-weight:600}
-.switch-phone{font-size:11px;color:var(--tx2);margin-top:2px}
-.switch-check{font-size:18px;color:var(--red)}
-.switch-add{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;color:var(--red);font-size:14px;font-weight:600;border-top:1px solid var(--bd)}
-.switch-add:active{background:var(--cream)}
+.switch-name{font:var(--f-item);font-weight:600;color:var(--ink)}
+.switch-phone{font:var(--f-cap);color:var(--ink2);margin-top:2px}
+.switch-check{color:var(--red);font:var(--f-body)}
+.switch-add{display:flex;align-items:center;gap:8px;padding:16px;cursor:pointer;color:var(--ink);font:var(--f-item);font-weight:600;border-top:1px solid var(--line)}
+.switch-add:active{background:var(--fill)}
+.switch-add.quit{color:var(--red-deep)}
 </style>
 </head>
 <body>
@@ -299,115 +324,112 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
   <h1><span class="logo-brick" aria-hidden="true"></span>乐高积分</h1>
   <div class="sub" id="hd"></div>
   <button class="user-switch" id="userSwitch" onclick="showSwitchModal()" style="display:none">
-    <span id="syncStatus" style="font-size:11px;margin-right:4px"></span>
+    <span class="sync-dot off" id="syncStatus"></span>
     <span class="us-avatar" id="usAvatar"></span>
     <span id="usName"></span>
     <span>▾</span>
-  </button>
-  <button class="user-switch" id="syncBtn" onclick="doSync()" style="display:none;left:14px;right:auto" title="同步数据">
-    🔄
   </button>
 </div>
 
 <!-- 首页 -->
 <div class="pg on" id="p-home">
   <div class="pc">
-    <div class="pc-brick" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="lb">🧱 总积分</div>
+    <div class="pc-brick" id="pcBrick" aria-hidden="true"><i class="studi"></i><i class="studi"></i><i class="studi"></i><i class="studi"></i></div>
+    <div class="lb">总积分</div>
     <div class="pts" id="tp">0</div>
     <div class="td" id="tdp">今日：+0</div>
   </div>
   <div class="qs">
-    <div class="sc"><div class="si">📈</div><div class="sv" id="tu">0</div><div class="sl">今日加分</div></div>
-    <div class="sc"><div class="si">📉</div><div class="sv" id="td">0</div><div class="sl">今日扣分</div></div>
-    <div class="sc"><div class="si">🔥</div><div class="sv" id="ts">0</div><div class="sl">连续天数</div></div>
+    <div class="sc"><div class="sv" id="tu">0</div><div class="sl">今日加分</div></div>
+    <div class="sc"><div class="sv" id="td">0</div><div class="sl">今日扣分</div></div>
+    <div class="sc"><div class="sv" id="ts">0</div><div class="sl">连续天数</div></div>
   </div>
-  <div class="sec"><div class="st">近一周概览</div><div class="sb2" id="wb"></div></div>
-  <div class="sec" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-    <button class="add-btn" onclick="openScore()"><span class="ab-icon">📝</span> 记录分数</button>
-    <button class="add-btn ex" onclick="openExchange()"><span class="ab-icon">🎁</span> 兑换积分</button>
+  <div class="sec"><div class="sec-h"><div class="st-t">近一周概览</div></div><div class="wb" id="wb"></div></div>
+  <div class="sec">
+    <div class="cta-row">
+      <button class="cta" onclick="openScore()">记录分数</button>
+      <button class="cta2" onclick="openExchange()">兑换积分</button>
+    </div>
   </div>
-  <div class="sec"><div class="st"><span id="trTitle">🏗️ 今日记录</span><span class="ftb" id="backToday" style="display:none;padding:3px 10px;font-size:11px" onclick="goToday()">回到今天</span></div><div class="rl" id="tr"></div></div>
+  <div class="sec">
+    <div class="sec-h"><div class="st-t" id="trTitle">今日记录</div><div class="ftb sm" id="backToday" style="display:none" onclick="goToday()">回到今天</div></div>
+    <div class="rl" id="tr"></div>
+  </div>
 </div>
 
 <!-- 记录 -->
 <div class="pg" id="p-records">
-  <div style="padding-top:10px">
-    <div class="dateTrigger" onclick="openDatePicker()">
-      <span class="dateTriggerText" id="dateTriggerText">📅 选择日期范围</span>
-      <span class="dateTriggerIcon">▼</span>
-    </div>
-    <div class="ft" id="typeFilter"></div>
-    <div class="rl" id="ar"></div>
+  <div class="dtrig" onclick="openDatePicker()">
+    <span class="dtrig-t" id="dateTriggerText">选择日期范围</span>
+    <span class="dtrig-c">▾</span>
   </div>
+  <div class="ft" id="typeFilter"></div>
+  <div class="rl" id="ar" style="margin:12px 16px 24px"></div>
 </div>
 
 <!-- 设置 -->
 <div class="pg" id="p-settings">
-  <div style="padding-top:10px">
-    <div class="sec">
+  <div style="padding-top:12px">
+    <div class="sec" style="margin-top:0">
       <div class="sg">
-        <div class="sgh" onclick="toggleSection(this,'up_main')">
-          <div class="sgt brick-red">➕ 加分项管理 <span class="cnt" id="upCnt"></span></div>
-          <span class="arr">▼</span>
-        </div>
-        <div class="sgc open" id="sui"></div>
+        <div class="sgh"><div class="sgt"><span class="gh-dot" style="background:var(--red)" aria-hidden="true"></span>加分项管理<span class="cnt" id="upCnt"></span></div></div>
+        <div class="sg-list" id="sui"></div>
+        <button class="add-inline" onclick="sam('up')">＋ 添加加分项</button>
       </div>
-      <button class="bn bp bsm" onclick="sam('up')">+ 添加加分项</button>
     </div>
     <div class="sec">
       <div class="sg">
-        <div class="sgh" onclick="toggleSection(this,'down_main')">
-          <div class="sgt brick-blue">⚠️ 扣分项管理 <span class="cnt" id="downCnt"></span></div>
-          <span class="arr">▼</span>
-        </div>
-        <div class="sgc" id="sdi"></div>
+        <div class="sgh"><div class="sgt"><span class="gh-dot" style="background:var(--blue)" aria-hidden="true"></span>扣分项管理<span class="cnt" id="downCnt"></span></div></div>
+        <div class="sg-list" id="sdi"></div>
+        <button class="add-inline" onclick="sam('down')">＋ 添加扣分项</button>
       </div>
-      <button class="bn bp bsm" onclick="sam('down')">+ 添加扣分项</button>
     </div>
     <div class="sec">
       <div class="sg">
-        <div class="sgh" onclick="toggleSection(this,'shop_main')">
-          <div class="sgt brick-green">🛒 兑换项管理 <span class="cnt" id="shopCnt"></span></div>
-          <span class="arr">▼</span>
-        </div>
-        <div class="sgc" id="ssi"></div>
+        <div class="sgh"><div class="sgt"><span class="gh-dot" style="background:var(--yellow)" aria-hidden="true"></span>兑换项管理<span class="cnt" id="shopCnt"></span></div></div>
+        <div class="sg-list" id="ssi"></div>
+        <button class="add-inline" onclick="sam('shop')">＋ 添加兑换项</button>
       </div>
-      <button class="bn bp bsm" onclick="sam('shop')">+ 添加兑换项</button>
     </div>
-        <div class="sec"><div class="st">🗑️ 数据管理</div><button class="bn bd2 bsm" onclick="ccd()">清除所有数据</button></div>
+    <div class="sec">
+      <div class="sg">
+        <div class="sgh" style="cursor:default"><div class="sgt">数据管理</div></div>
+        <div style="padding:0 16px 16px"><button class="bn-danger" onclick="ccd()">清除所有数据</button></div>
+      </div>
+    </div>
   </div>
 </div>
 
 <!-- Tab Bar -->
 <div class="tb">
-  <div class="ti on" onclick="st('home')"><div class="ti2">🏠</div><div class="tl">首页</div></div>
-  <div class="ti" onclick="st('records')"><div class="ti2">📋</div><div class="tl">记录</div></div>
-  <div class="ti" onclick="st('settings')"><div class="ti2">⚙️</div><div class="tl">设置</div></div>
+  <div class="ti on" onclick="st('home')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">首页</span></div>
+  <div class="ti" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
+  <div class="ti" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
 </div>
 
 <!-- 记录分数弹窗 -->
 <div class="mo" id="ms">
   <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
     <div class="ml-header">
-      <div class="ml-title">📝 记录分数</div>
+      <div class="ml-title">记录分数</div>
       <button class="ml-close" onclick="cm('ms')">✕</button>
     </div>
     <div class="ml-body">
-      <div class="fg"><label class="fl">加分/扣分</label>
-        <select class="fs" id="scoreType" onchange="setScoreType(this.value)">
-          <option value="up">➕ 加分</option>
-          <option value="down">⚠️ 扣分</option>
-        </select>
+      <div class="fg"><label class="fl">加分 / 扣分</label>
+        <div class="seg">
+          <button type="button" class="seg-b on" id="segUp" onclick="setScoreType('up')">加分</button>
+          <button type="button" class="seg-b" id="segDown" onclick="setScoreType('down')">扣分</button>
+        </div>
       </div>
       <div class="fg"><label class="fl">分类</label><select class="fs" id="scat" onchange="selectCat(this.value)"></select></div>
       <div class="fg"><label class="fl">具体项目</label><select class="fs" id="sis"></select></div>
       <div class="fg"><label class="fl">日期（可补录最近7天）</label><input type="date" class="fi" id="sdate"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">分值</label><input type="number" class="fi" id="sv" value="5"></div>
+        <div class="fg"><label class="fl">分值</label><input type="number" class="fi" id="sv" value="5" min="1"></div>
         <div class="fg"><label class="fl">备注</label><input type="text" class="fi" id="sn" placeholder="可选"></div>
       </div>
-      <button class="bn bp" onclick="ss()">✅ 确认</button>
+      <button class="bn bn-p" onclick="ss()">确认</button>
     </div>
   </div>
 </div>
@@ -415,17 +437,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <!-- 兑换积分弹窗 -->
 <div class="mo" id="ms2">
   <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
     <div class="ml-header">
-      <div class="ml-title">🎁 兑换积分</div>
+      <div class="ml-title">兑换积分</div>
       <button class="ml-close" onclick="cm('ms2')">✕</button>
     </div>
     <div class="ml-body">
       <div class="fg">
-        <label class="fl">当前积分：<span id="exScore" style="color:var(--yellow-deep);font-weight:700">0</span></label>
-        <select class="fs" id="exSelect" onchange="onExSelectChange()"></select>
+        <label class="fl">当前积分</label>
+        <div class="ex-now">可用积分 <b id="exScore">0</b></div>
+        <select class="fs" id="exSelect" onchange="onExSelectChange()" style="margin-top:8px"></select>
       </div>
-      <div class="fg"><label class="fl">需消耗积分</label><div id="exCost" style="font-size:15px;font-weight:700;color:var(--yellow-deep)"></div></div>
-      <button class="bn bp" onclick="confirmExchange()">✅ 确认兑换</button>
+      <div class="fg"><label class="fl">需消耗积分</label><div class="ex-cost" id="exCost"></div></div>
+      <button class="bn bn-p" id="exConfirm" onclick="confirmExchange()">确认兑换</button>
     </div>
   </div>
 </div>
@@ -433,6 +457,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <!-- 添加/编辑项目弹窗 -->
 <div class="mo" id="ma">
   <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
     <div class="ml-header">
       <div class="ml-title" id="amt">添加项目</div>
       <button class="ml-close" onclick="cm('ma')">✕</button>
@@ -442,9 +467,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
       <div class="fg"><label class="fl">项目名称</label><input type="text" class="fi" id="an" placeholder="如：完成额外作业"></div>
       <div class="fr">
         <div class="fg"><label class="fl">分值</label><input type="number" class="fi" id="asc" value="5"></div>
-        <div class="fg"><label class="fl">分类</label><select class="fs" id="acat"><option value="学习">📚 学习</option><option value="生活">🏠 生活</option><option value="饮食">🍽️ 饮食</option><option value="品德">❤️ 品德</option><option value="运动">🏃 运动</option><option value="电子产品">📱 电子产品</option><option value="兴趣">🎨 兴趣</option><option value="家务">🧹 家务</option></select></div>
+        <div class="fg"><label class="fl">分类</label><select class="fs" id="acat"><option value="学习">学习</option><option value="生活">生活</option><option value="饮食">饮食</option><option value="品德">品德</option><option value="运动">运动</option><option value="电子产品">电子产品</option><option value="兴趣">兴趣</option><option value="家务">家务</option></select></div>
       </div>
-      <button class="bn bp" onclick="sai()">✅ 保存</button>
+      <button class="bn bn-q" onclick="sai()">保存</button>
     </div>
   </div>
 </div>
@@ -452,6 +477,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <!-- 添加/编辑兑换项弹窗 -->
 <div class="mo" id="ms3">
   <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
     <div class="ml-header">
       <div class="ml-title" id="amt3">添加兑换项</div>
       <button class="ml-close" onclick="cm('ms3')">✕</button>
@@ -461,10 +487,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
       <div class="fg"><label class="fl">名称</label><input type="text" class="fi" id="s3n" placeholder="如：买一本喜欢的书"></div>
       <div class="fr">
         <div class="fg"><label class="fl">所需积分</label><input type="number" class="fi" id="s3c" value="50"></div>
-        <div class="fg"><label class="fl">图标</label><input type="text" class="fi" id="s3i" placeholder="🎁" value="🎁"></div>
+        <div class="fg"><label class="fl">图标（可选）</label><input type="text" class="fi" id="s3i" placeholder="可选"></div>
       </div>
       <div class="fg"><label class="fl">描述</label><input type="text" class="fi" id="s3d" placeholder="如：书店自选"></div>
-      <button class="bn bp" onclick="sasi()">✅ 保存</button>
+      <button class="bn bn-q" onclick="sasi()">保存</button>
     </div>
   </div>
 </div>
@@ -472,6 +498,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <!-- 日期选择器 -->
 <div class="mo" id="datePicker">
   <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
     <div class="ml-header">
       <div class="ml-title">选择日期范围</div>
       <button class="ml-close" onclick="closeDatePicker()">✕</button>
@@ -482,27 +509,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
   </div>
 </div>
 
-<div class="to" id="toast"></div>
+<div class="to" id="toast"><span class="to-dot"></span><span id="toTx"></span></div>
 <div class="co2" id="cd2">
   <div class="cb">
     <div class="ct2" id="ct2t">确认</div>
     <div class="cx" id="ct2x">确定要执行此操作吗？</div>
     <div class="cn">
-      <button class="bn bg" onclick="cc()">取消</button>
-      <button class="bn bd2" id="ct2b" onclick="ec()">确定</button>
+      <button class="bn bn-q" onclick="cc()">取消</button>
+      <button class="bn bn-p" id="ct2b" onclick="ec()">确定</button>
     </div>
   </div>
 </div>
 
 <!-- 登录页 -->
 <div class="login-page" id="loginPage">
-  <div class="login-logo">🧱</div>
+  <div class="fbrick red" aria-hidden="true"><i></i><i></i></div>
+  <div class="fbrick blu" aria-hidden="true"><i></i><i></i></div>
+  <div class="login-logo" aria-hidden="true"><i class="studi"></i><i class="studi"></i><i class="studi"></i><i class="studi"></i><i class="studi"></i><i class="studi"></i></div>
   <div class="login-title">乐高积分</div>
   <div class="login-sub">记录成长，兑换惊喜</div>
   <div class="login-card">
     <div class="fg"><label class="fl">手机号</label><input type="tel" class="fi" id="loginPhone" placeholder="请输入手机号" maxlength="11"></div>
     <div class="fg"><label class="fl">姓名</label><input type="text" class="fi" id="loginName" placeholder="请输入姓名"></div>
-    <button class="login-btn" onclick="doLogin()">🚀 开始使用</button>
+    <button class="cta" onclick="doLogin()">开始使用</button>
     <div class="login-divider">快速登录</div>
     <div class="login-quick" id="loginQuick"></div>
   </div>
@@ -511,8 +540,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <!-- 用户切换弹窗 -->
 <div class="switch-modal" id="switchModal">
   <div class="switch-card" onclick="event.stopPropagation()">
-    <div class="switch-header"><h3>👤 切换用户</h3></div>
-    <div id="switchList"></div>
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">切换用户</div>
+      <button class="ml-close" onclick="closeSwitchModal()">✕</button>
+    </div>
+    <div id="switchList" style="padding-top:8px"></div>
   </div>
 </div>
 
@@ -590,13 +623,16 @@ function syncPush(data){
     })
     .catch(function(){syncStatus='error';updateSyncUI()});
 }
+// 同步状态合并进用户胶囊：6px 色点（绿=已同步，黄=同步中，红=失败）
 function updateSyncUI(){
   var el=document.getElementById('syncStatus');
   if(!el)return;
-  if(syncStatus==='loading')el.textContent='⏳';
-  else if(syncStatus==='synced')el.textContent='☁️';
-  else if(syncStatus==='error')el.textContent='⚠️';
-  else el.textContent='';
+  var c='sync-dot';
+  if(syncStatus==='loading')c+=' wait';
+  else if(syncStatus==='synced')c+=' ok';
+  else if(syncStatus==='error')c+=' err';
+  else c+=' off';
+  el.className=c;
 }
 function doSync(){
   if(!currentUser)return;
@@ -605,7 +641,6 @@ function doSync(){
     render();
   });
 }
-var ci={'学习':'📚','生活':'🏠','饮食':'🍽️','品德':'❤️','运动':'🏃','电子产品':'📱','兴趣':'🎨','家务':'🧹'};
 var du=[
 {id:'up_1',name:'按时完成作业',score:5,category:'学习'},
 {id:'up_2',name:'完成额外作业',score:5,category:'学习',unit:'项'},
@@ -720,22 +755,30 @@ function gd(){return{totalPoints:0,records:[],exchanges:[],upItems:JSON.parse(JS
 function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function fd(ds){var d=new Date(ds);var m=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];var w=['周日','周一','周二','周三','周四','周五','周六'];return d.getFullYear()+'年'+m[d.getMonth()]+d.getDate()+'日 '+w[d.getDay()]}
 function fdt(ts){var d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
-function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2000)}
+// toast：深底白字，成功左侧绿点 / 失败左侧红点
+function toast(m,type){var t=document.getElementById('toast');t.classList.remove('ok','err');if(type)t.classList.add(type);document.getElementById('toTx').textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2000)}
 var pc=null;
-function sc2(t,x,c){document.getElementById('ct2t').textContent=t;document.getElementById('ct2x').textContent=x;pc=c;document.getElementById('cd2').classList.add('show')}
+function sc2(t,x,c){document.getElementById('ct2t').textContent=t;document.getElementById('ct2x').textContent=x;pc=c;document.getElementById('ct2b').classList.toggle('bn-dg',t.indexOf('删除')>=0);document.getElementById('cd2').classList.add('show')}
 function cc(){document.getElementById('cd2').classList.remove('show');pc=null}
 function ec(){if(pc)pc();cc()}
+
+// 类别色点固定映射（§3.4）
+function catColor(c){var m={'学习':'var(--blue)','生活':'var(--green)','饮食':'var(--yellow)','品德':'var(--red)','运动':'var(--green)','电子产品':'var(--blue)','兴趣':'var(--yellow)','家务':'var(--ink2)'};return m[c]||'var(--ink2)'}
+// 空状态积木插画（§4.13）
+function esBricks(){return '<div class="es-bricks" aria-hidden="true"><span class="b b1"></span><span class="b b2"></span><span class="b b3"></span></div>'}
+// 头像四色轮换（red/blue/green/yellow 按序）
+var AVCOLORS=['var(--red)','var(--blue)','var(--green)','var(--yellow)'];
 
 // ===== 登录管理 =====
 function doLogin(){
   var phone=document.getElementById('loginPhone').value.trim();
   var name=document.getElementById('loginName').value.trim();
-  if(!phone||phone.length<11){toast('请输入正确的手机号');return}
-  if(!name){toast('请输入姓名');return}
+  if(!phone||phone.length<11){toast('请输入正确的手机号','err');return}
+  if(!name){toast('请输入姓名','err');return}
   var users=getUsers();
   var exist=users.find(function(u){return u.phone===phone});
   if(!exist){
-    if(users.length>=3){toast('最多支持3个账号');return}
+    if(users.length>=3){toast('最多支持3个账号','err');return}
     users.push({phone:phone,name:name});
     saveUsers(users);
   }
@@ -754,7 +797,6 @@ function enterApp(){
   document.getElementById('loginPage').classList.remove('show');
   document.getElementById('mainHeader').style.display='';
   document.getElementById('userSwitch').style.display='';
-  document.getElementById('syncBtn').style.display='';
   var users=getUsers();
   var u=users.find(function(x){return x.phone===currentUser});
   if(u){
@@ -774,13 +816,13 @@ function showSwitchModal(){
     var u=users[i];
     var isCur=u.phone===currentUser;
     html+='<div class="switch-item'+(isCur?' current':'')+'" onclick="switchUser(\''+u.phone+'\')">';
-    html+='<div class="switch-avatar">'+u.name.charAt(0)+'</div>';
+    html+='<div class="switch-avatar" style="background:'+AVCOLORS[i%4]+'">'+u.name.charAt(0)+'</div>';
     html+='<div class="switch-info"><div class="switch-name">'+u.name+'</div><div class="switch-phone">'+u.phone.replace(/(\d{3})\d{4}(\d{4})/,'$1****$2')+'</div></div>';
     if(isCur)html+='<div class="switch-check">✓</div>';
     html+='</div>';
   }
-  if(users.length<3)html+='<div class="switch-add" onclick="closeSwitchModal();showLoginPage()">➕ 添加新用户</div>';
-  html+='<div class="switch-add" style="color:var(--no)" onclick="doLogout()">🚪 退出登录</div>';
+  if(users.length<3)html+='<div class="switch-add" onclick="closeSwitchModal();showLoginPage()">＋ 添加新用户</div>';
+  html+='<div class="switch-add quit" onclick="doLogout()">退出登录</div>';
   document.getElementById('switchList').innerHTML=html;
   document.getElementById('switchModal').classList.add('show');
 }
@@ -808,14 +850,12 @@ function doLogout(){
   currentUser=null;
   setCurrentPhone('');
   document.getElementById('userSwitch').style.display='none';
-  document.getElementById('syncBtn').style.display='none';
   showLoginPage();
 }
 function showLoginPage(){
   document.getElementById('loginPage').classList.add('show');
   document.getElementById('mainHeader').style.display='none';
   document.getElementById('userSwitch').style.display='none';
-  document.getElementById('syncBtn').style.display='none';
   renderQuickLogin();
 }
 function renderQuickLogin(){
@@ -824,7 +864,7 @@ function renderQuickLogin(){
   for(var i=0;i<users.length;i++){
     var u=users[i];
     html+='<div class="login-quick-item" onclick="quickLogin(\''+u.phone+'\')">';
-    html+='<div class="login-quick-avatar">'+u.name.charAt(0)+'</div>';
+    html+='<div class="login-quick-avatar" style="background:'+AVCOLORS[i%4]+'">'+u.name.charAt(0)+'</div>';
     html+='<div class="login-quick-info"><div class="login-quick-name">'+u.name+'</div><div class="login-quick-phone">'+u.phone.replace(/(\d{3})\d{4}(\d{4})/,'$1****$2')+'</div></div>';
     html+='<div class="login-quick-enter">›</div>';
     html+='</div>';
@@ -839,7 +879,6 @@ function renderAll(data){
 }
 
 var curTab='home';
-var sectionState={};
 var scoreType='up';
 var dateRangeStart=minRecordDate(); // 记录页默认筛选：近一周（今天-6 ~ 今天），仅初始化一次，用户改后以用户为准
 var dateRangeEnd=today();
@@ -857,6 +896,7 @@ function st(tab){
   var tabs=document.querySelectorAll('.ti');
   for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('on');
   document.getElementById('p-'+tab).classList.add('on');
+  document.querySelector('.tb .ti:nth-child('+({'home':1,'records':2,'settings':3}[tab]||1)+')').classList.add('on');
   curTab=tab;
   // 切换页签时同步
   if(currentUser){
@@ -877,7 +917,12 @@ function render(){
 }
 
 function renderHome(){
-  document.getElementById('tp').textContent=ad.totalPoints;
+  var tpEl=document.getElementById('tp');
+  tpEl.textContent=ad.totalPoints;
+  tpEl.classList.toggle('zero',!ad.totalPoints);
+  // 徽章等级：红 <100 ≤ 黄 <500 ≤ 蓝
+  document.getElementById('pcBrick').className='pc-brick'+(ad.totalPoints>=500?' b':(ad.totalPoints>=100?' y':''));
+
   var tr=ad.records.filter(function(r){return r.date===today()});
   var tu=tr.filter(function(r){return r.score>0}).reduce(function(s,r){return s+r.score},0);
   var td2=tr.filter(function(r){return r.score<0}).reduce(function(s,r){return s+Math.abs(r.score)},0);
@@ -905,13 +950,19 @@ function renderHome(){
     var dd2=new Date(ws);dd2.setDate(ws.getDate()+i);
     var ds2=dd2.getFullYear()+'-'+String(dd2.getMonth()+1).padStart(2,'0')+'-'+String(dd2.getDate()).padStart(2,'0');
     var dr2=ad.records.filter(function(r){return r.date===ds2});
-    var dn=dr2.reduce(function(s,r){return s+r.score},0);
+    var upN=dr2.filter(function(r){return r.score>0}).reduce(function(s,r){return s+r.score},0);
+    var dnN=dr2.filter(function(r){return r.score<0}).reduce(function(s,r){return s+Math.abs(r.score)},0);
+    var dn=upN-dnN;
+    // 底部色条：加分绿 / 扣分红 / 混合日黄
+    var bar='';
+    if(upN>0&&dnN>0)bar='var(--yellow)';
+    else if(dn>0)bar='var(--green)';
+    else if(dn<0)bar='var(--red)';
     var d=document.createElement('div');
-    var vd2=selectedDay||today(); // 视图日：蓝框跟随选中格，未选中时停在今天
+    var vd2=selectedDay||today(); // 视图日：红框跟随选中格，未选中时停在今天
     var lbl=(ds2===today())?'今天':dl[dd2.getDay()];
-    var dstr=(dd2.getMonth()+1)+'/'+dd2.getDate(); // 小字日期，跨自然周/跨月时可区分
-    d.className='sbd'+(dr2.length>0?' hd':'')+(vd2===ds2?' tdy':'');
-    d.innerHTML='<span class="sdl">'+lbl+'</span><span class="sdd">'+dstr+'</span><span class="sds">'+(dn>0?'+':'')+dn+'</span>';
+    d.className='sbd'+(vd2===ds2?' tdy':'');
+    d.innerHTML='<span class="sdl">'+lbl+'</span><span class="sdd">'+dd2.getDate()+'</span>'+(bar?'<i class="sdbar" style="background:'+bar+'"></i>':'');
     d.onclick=(function(ds){return function(){openDayDetail(ds)}})(ds2);
     wb.appendChild(d);
   }
@@ -931,8 +982,8 @@ function renderHome(){
   var trl=document.getElementById('tr');
   if(vitems.length===0){
     trl.innerHTML=(vd===today())
-      ?'<div class="es"><div class="ei">🏗️</div><div class="et">今天还没有记录哦<br>点击上方按钮开始加分吧！</div></div>'
-      :'<div class="es"><div class="ei">📭</div><div class="et">该日暂无记录</div></div>';
+      ?'<div class="es">'+esBricks()+'<div class="et">今天还没有记录哦</div><div class="eg">点击上方按钮开始加分吧！</div></div>'
+      :'<div class="es">'+esBricks()+'<div class="et">该日暂无记录</div></div>';
   }else{
     var html2='';
     for(var i=0;i<vitems.length;i++){
@@ -945,11 +996,11 @@ function renderHome(){
 
 // 当日记录区块标题：视图日为今天 →「今日记录」；其他日子 →「当日记录 · X月X日 周X」
 function dayTitle(ds){
-  if(ds===today())return'🏗️ 今日记录';
+  if(ds===today())return'今日记录';
   var p=ds.split('-');
   var d=new Date(ds);
   var w=['周日','周一','周二','周三','周四','周五','周六'];
-  return '🏗️ 当日记录 · '+parseInt(p[1],10)+'月'+parseInt(p[2],10)+'日 '+w[d.getDay()];
+  return '当日记录 · '+parseInt(p[1],10)+'月'+parseInt(p[2],10)+'日 '+w[d.getDay()];
 }
 
 // 记录列表通用排序：按发生日期(data.date)降序，同日期内按录入时间(timestamp)降序。
@@ -963,22 +1014,21 @@ function cmpTimeDesc(a,b){
 function renderRecord(r,currentDay){
   var u=r.score>0;
   var cls=u?'u':'d';
-  var ico=u?'✅':'⚠️';
   var sign=u?'+':'';
   var noteStr=r.note?(' · '+r.note):'';
   var timeStr=(r.date===currentDay)?fdt(r.timestamp):fd(r.date)+' '+fdt(r.timestamp);
-  return '<div class="ri"><div class="ic '+cls+'">'+ico+'</div><div class="inf"><div class="nm">'+r.name+'</div><div class="tm">'+timeStr+noteStr+'</div></div><div class="sc2 '+cls+'">'+sign+r.score+'</div><button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button></div>';
+  return '<div class="ri"><span class="cat-dot" style="background:'+catColor(r.category)+'"></span><div class="inf"><div class="nm">'+r.name+'</div><div class="tm">'+timeStr+noteStr+'</div></div><div class="sc2 '+cls+'">'+sign+r.score+'</div><button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button></div>';
 }
 
 function renderExchange(e,currentDay){
   var timeStr=(e.date===currentDay)?fdt(e.timestamp):fd(e.date)+' '+fdt(e.timestamp);
-  return '<div class="ri"><div class="ic e">🎁</div><div class="inf"><div class="nm">'+e.name+'</div><div class="tm">'+timeStr+' · 兑换</div></div><div class="sc2 d">-'+e.cost+'</div></div>';
+  return '<div class="ri"><span class="cat-dot" style="background:var(--yellow)"></span><div class="inf"><div class="nm">'+e.name+'</div><div class="tm">'+timeStr+'</div></div><span class="ex-chip">兑换</span><div class="sc2 e">-'+e.cost+'</div></div>';
 }
 
 function renderRecords(){
   if(!dateRangeStart) dateRangeStart=today();
   if(!dateRangeEnd) dateRangeEnd=today();
-  document.getElementById('dateTriggerText').textContent='📅 '+dateRangeStart.replace(/-/g,'/')+' 至 '+dateRangeEnd.replace(/-/g,'/');
+  document.getElementById('dateTriggerText').textContent=dateRangeStart.replace(/-/g,'/')+' 至 '+dateRangeEnd.replace(/-/g,'/');
 
   // 类型筛选按钮
   var types=['所有','得分','扣分','兑换'];
@@ -1006,7 +1056,7 @@ function renderRecords(){
   allItems.sort(cmpTimeDesc);
 
   var ar=document.getElementById('ar');
-  if(allItems.length===0) ar.innerHTML='<div class="es"><div class="ei">📭</div><div class="et">这个时间段还没有记录</div></div>';
+  if(allItems.length===0) ar.innerHTML='<div class="es">'+esBricks()+'<div class="et">这个时间段还没有记录</div></div>';
   else{
     var html='';
     for(var i=0;i<allItems.length;i++){
@@ -1018,81 +1068,37 @@ function renderRecords(){
 }
 
 function renderSettings(){
-  document.getElementById('upCnt').textContent='('+ad.upItems.length+'项)';
-  document.getElementById('downCnt').textContent='('+ad.downItems.length+'项)';
-  document.getElementById('shopCnt').textContent='('+ad.shopItems.length+'项)';
+  document.getElementById('upCnt').textContent=ad.upItems.length+' 项';
+  document.getElementById('downCnt').textContent=ad.downItems.length+' 项';
+  document.getElementById('shopCnt').textContent=ad.shopItems.length+' 项';
 
-  document.getElementById('sui').innerHTML=renderGroupedItems(ad.upItems,'up','up_main');
-  document.getElementById('sdi').innerHTML=renderGroupedItems(ad.downItems,'down','down_main');
+  document.getElementById('sui').innerHTML=renderGroupedItems(ad.upItems,'up');
+  document.getElementById('sdi').innerHTML=renderGroupedItems(ad.downItems,'down');
 
   var html='';
   for(var i=0;i<ad.shopItems.length;i++){
     var it=ad.shopItems[i];
-    html+='<div class="sr"><span class="n">'+it.icon+' '+it.name+'</span><span class="s">'+it.cost+'分</span><button class="ed" onclick="editShopItem(\''+it.id+'\')">✎</button><button class="x" onclick="deleteItem(\'shop\',\''+it.id+'\')">✕</button></div>';
+    html+='<div class="sr"><span class="n">'+it.name+'</span><span class="s e">-'+it.cost+'分</span><button class="ed" onclick="editShopItem(\''+it.id+'\')">✎</button><button class="x" onclick="deleteItem(\'shop\',\''+it.id+'\')">✕</button></div>';
   }
   document.getElementById('ssi').innerHTML=html;
-
-  // 恢复主section展开状态
-  var sections=[
-    {idx:1,stateKey:'up_main'},
-    {idx:2,stateKey:'down_main'},
-    {idx:3,stateKey:'shop_main'}
-  ];
-  for(var i=0;i<sections.length;i++){
-    var sec=sections[i];
-    var sgh=document.querySelector('#p-settings .sec:nth-child('+sec.idx+') .sg .sgh');
-    var sgc=document.querySelector('#p-settings .sec:nth-child('+sec.idx+') .sg .sgc');
-    if(sgh&&sgc){
-      var isOpen=sectionState[sec.stateKey]===true;
-      if(isOpen){sgh.classList.add('open');sgc.classList.add('open')}
-      else{sgh.classList.remove('open');sgc.classList.remove('open')}
-    }
-  }
 }
 
-function renderGroupedItems(items,type,stateKey){
-  var groups={};
-  var order=[];
-  for(var i=0;i<items.length;i++){
-    var c=items[i].category;
-    if(!groups[c]){groups[c]=[];order.push(c)}
-    groups[c].push(items[i]);
-  }
+// 设置页行列表：类别色点标识分类（三组平铺，每行常显编辑/删除按钮）
+function renderGroupedItems(items,type){
   var html='';
-  for(var j=0;j<order.length;j++){
-    var cat=order[j];
-    var icon=ci[cat]||'📌';
-    var isOpen=sectionState[stateKey+'_'+cat]===true;
-    html+='<div class="sg" style="margin-bottom:8px;box-shadow:none;border:1px solid var(--bd)">';
-    html+='<div class="sgh'+(isOpen?' open':'')+'" onclick="toggleSection(this,\''+stateKey+'_'+cat+'\')" style="padding:10px 12px">';
-    html+='<div class="sgt" style="font-size:13px">'+icon+' '+cat+' <span class="cnt">('+groups[cat].length+'项)</span></div>';
-    html+='<span class="arr">▼</span>';
-    html+='</div>';
-    html+='<div class="sgc'+(isOpen?' open':'')+'">';
-    for(var k=0;k<groups[cat].length;k++){
-      var it=groups[cat][k];
-      var sign=type==='up'?'+':'-';
-      html+='<div class="sr"><span class="n">'+it.name+'</span><span class="s '+(type==='up'?'u':'d')+'">'+sign+it.score+'</span><button class="ed" onclick="editItem(\''+type+'\',\''+it.id+'\')">✎</button><button class="x" onclick="deleteItem(\''+type+'\',\''+it.id+'\')">✕</button></div>';
-    }
-    html+='</div></div>';
+  for(var i=0;i<items.length;i++){
+    var it=items[i];
+    var sign=type==='up'?'+':'-';
+    html+='<div class="sr"><span class="cat-dot" style="background:'+catColor(it.category)+'"></span><span class="n">'+it.name+'</span><span class="s '+(type==='up'?'u':'d')+'">'+sign+it.score+'</span><button class="ed" onclick="editItem(\''+type+'\',\''+it.id+'\')">✎</button><button class="x" onclick="deleteItem(\''+type+'\',\''+it.id+'\')">✕</button></div>';
   }
   return html;
-}
-
-function toggleSection(header,stateKey){
-  var content=header.nextElementSibling;
-  header.classList.toggle('open');
-  content.classList.toggle('open');
-  if(stateKey){
-    sectionState[stateKey]=header.classList.contains('open');
-  }
 }
 
 function setTypeFilter(t){curTypeFilter=t;renderRecords()}
 
 function openScore(){
   scoreType='up';
-  document.getElementById('scoreType').value='up';
+  updateSeg();
   var dateInput=document.getElementById('sdate');
   // 选中日联动：点击过周概览某天且不晚于今天 → 默认该天（补签）；未来日子或未点击 → 默认今天
   var dv=today();
@@ -1107,8 +1113,13 @@ function openScore(){
 
 function setScoreType(type){
   scoreType=type;
-  document.getElementById('scoreType').value=type;
+  updateSeg();
   populateCats();
+}
+
+function updateSeg(){
+  document.getElementById('segUp').classList.toggle('on',scoreType==='up');
+  document.getElementById('segDown').classList.toggle('on',scoreType==='down');
 }
 
 // 补签最早可选日期：今天往前 6 天（含今天共 7 天）
@@ -1126,10 +1137,11 @@ function populateCats(){
   }
   var catHtml='';
   for(var i=0;i<cats.length;i++){
-    catHtml+='<option value="'+cats[i]+'">'+(ci[cats[i]]||'')+' '+cats[i]+'</option>';
+    catHtml+='<option value="'+cats[i]+'">'+cats[i]+'</option>';
   }
   document.getElementById('scat').innerHTML=catHtml;
   if(cats.length>0) selectCat(cats[0]);
+  else{document.getElementById('scat').innerHTML='';document.getElementById('sis').innerHTML=''}
 }
 
 function selectCat(cat){
@@ -1162,20 +1174,20 @@ function ss(){
   var items=scoreType==='up'?ad.upItems:ad.downItems;
   var it=null;
   for(var i=0;i<items.length;i++){if(items[i].id===sis.value){it=items[i];break}}
-  if(!it){toast('请选择项目');return}
+  if(!it){toast('请选择项目','err');return}
   var sv=parseInt(document.getElementById('sv').value)||0;
   var sn=document.getElementById('sn').value.trim();
-  if(sv<=0){toast('分值必须大于0');return}
+  if(sv<=0){toast('分值必须大于0','err');return}
   var dateInput=document.getElementById('sdate');
   var recDate=dateInput.value||today();
-  if(recDate>today()){toast('日期不能晚于今天');return}
-  if(recDate<minRecordDate()){toast('只能补录最近7天内的记录');return}
+  if(recDate>today()){toast('日期不能晚于今天','err');return}
+  if(recDate<minRecordDate()){toast('只能补录最近7天内的记录','err');return}
   var rec={id:'r_'+Date.now(),date:recDate,timestamp:Date.now(),type:scoreType,itemId:it.id,name:it.name,category:it.category,score:scoreType==='up'?sv:-sv,note:sn};
   ad.records.push(rec);
   ad.totalPoints+=rec.score;
   sd(ad);
   document.getElementById('ms').classList.remove('show');
-  toast(scoreType==='up'?('✅ +'+sv+'分！'):'⚠️ -'+sv+'分');
+  toast(scoreType==='up'?('+'+sv+' 分'):('-'+sv+' 分'),scoreType==='up'?'ok':'err');
   render();
 }
 
@@ -1189,7 +1201,21 @@ function openExchange(){
   }
   if(!html) html='<option value="">没有可兑换项</option>';
   document.getElementById('exSelect').innerHTML=html;
-  document.getElementById('exCost').textContent='';
+  var exBtn=document.getElementById('exConfirm');
+  var anyFit=ad.shopItems.some(function(it){return ad.totalPoints>=it.cost});
+  if(anyFit){
+    exBtn.disabled=false;
+    // 初始显式选中第一个可用项（disabled 首项会导致 selectedIndex=-1，cost 无法填充）
+    var selEl=document.getElementById('exSelect');
+    for(var j=0;j<selEl.options.length;j++){
+      if(!selEl.options[j].disabled){selEl.selectedIndex=j;break}
+    }
+    onExSelectChange();
+  }else{
+    // 积分不足：按钮置 disabled（禁用视觉 .bn:disabled）；confirmExchange 内的 guard 保留兜底
+    exBtn.disabled=true;
+    document.getElementById('exCost').textContent='积分不足，暂无可兑换项';
+  }
   document.getElementById('ms2').classList.add('show');
 }
 
@@ -1203,15 +1229,15 @@ function onExSelectChange(){
 function confirmExchange(){
   var sel=document.getElementById('exSelect');
   var itemId=sel.value;
-  if(!itemId){toast('请选择兑换项');return}
+  if(!itemId){toast('请选择兑换项','err');return}
   var it=null;
   for(var i=0;i<ad.shopItems.length;i++){if(ad.shopItems[i].id===itemId){it=ad.shopItems[i];break}}
-  if(!it||ad.totalPoints<it.cost){toast('积分不足！');return}
+  if(!it||ad.totalPoints<it.cost){toast('积分不足','err');return}
   sc2('确认兑换','用 '+it.cost+' 积分兑换「'+it.name+'」？',function(){
     ad.totalPoints-=it.cost;
     ad.exchanges.push({id:'ex_'+Date.now(),date:today(),timestamp:Date.now(),shopItemId:itemId,name:it.name,icon:it.icon,cost:it.cost});
     sd(ad);
-    toast('🎉 兑换成功！剩余 '+ad.totalPoints+' 分');
+    toast('兑换成功，剩余 '+ad.totalPoints+' 分','ok');
     document.getElementById('ms2').classList.remove('show');
     render();
   });
@@ -1251,7 +1277,7 @@ function sam(type){
     document.getElementById('editShopId').value='';
     document.getElementById('s3n').value='';
     document.getElementById('s3c').value='50';
-    document.getElementById('s3i').value='🎁';
+    document.getElementById('s3i').value='';
     document.getElementById('s3d').value='';
     document.getElementById('ms3').classList.add('show');
   }else{
@@ -1293,8 +1319,8 @@ function sai(){
   var n=document.getElementById('an').value.trim();
   var scv=parseInt(document.getElementById('asc').value)||0;
   var cat=document.getElementById('acat').value;
-  if(!n){toast('请输入名称');return}
-  if(scv<=0){toast('分值必须大于0');return}
+  if(!n){toast('请输入名称','err');return}
+  if(scv<=0){toast('分值必须大于0','err');return}
   var editId=document.getElementById('editId').value;
   if(editId){
     // 编辑模式
@@ -1311,7 +1337,7 @@ function sai(){
   }
   sd(ad);
   document.getElementById('ma').classList.remove('show');
-  toast('✅ 保存成功');
+  toast('保存成功','ok');
   render();
 }
 
@@ -1320,8 +1346,8 @@ function sasi(){
   var c=parseInt(document.getElementById('s3c').value)||0;
   var ic=document.getElementById('s3i').value.trim()||'🎁';
   var d=document.getElementById('s3d').value.trim();
-  if(!n){toast('请输入名称');return}
-  if(c<=0){toast('积分必须大于0');return}
+  if(!n){toast('请输入名称','err');return}
+  if(c<=0){toast('积分必须大于0','err');return}
   var editId=document.getElementById('editShopId').value;
   if(editId){
     for(var i=0;i<ad.shopItems.length;i++){
@@ -1334,13 +1360,13 @@ function sasi(){
   }
   sd(ad);
   document.getElementById('ms3').classList.remove('show');
-  toast('✅ 保存成功');
+  toast('保存成功','ok');
   render();
 }
 
 function deleteItem(type,id){
   var lb={up:'加分项',down:'扣分项',shop:'兑换项'};
-  sc2('删除','确定删除这个'+lb[type]+'吗？',function(){
+  sc2('删除'+lb[type],'确定删除这个'+lb[type]+'吗？',function(){
     if(type==='up') ad.upItems=ad.upItems.filter(function(i){return i.id!==id});
     else if(type==='down') ad.downItems=ad.downItems.filter(function(i){return i.id!==id});
     else ad.shopItems=ad.shopItems.filter(function(i){return i.id!==id});
@@ -1351,7 +1377,7 @@ function deleteItem(type,id){
 }
 
 function ccd(){
-  sc2('⚠️ 清除所有数据','这将删除所有积分记录、兑换记录和自定义项目，总分归零。确定要继续吗？',function(){
+  sc2('清除所有数据','这将删除所有积分记录、兑换记录和自定义项目，总分归零。确定要继续吗？',function(){
     ad=gd();sd(ad);toast('数据已清除');render();
   });
 }
@@ -1436,6 +1462,12 @@ function selectDate(dateStr){
   }
   renderCalendars();
 }
+
+// 顶栏：滚动时才浮现白底 + 1px 描边
+window.addEventListener('scroll',function(){
+  var h=document.getElementById('mainHeader');
+  if(h)h.classList.toggle('scrolled',window.scrollY>4);
+},{passive:true});
 
 // 初始化：检查登录状态
 (function init(){
