@@ -154,13 +154,24 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 .ftb.on{background:var(--blue-l);border-color:var(--blue-l);color:var(--blue-deep);font-weight:600}
 .ftb.sm{padding:4px 12px;font:var(--f-cap)}
 
-/* —— 设置页：三组直接平铺（v3 结构），组头=小色砖+组名+计数 —— */
+/* —— 设置页：v3 结构（分组卡可折叠 + 组内按分类再分组），v4 皮肤 —— */
 .sg{background:var(--card);border:var(--bd);border-radius:var(--r-m);margin-bottom:12px;overflow:hidden}
-.sgh{padding:16px 16px 10px;display:flex;align-items:center;gap:8px}
+.sgh{padding:16px 16px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;border-bottom:1px solid transparent;transition:border-color .2s}
+.sgh.open{border-bottom-color:var(--line)}
 .sgt{flex:1;font:var(--f-item);font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px}
 .gh-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;box-shadow:inset 0 -2px 0 rgba(0,0,0,.10)}
 .cnt{font:var(--f-cap);font-weight:500;color:var(--ink2);background:var(--fill);border-radius:var(--r-full);padding:4px 8px}
-.sg-list{padding:0 16px}
+/* 折叠箭头：CSS chevron（非 emoji 字符），open 时旋转指向上 */
+.sgh .arr{width:8px;height:8px;border-right:2px solid var(--ink2);border-bottom:2px solid var(--ink2);transform:rotate(45deg);transition:transform .2s;flex-shrink:0}
+.sgh.open .arr{transform:rotate(-135deg)}
+/* 可折叠内容区：max-height 过渡，折叠机制照 v3（.open 切换，无持久化） */
+.sgc{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease}
+.sgc.open{max-height:2000px;padding:10px 16px 0}
+/* 组内分类小节：嵌套卡片（v3 renderGroupedItems 结构） */
+.sg-sub{margin-bottom:8px;border-radius:var(--r-s)}
+.sg-sub>.sgh{padding:10px 12px}
+.sg-sub .sgt{font-size:13px}
+.sg-sub>.sgc.open{max-height:2000px;padding:2px 12px 8px}
 .add-inline{display:block;width:calc(100% - 32px);margin:8px 16px 16px;height:40px;background:var(--fill);border:1.5px dashed var(--line);border-radius:var(--r-s);color:var(--ink);font:var(--f-item);font-weight:600;cursor:pointer}
 .add-inline:active{background:var(--blue-l)}
 .sr{display:flex;align-items:center;gap:8px;background:var(--fill);border-radius:var(--r-s);padding:8px 12px;margin-bottom:8px}
@@ -372,22 +383,22 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
   <div style="padding-top:12px">
     <div class="sec" style="margin-top:0">
       <div class="sg">
-        <div class="sgh"><div class="sgt"><span class="gh-dot" style="background:var(--red)" aria-hidden="true"></span>加分项管理<span class="cnt" id="upCnt"></span></div></div>
-        <div class="sg-list" id="sui"></div>
+        <div class="sgh" onclick="toggleSection(this,'up_main')"><div class="sgt"><span class="gh-dot" style="background:var(--red)" aria-hidden="true"></span>加分项管理<span class="cnt" id="upCnt"></span></div><span class="arr" aria-hidden="true"></span></div>
+        <div class="sgc" id="sui"></div>
         <button class="add-inline" onclick="sam('up')">＋ 添加加分项</button>
       </div>
     </div>
     <div class="sec">
       <div class="sg">
-        <div class="sgh"><div class="sgt"><span class="gh-dot" style="background:var(--blue)" aria-hidden="true"></span>扣分项管理<span class="cnt" id="downCnt"></span></div></div>
-        <div class="sg-list" id="sdi"></div>
+        <div class="sgh" onclick="toggleSection(this,'down_main')"><div class="sgt"><span class="gh-dot" style="background:var(--blue)" aria-hidden="true"></span>扣分项管理<span class="cnt" id="downCnt"></span></div><span class="arr" aria-hidden="true"></span></div>
+        <div class="sgc" id="sdi"></div>
         <button class="add-inline" onclick="sam('down')">＋ 添加扣分项</button>
       </div>
     </div>
     <div class="sec">
       <div class="sg">
-        <div class="sgh"><div class="sgt"><span class="gh-dot" style="background:var(--yellow)" aria-hidden="true"></span>兑换项管理<span class="cnt" id="shopCnt"></span></div></div>
-        <div class="sg-list" id="ssi"></div>
+        <div class="sgh" onclick="toggleSection(this,'shop_main')"><div class="sgt"><span class="gh-dot" style="background:var(--yellow)" aria-hidden="true"></span>兑换项管理<span class="cnt" id="shopCnt"></span></div><span class="arr" aria-hidden="true"></span></div>
+        <div class="sgc" id="ssi"></div>
         <button class="add-inline" onclick="sam('shop')">＋ 添加兑换项</button>
       </div>
     </div>
@@ -879,6 +890,7 @@ function renderAll(data){
 }
 
 var curTab='home';
+var sectionState={}; // 设置页折叠状态（内存变量，照 v3：刷新后重置，不用 localStorage）
 var scoreType='up';
 var dateRangeStart=minRecordDate(); // 记录页默认筛选：近一周（今天-6 ~ 今天），仅初始化一次，用户改后以用户为准
 var dateRangeEnd=today();
@@ -1072,8 +1084,8 @@ function renderSettings(){
   document.getElementById('downCnt').textContent=ad.downItems.length+' 项';
   document.getElementById('shopCnt').textContent=ad.shopItems.length+' 项';
 
-  document.getElementById('sui').innerHTML=renderGroupedItems(ad.upItems,'up');
-  document.getElementById('sdi').innerHTML=renderGroupedItems(ad.downItems,'down');
+  document.getElementById('sui').innerHTML=renderGroupedItems(ad.upItems,'up','up_main');
+  document.getElementById('sdi').innerHTML=renderGroupedItems(ad.downItems,'down','down_main');
 
   var html='';
   for(var i=0;i<ad.shopItems.length;i++){
@@ -1081,17 +1093,63 @@ function renderSettings(){
     html+='<div class="sr"><span class="n">'+it.name+'</span><span class="s e">-'+it.cost+'分</span><button class="ed" onclick="editShopItem(\''+it.id+'\')">✎</button><button class="x" onclick="deleteItem(\'shop\',\''+it.id+'\')">✕</button></div>';
   }
   document.getElementById('ssi').innerHTML=html;
+
+  // 恢复主分组展开状态（照 v3：按 .sec 序号回填 open 类）
+  var sections=[
+    {idx:1,stateKey:'up_main'},
+    {idx:2,stateKey:'down_main'},
+    {idx:3,stateKey:'shop_main'}
+  ];
+  for(var i=0;i<sections.length;i++){
+    var sec=sections[i];
+    var sgh=document.querySelector('#p-settings .sec:nth-child('+sec.idx+') .sg .sgh');
+    var sgc=document.querySelector('#p-settings .sec:nth-child('+sec.idx+') .sg .sgc');
+    if(sgh&&sgc){
+      var isOpen=sectionState[sec.stateKey]===true;
+      if(isOpen){sgh.classList.add('open');sgc.classList.add('open')}
+      else{sgh.classList.remove('open');sgc.classList.remove('open')}
+    }
+  }
 }
 
-// 设置页行列表：类别色点标识分类（三组平铺，每行常显编辑/删除按钮）
-function renderGroupedItems(items,type){
-  var html='';
+// 设置页行列表：照 v3——按分类再分组，每个分类小节可展开/收缩
+// 状态存内存 sectionState[stateKey+'_'+cat]（刷新重置，不用 localStorage）
+function renderGroupedItems(items,type,stateKey){
+  var groups={};
+  var order=[];
   for(var i=0;i<items.length;i++){
-    var it=items[i];
-    var sign=type==='up'?'+':'-';
-    html+='<div class="sr"><span class="cat-dot" style="background:'+catColor(it.category)+'"></span><span class="n">'+it.name+'</span><span class="s '+(type==='up'?'u':'d')+'">'+sign+it.score+'</span><button class="ed" onclick="editItem(\''+type+'\',\''+it.id+'\')">✎</button><button class="x" onclick="deleteItem(\''+type+'\',\''+it.id+'\')">✕</button></div>';
+    var c=items[i].category;
+    if(!groups[c]){groups[c]=[];order.push(c)}
+    groups[c].push(items[i]);
+  }
+  var html='';
+  for(var j=0;j<order.length;j++){
+    var cat=order[j];
+    var isOpen=sectionState[stateKey+'_'+cat]===true;
+    html+='<div class="sg sg-sub">';
+    html+='<div class="sgh'+(isOpen?' open':'')+'" onclick="toggleSection(this,\''+stateKey+'_'+cat+'\')">';
+    html+='<div class="sgt"><span class="cat-dot" style="background:'+catColor(cat)+'" aria-hidden="true"></span>'+cat+'<span class="cnt">('+groups[cat].length+'项)</span></div>';
+    html+='<span class="arr" aria-hidden="true"></span>';
+    html+='</div>';
+    html+='<div class="sgc'+(isOpen?' open':'')+'">';
+    for(var k=0;k<groups[cat].length;k++){
+      var it=groups[cat][k];
+      var sign=type==='up'?'+':'-';
+      html+='<div class="sr"><span class="n">'+it.name+'</span><span class="s '+(type==='up'?'u':'d')+'">'+sign+it.score+'</span><button class="ed" onclick="editItem(\''+type+'\',\''+it.id+'\')">✎</button><button class="x" onclick="deleteItem(\''+type+'\',\''+it.id+'\')">✕</button></div>';
+    }
+    html+='</div></div>';
   }
   return html;
+}
+
+// 折叠切换（照 v3）：切头与内容的 open 类，状态记入内存 sectionState
+function toggleSection(header,stateKey){
+  var content=header.nextElementSibling;
+  header.classList.toggle('open');
+  content.classList.toggle('open');
+  if(stateKey){
+    sectionState[stateKey]=header.classList.contains('open');
+  }
 }
 
 function setTypeFilter(t){curTypeFilter=t;renderRecords()}
