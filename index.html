@@ -185,6 +185,11 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 .sr .x:active{color:var(--red-deep)}
 .bn-danger{display:block;width:100%;height:44px;background:var(--card);border:1px solid var(--red);border-radius:var(--r-s);color:var(--red-deep);font:var(--f-body);font-weight:600;cursor:pointer}
 .bn-danger:active{background:var(--red-l)}
+/* —— 云端同步区块（设置页，非折叠，状态行走色点语言）—— */
+.sync-hint{font:var(--f-cap);color:var(--ink3)}
+.sync-line{display:flex;align-items:center;gap:6px;margin-top:10px;font:var(--f-cap);color:var(--ink2)}
+.sync-line .sync-dot{width:8px;height:8px}
+.sync-line-t{word-break:break-all}
 
 /* —— 底部弹窗：把手 + 居中标题 + ✕ —— */
 .mo{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay);z-index:200;display:none;align-items:flex-end;justify-content:center}
@@ -405,6 +410,17 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
     </div>
     <div class="sec">
       <div class="sg">
+        <div class="sgh" style="cursor:default"><div class="sgt"><span class="gh-dot" style="background:var(--blue)" aria-hidden="true"></span>云端同步</div></div>
+        <div style="padding:12px 16px 16px">
+          <div class="sync-hint">填入仅授权 star-points-data 仓库的 GitHub token，多设备填同一 token 即可同步</div>
+          <div class="fg" style="margin:10px 0 0"><label class="fl">GitHub Token</label><input type="password" class="fi" id="syncTokenInput" placeholder="github_pat_ 开头" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+          <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="saveSyncToken()">保存</button>
+          <div class="sync-line" id="syncStateLine"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sg">
         <div class="sgh" style="cursor:default"><div class="sgt">数据管理</div></div>
         <div style="padding:0 16px 16px"><button class="bn-danger" onclick="ccd()">清除所有数据</button></div>
       </div>
@@ -565,15 +581,19 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 var SK='***';
 var USER_KEY='star_users';
 var CURR_KEY='star_current';
-var SYNC_API=location.origin;
-var GH_TOKEN='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';
-var GH_OWNER='wxx-1006';
-var GH_REPO='star-points';
+/* ===== 云端同步配置 =====
+   数据仓库（私有）：wxx-1006/star-points-data，数据文件 sync-data.json。
+   token 运行时输入：用户在设置页填入 Fine-grained token，仅存本机 localStorage，
+   严禁硬编码。无 token 时同步静默跳过（色点灰），本地功能不受影响。 */
+var GH_REPO='wxx-1006/star-points-data';
 var GH_FILE='sync-data.json';
-var GH_API='https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/contents/'+GH_FILE;
+var GH_API='https://api.github.com/repos/'+GH_REPO+'/contents/'+GH_FILE;
+var TOKEN_KEY='sp_gh_token';
 var syncSHA='';
 var currentUser=null;
-var syncStatus='idle'; // idle | loading | synced | error
+var syncStatus='off'; // off(未配置/灰) | loading(黄) | synced(绿) | error(红)
+var syncErr='';       // 最近一次同步失败提示，显示在设置页「云端同步」状态行
+function getSyncToken(){try{return localStorage.getItem(TOKEN_KEY)||''}catch(e){return ''}}
 function getUsers(){try{var r=localStorage.getItem(USER_KEY);if(r)return JSON.parse(r)}catch(e){}return[]}
 function saveUsers(u){try{localStorage.setItem(USER_KEY,JSON.stringify(u))}catch(e){}}
 function getCurrentPhone(){try{return localStorage.getItem(CURR_KEY)||null}catch(e){}return null}
@@ -583,43 +603,84 @@ function ld(){var phone=currentUser;if(!phone)return gd();try{var r=localStorage
 function sd(d){var phone=currentUser;if(!phone)return;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
 function migrateOldData(phone){try{var old=localStorage.getItem(SK);if(old&&phone){var parsed=JSON.parse(old);if(parsed.records&&parsed.records.length>0){localStorage.setItem(userKey(phone),JSON.stringify(parsed));toast('已迁移历史数据')}}}catch(e){}}
 
-// ===== 数据同步 (GitHub API) =====
+// ===== 数据同步 (GitHub Contents API，私有仓库 star-points-data) =====
+// 状态机（用户胶囊 6px 色点 + 设置页状态行）：
+//   off    灰 = 未配置 token，同步静默跳过，本地照常
+//   loading 黄 = 同步请求进行中
+//   synced  绿 = 最近一次同步成功
+//   error   红 = token 无效(401/404)/无权限 或 网络失败；本地数据不受影响
+// 冲突策略：last-write-wins（后保存整体覆盖），家庭场景够用。
 function utf8ToB64(str){return btoa(unescape(encodeURIComponent(str)))}
 function b64ToUtf8(b64){return decodeURIComponent(escape(atob(b64)))}
 function syncPull(phone){
-  syncStatus='loading';
+  var token=getSyncToken();
+  if(!token){ // 未配置：跳过，不报错
+    syncStatus='off';syncErr='';
+    updateSyncUI();
+    return Promise.resolve(ld());
+  }
+  syncStatus='loading';syncErr='';
   updateSyncUI();
-  return fetch(GH_API,{headers:{'Authorization':'token '+GH_TOKEN}})
+  return fetch(GH_API,{headers:{'Authorization':'token '+token}})
     .then(function(r){
-      if(!r.ok) return {sha:'',content:null};
-      return r.json();
-    })
-    .then(function(meta){
-      syncSHA=meta.sha||'';
-      if(meta.content){
-        try{
-          var content=b64ToUtf8(meta.content);
-          var allData=JSON.parse(content);
-          if(allData && allData[phone]){
-            localStorage.setItem(userKey(phone),JSON.stringify(allData[phone]));
-          }
-        }catch(e){}
+      if(r.status===401||r.status===404){ // token 无效或无权限（私有仓库无权限 GET 返回 404）
+        syncStatus='error';syncErr='token 无效或无权限，请到设置页重新填写';
+        updateSyncUI();
+        return ld();
       }
-      syncStatus='synced';
-      updateSyncUI();
-      return ld();
+      if(!r.ok){
+        syncStatus='error';syncErr='同步失败（HTTP '+r.status+'）';
+        updateSyncUI();
+        return ld();
+      }
+      return r.json().then(function(meta){
+        syncSHA=meta.sha||'';
+        if(meta.content){
+          try{
+            var content=b64ToUtf8(meta.content);
+            var allData=JSON.parse(content);
+            if(allData && allData[phone]){
+              localStorage.setItem(userKey(phone),JSON.stringify(allData[phone]));
+            }
+          }catch(e){}
+        }
+        syncStatus='synced';syncErr='';
+        updateSyncUI();
+        return ld();
+      });
     })
-    .catch(function(e){
-      syncStatus='error';
+    .catch(function(){
+      // 网络失败：本地数据不受影响
+      syncStatus='error';syncErr='网络异常，同步失败，本地数据不受影响';
       updateSyncUI();
       return ld();
     });
 }
 function syncPush(data){
   if(!currentUser)return;
-  fetch(GH_API,{headers:{'Authorization':'token '+GH_TOKEN}})
-    .then(function(r){return r.json()})
+  var token=getSyncToken();
+  if(!token){ // 未配置：跳过，不报错
+    syncStatus='off';syncErr='';
+    updateSyncUI();
+    return;
+  }
+  syncStatus='loading';
+  updateSyncUI();
+  fetch(GH_API,{headers:{'Authorization':'token '+token}})
+    .then(function(r){
+      // 404 = 云端文件尚未创建（首次推送即迁移），按空数据处理走创建流程
+      if(r.status===404){syncSHA='';return {sha:'',content:null}}
+      // 其他非 ok（401/403/5xx/429 等）：语义不明时不推送，避免误创建覆盖
+      if(!r.ok){
+        syncStatus='error';
+        syncErr=(r.status===401||r.status===403)?'token 无效或无权限，请到设置页重新填写':'同步失败（HTTP '+r.status+'），本地数据不受影响';
+        updateSyncUI();
+        return null;
+      }
+      return r.json();
+    })
     .then(function(meta){
+      if(!meta)return;
       syncSHA=meta.sha||'';
       var allData={};
       if(meta.content){
@@ -627,15 +688,24 @@ function syncPush(data){
       }
       allData[currentUser]=data;
       var content=utf8ToB64(JSON.stringify(allData));
-      return fetch(GH_API,{method:'PUT',headers:{'Authorization':'token '+GH_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({message:'sync:'+currentUser,content:content,sha:syncSHA})});
+      return fetch(GH_API,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:JSON.stringify({message:'sync:'+currentUser,content:content,sha:syncSHA})})
+        .then(function(r){
+          if(r.status===401||r.status===403){
+            syncStatus='error';syncErr='token 无效或无权限，请到设置页重新填写';
+          }else if(r.ok){
+            syncStatus='synced';syncErr='';
+          }else{
+            syncStatus='error';syncErr='同步失败（HTTP '+r.status+'），本地数据不受影响';
+          }
+          updateSyncUI();
+        });
     })
-    .then(function(r){
-      if(r.ok){syncStatus='synced';updateSyncUI()}
-      else{syncStatus='error';updateSyncUI()}
-    })
-    .catch(function(){syncStatus='error';updateSyncUI()});
+    .catch(function(){
+      syncStatus='error';syncErr='网络异常，同步失败，本地数据不受影响';
+      updateSyncUI();
+    });
 }
-// 同步状态合并进用户胶囊：6px 色点（绿=已同步，黄=同步中，红=失败）
+// 同步状态合并进用户胶囊：6px 色点（绿=已同步，黄=同步中，红=失败，灰=未配置）
 function updateSyncUI(){
   var el=document.getElementById('syncStatus');
   if(!el)return;
@@ -645,6 +715,45 @@ function updateSyncUI(){
   else if(syncStatus==='error')c+=' err';
   else c+=' off';
   el.className=c;
+  renderSyncSettings();
+}
+// ===== 设置页「云端同步」区块 =====
+function renderSyncSettings(){
+  var line=document.getElementById('syncStateLine');
+  if(!line)return;
+  var inp=document.getElementById('syncTokenInput');
+  var token=getSyncToken();
+  // 回填已保存 token（密码框掩码显示）；输入框聚焦时不回填，避免打断输入
+  if(inp && document.activeElement!==inp){
+    var cur=inp.value.trim();
+    if(cur!==token) inp.value=token;
+  }
+  var dot='off',txt='';
+  if(!token){
+    dot='off';txt='未配置：填入 token 后即可多设备同步';
+  }else if(syncStatus==='loading'){
+    dot='wait';txt='已配置 · 同步中…';
+  }else if(syncStatus==='synced'){
+    dot='ok';txt='已配置 · 最近同步成功';
+  }else if(syncStatus==='error'){
+    dot='err';txt=syncErr||'同步失败';
+  }else{
+    dot='ok';txt='已配置';
+  }
+  line.innerHTML='<span class="sync-dot '+dot+'"></span><span class="sync-line-t">'+txt+'</span>';
+}
+// 保存 token：写入 localStorage 并立即触发一次 syncPull 验证
+function saveSyncToken(){
+  var inp=document.getElementById('syncTokenInput');
+  var v=inp.value.trim();
+  if(!v){toast('请输入 GitHub token','err');return}
+  try{localStorage.setItem(TOKEN_KEY,v)}catch(e){toast('保存失败','err');return}
+  toast('已保存，正在验证同步…','ok');
+  if(currentUser){
+    syncPull(currentUser).then(function(data){ad=data;render()});
+  }else{
+    syncStatus='off';syncErr='';updateSyncUI();
+  }
 }
 function doSync(){
   if(!currentUser)return;
@@ -1088,6 +1197,7 @@ function renderSettings(){
   document.getElementById('upCnt').textContent=ad.upItems.length+' 项';
   document.getElementById('downCnt').textContent=ad.downItems.length+' 项';
   document.getElementById('shopCnt').textContent=ad.shopItems.length+' 项';
+  renderSyncSettings();
 
   document.getElementById('sui').innerHTML=renderGroupedItems(ad.upItems,'up','up_main');
   document.getElementById('sdi').innerHTML=renderGroupedItems(ad.downItems,'down','down_main');
