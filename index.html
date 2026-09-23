@@ -77,6 +77,8 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 .sync-dot.err{background:var(--red)}
 .sync-dot.off{background:var(--line)}
 .us-avatar{width:20px;height:20px;border-radius:var(--r-full);background:var(--blue-l);color:var(--blue-deep);display:flex;align-items:center;justify-content:center;font:var(--f-mini)}
+/* —— 孩子视角徽章：顶栏用户胶囊内（蓝域，与日历/筛选同一色域语言）—— */
+.kid-badge{font:var(--f-mini);font-weight:600;color:var(--blue-deep);background:var(--blue-l);border-radius:var(--r-full);padding:3px 8px;flex-shrink:0}
 
 /* —— 页面区块节奏 —— */
 .pg{display:none}
@@ -215,6 +217,9 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 .seg-b{flex:1;height:44px;border:none;border-radius:var(--r-full);background:var(--fill);color:var(--ink2);font:var(--f-body);cursor:pointer;transition:all .2s}
 #segUp.on{background:var(--green-l);color:var(--grn-deep);font-weight:600}
 #segDown.on{background:var(--red-l);color:var(--red-deep);font-weight:600}
+/* 登录页角色分段选择：家长=红域 / 孩子=蓝域（沿用记分弹窗分段控件语言） */
+#segParent.on{background:var(--red-l);color:var(--red-deep);font-weight:600}
+#segKid.on{background:var(--blue-l);color:var(--blue-deep);font-weight:600}
 /* 弹窗内确认按钮 */
 .bn{display:block;width:100%;height:48px;border:none;border-radius:var(--r-m);font:var(--f-body);font-weight:700;cursor:pointer;transition:transform .15s}
 .bn:active{transform:scale(.97)}
@@ -342,6 +347,7 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
   <div class="sub" id="hd"></div>
   <button class="user-switch" id="userSwitch" onclick="showSwitchModal()" style="display:none">
     <span class="sync-dot off" id="syncStatus"></span>
+    <span class="kid-badge" id="kidBadge" style="display:none">孩子视角</span>
     <span class="us-avatar" id="usAvatar"></span>
     <span id="usName"></span>
     <span>▾</span>
@@ -362,7 +368,7 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
     <div class="sc"><div class="sv" id="ts">0</div><div class="sl">连续天数</div></div>
   </div>
   <div class="sec"><div class="sec-h"><div class="st-t">近一周概览</div></div><div class="wb" id="wb"></div></div>
-  <div class="sec">
+  <div class="sec" id="ctaSec">
     <div class="cta-row">
       <button class="cta" onclick="openScore()">记录分数</button>
       <button class="cta2" onclick="openExchange()">兑换积分</button>
@@ -410,6 +416,16 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
     </div>
     <div class="sec">
       <div class="sg">
+        <div class="sgh" style="cursor:default"><div class="sgt"><span class="gh-dot" style="background:var(--red)" aria-hidden="true"></span>家长 PIN</div></div>
+        <div style="padding:12px 16px 16px">
+          <div class="sync-hint">4 位数字 PIN 保护家长端：其他设备登录家长角色时需验证。孩子端为只读视角，不受影响。</div>
+          <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="openChangePin()">修改 PIN</button>
+          <div class="sync-line" id="pinStateLine"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sg">
         <div class="sgh" style="cursor:default"><div class="sgt"><span class="gh-dot" style="background:var(--blue)" aria-hidden="true"></span>云端同步</div></div>
         <div style="padding:12px 16px 16px">
           <div class="sync-hint">填入仅授权 star-points-data 仓库的 GitHub token，多设备填同一 token 即可同步；新仓库首次使用时云端为空属正常，记分后自动创建</div>
@@ -432,7 +448,7 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 <div class="tb">
   <div class="ti on" onclick="st('home')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">首页</span></div>
   <div class="ti" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
-  <div class="ti" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
+  <div class="ti" id="tabSettings" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
 </div>
 
 <!-- 记录分数弹窗 -->
@@ -537,6 +553,34 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
   </div>
 </div>
 
+<!-- 设置家长 PIN 弹窗（首次进入家长端强制设置，无关闭入口） -->
+<div class="mo" id="mPin">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header"><div class="ml-title">设置家长 PIN</div></div>
+    <div class="ml-body">
+      <div class="sync-hint" style="margin-bottom:12px">4 位数字 PIN 用于保护家长端；其他设备登录家长角色时需验证，请牢记。</div>
+      <div class="fg"><label class="fl">设置 PIN（4 位数字）</label><input type="password" class="fi" id="pinNew1" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <div class="fg"><label class="fl">再次输入确认</label><input type="password" class="fi" id="pinNew2" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <button class="bn bn-p" onclick="saveNewPin()">确认设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- 修改家长 PIN 弹窗（设置页入口，可关闭） -->
+<div class="mo" id="mPinChg">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header"><div class="ml-title">修改家长 PIN</div><button class="ml-close" onclick="cm('mPinChg')">✕</button></div>
+    <div class="ml-body">
+      <div class="fg"><label class="fl">当前 PIN</label><input type="password" class="fi" id="pinOld" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <div class="fg"><label class="fl">新 PIN（4 位数字）</label><input type="password" class="fi" id="pinNew3" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <div class="fg"><label class="fl">再次输入确认</label><input type="password" class="fi" id="pinNew4" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <button class="bn bn-p" onclick="saveChangedPin()">确认修改</button>
+    </div>
+  </div>
+</div>
+
 <div class="to" id="toast"><span class="to-dot"></span><span id="toTx"></span></div>
 <div class="co2" id="cd2">
   <div class="cb">
@@ -557,11 +601,30 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
   <div class="login-title">赚星账本</div>
   <div class="login-sub">记录成长，兑换惊喜</div>
   <div class="login-card">
-    <div class="fg"><label class="fl">手机号</label><input type="tel" class="fi" id="loginPhone" placeholder="请输入手机号" maxlength="11"></div>
-    <div class="fg"><label class="fl">姓名</label><input type="text" class="fi" id="loginName" placeholder="请输入姓名"></div>
-    <button class="cta" onclick="doLogin()">开始使用</button>
-    <div class="login-divider">快速登录</div>
-    <div class="login-quick" id="loginQuick"></div>
+    <div class="fg" id="loginRoleSeg"><label class="fl">选择角色</label>
+      <div class="seg">
+        <button type="button" class="seg-b on" id="segParent" onclick="setLoginRole('parent')">家长</button>
+        <button type="button" class="seg-b" id="segKid" onclick="setLoginRole('kid')">孩子</button>
+      </div>
+    </div>
+    <div id="parentFields">
+      <div class="fg"><label class="fl">手机号</label><input type="tel" class="fi" id="loginPhone" placeholder="请输入手机号" maxlength="11"></div>
+      <div class="fg"><label class="fl">姓名</label><input type="text" class="fi" id="loginName" placeholder="请输入姓名"></div>
+    </div>
+    <div id="kidFields" style="display:none">
+      <div class="fg"><label class="fl">家长手机号</label><input type="tel" class="fi" id="kidPhone" placeholder="要查看的账本手机号" maxlength="11"></div>
+      <div class="fg"><label class="fl">孩子昵称</label><input type="text" class="fi" id="kidName" placeholder="如：小星"></div>
+    </div>
+    <div id="pinStep" style="display:none">
+      <div class="fg"><label class="fl">输入家长 PIN</label><input type="password" class="fi" id="loginPin" inputmode="numeric" maxlength="4" placeholder="4 位数字" autocomplete="off"></div>
+      <button class="cta" onclick="verifyLoginPin()">验证并进入</button>
+      <button class="bn bn-q" style="height:40px;margin-top:8px" onclick="cancelPinStep()">返回重新填写</button>
+    </div>
+    <button class="cta" id="loginSubmit" onclick="doLogin()">开始使用</button>
+    <div id="loginQuickWrap">
+      <div class="login-divider">快速登录</div>
+      <div class="login-quick" id="loginQuick"></div>
+    </div>
   </div>
 </div>
 
@@ -589,8 +652,12 @@ var GH_REPO='wxx-1006/star-points-data';
 var GH_FILE='sync-data.json';
 var GH_API='https://api.github.com/repos/'+GH_REPO+'/contents/'+GH_FILE;
 var TOKEN_KEY='sp_gh_token';
+var KID_KEY='sp_kid_session'; // 孩子端本机会话 {parentPhone,nickname}，不入 star_users、不上云
 var syncSHA='';
 var currentUser=null;
+var sessionRole=null;   // 'parent' | 'kid' | null（未登录）。kid=只读视角：不写桶、绝不 syncPush
+var loginRole='parent'; // 登录页当前选中角色（'parent' | 'kid'）
+var pendingLogin=null;  // PIN 验证期间挂起的家长身份 {phone,name}
 var syncStatus='off'; // off(未配置/灰) | loading(黄) | synced(绿) | error(红)
 var syncErr='';       // 最近一次同步失败提示，显示在设置页「云端同步」状态行
 function getSyncToken(){try{return localStorage.getItem(TOKEN_KEY)||''}catch(e){return ''}}
@@ -600,8 +667,75 @@ function getCurrentPhone(){try{return localStorage.getItem(CURR_KEY)||null}catch
 function setCurrentPhone(p){try{localStorage.setItem(CURR_KEY,p)}catch(e){}}
 function userKey(phone){return SK+'_'+phone}
 function ld(){var phone=currentUser;if(!phone)return gd();try{var r=localStorage.getItem(userKey(phone));if(r)return JSON.parse(r)}catch(e){}return gd()}
-function sd(d){var phone=currentUser;if(!phone)return;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
+function sd(d){if(sessionRole==='kid')return;var phone=currentUser;if(!phone)return;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
 function migrateOldData(phone){try{var old=localStorage.getItem(SK);if(old&&phone){var parsed=JSON.parse(old);if(parsed.records&&parsed.records.length>0){localStorage.setItem(userKey(phone),JSON.stringify(parsed));toast('已迁移历史数据')}}}catch(e){}}
+
+// ===== 家长 PIN 与角色（新增能力，不动现有字段/键） =====
+// 存储位置：账号数据桶（SK_<phone>）新增 pinHash/pinSalt/role 三个字段，
+// 随 sd() 一起同步上云 → 新设备 syncPull 后即可校验 PIN。
+// hash：纯 JS SHA-256(salt + pin)，同步实现，node/jsdom/浏览器均可用。
+function sha256hex(ascii){
+  function rightRotate(v,a){return (v>>>a)|(v<<(32-a));}
+  var mathPow=Math.pow,maxWord=mathPow(2,32),result='',words=[],asciiBitLength=ascii.length*8;
+  var hash=sha256hex.h=sha256hex.h||[],k=sha256hex.k=sha256hex.k||[],primeCounter=k.length;
+  var isComposite={},i,j;
+  for(var candidate=2;primeCounter<64;candidate++){
+    if(!isComposite[candidate]){
+      for(i=0;i<313;i+=candidate)isComposite[i]=candidate;
+      hash[primeCounter]=(mathPow(candidate,.5)*maxWord)|0;
+      k[primeCounter++]=(mathPow(candidate,1/3)*maxWord)|0;
+    }
+  }
+  ascii+='\x80';
+  while(ascii.length%64-56)ascii+='\x00';
+  for(i=0;i<ascii.length;i++){
+    j=ascii.charCodeAt(i);
+    if(j>>8)return ''; // 仅支持 ASCII 输入（盐为十六进制随机串，pin 为数字）
+    words[i>>2]|=j<<((3-i)%4)*8;
+  }
+  words[words.length]=(asciiBitLength/maxWord)|0;
+  words[words.length]=asciiBitLength;
+  for(j=0;j<words.length;){
+    var w=words.slice(j,j+=16),oldHash=hash;
+    hash=hash.slice(0,8);
+    for(i=0;i<64;i++){
+      var w15=w[i-15],w2=w[i-2];
+      var a=hash[0],e=hash[4];
+      var temp1=hash[7]
+        +(rightRotate(e,6)^rightRotate(e,11)^rightRotate(e,25))
+        +((e&hash[5])^((~e)&hash[6]))
+        +k[i]
+        +(w[i]=(i<16)?w[i]:(w[i-16]+(rightRotate(w15,7)^rightRotate(w15,18)^(w15>>>3))+w[i-7]+(rightRotate(w2,17)^rightRotate(w2,19)^(w2>>>10)))|0);
+      var temp2=(rightRotate(a,2)^rightRotate(a,13)^rightRotate(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash=[(temp1+temp2)|0].concat(hash);
+      hash[4]=(hash[4]+temp1)|0;
+    }
+    for(i=0;i<8;i++)hash[i]=(hash[i]+oldHash[i])|0;
+  }
+  for(i=0;i<8;i++){
+    for(j=3;j+1;j--){
+      var b=(hash[i]>>(j*8))&255;
+      result+=((b<16)?0:'')+b.toString(16);
+    }
+  }
+  return result;
+}
+function genSalt(){var s='';for(var i=0;i<8;i++)s+=Math.floor(Math.random()*16).toString(16);return s}
+// 直读本地数据桶（不经 currentUser），供登录前 PIN 校验使用
+function loadBucket(phone){try{var r=localStorage.getItem(userKey(phone));if(r)return JSON.parse(r)}catch(e){}return null}
+function readKidSession(){try{var r=localStorage.getItem(KID_KEY);if(r)return JSON.parse(r)}catch(e){}return null}
+function clearKidSession(){try{localStorage.removeItem(KID_KEY)}catch(e){}}
+// 判断账号是否已有 PIN：先看本地桶；本地没有且配置了 token 时拉一次云端再查
+// （syncPull 会把 allData[phone] 缓存进本地桶，故拉完重读即可）。返回 Promise<boolean>
+function ensurePinKnown(phone){
+  var b=loadBucket(phone);
+  if(b&&b.pinHash)return Promise.resolve(true);
+  if(!getSyncToken())return Promise.resolve(false);
+  return syncPull(phone).then(function(){
+    var b2=loadBucket(phone);
+    return !!(b2&&b2.pinHash);
+  });
+}
 
 // ===== 数据同步 (GitHub Contents API，私有仓库 star-points-data) =====
 // 状态机（用户胶囊 6px 色点 + 设置页状态行）：
@@ -663,6 +797,7 @@ function syncPull(phone){
     });
 }
 function syncPush(data){
+  if(sessionRole==='kid')return; // 孩子端只拉不推：任何路径都不会触发写云端
   if(!currentUser)return;
   var token=getSyncToken();
   if(!token){ // 未配置：跳过，不报错
@@ -902,7 +1037,17 @@ function esBricks(){return '<div class="es-bricks" aria-hidden="true"><span clas
 var AVCOLORS=['var(--red)','var(--blue)','var(--green)','var(--yellow)'];
 
 // ===== 登录管理 =====
+// 登录页角色分段切换：家长=完整功能；孩子=只读视角（输入家长手机号+昵称）
+function setLoginRole(r){
+  loginRole=r;
+  document.getElementById('segParent').classList.toggle('on',r==='parent');
+  document.getElementById('segKid').classList.toggle('on',r==='kid');
+  document.getElementById('parentFields').style.display=r==='parent'?'':'none';
+  document.getElementById('kidFields').style.display=r==='kid'?'':'none';
+  hidePinStep();
+}
 function doLogin(){
+  if(loginRole==='kid'){doKidLogin();return}
   var phone=document.getElementById('loginPhone').value.trim();
   var name=document.getElementById('loginName').value.trim();
   if(!phone||phone.length<11){toast('请输入正确的手机号','err');return}
@@ -914,16 +1059,50 @@ function doLogin(){
     users.push({phone:phone,name:name});
     saveUsers(users);
   }
-  setCurrentPhone(phone);
-  currentUser=phone;
-  migrateOldData(phone);
-  enterApp();
+  pendingLogin={phone:phone,name:name};
+  // 账号已有 PIN（本地桶或云端）→ 先验证；无 PIN（新账号/老账号首次）→ 进入后补设
+  ensurePinKnown(phone).then(function(hasPin){
+    if(hasPin)showPinStep();
+    else finishParentEntry(phone,name);
+  });
+}
+// 孩子登录：输入家长手机号 + 自己的昵称；身份只存本机（sp_kid_session），
+// 不创建 star_users 账号、不建数据桶、绝不 syncPush。
+function doKidLogin(){
+  var phone=document.getElementById('kidPhone').value.trim();
+  var nick=document.getElementById('kidName').value.trim();
+  if(!phone||phone.length<11){toast('请输入正确的家长手机号','err');return}
+  if(!nick){toast('请输入孩子昵称','err');return}
+  startKidSession(phone,nick);
+  toast('已进入孩子视角（只读）','ok');
 }
 function quickLogin(phone){
+  var users=getUsers();
+  var u=users.find(function(x){return x.phone===phone});
+  var name=u?u.name:'';
+  pendingLogin={phone:phone,name:name};
+  ensurePinKnown(phone).then(function(hasPin){
+    if(hasPin)showPinStep();
+    else finishParentEntry(phone,name);
+  });
+}
+// 家长身份落定：清理孩子会话 → 设为 parent 会话 → 进入 App → 无 PIN 则补设
+function finishParentEntry(phone,name){
+  clearKidSession();
   currentUser=phone;
+  sessionRole='parent';
   setCurrentPhone(phone);
+  if(name)upsertUser(phone,name);
   migrateOldData(phone);
+  pendingLogin=null;
+  hidePinStep();
   enterApp();
+  maybePinSetup();
+}
+function upsertUser(phone,name){
+  var users=getUsers();
+  var exist=users.find(function(u){return u.phone===phone});
+  if(!exist){users.push({phone:phone,name:name});saveUsers(users)}
 }
 function enterApp(){
   document.getElementById('loginPage').classList.remove('show');
@@ -935,18 +1114,137 @@ function enterApp(){
     document.getElementById('usAvatar').textContent=u.name.charAt(0);
     document.getElementById('usName').textContent=u.name;
   }
+  applyRoleUI();
   // 从服务端拉取数据
   syncPull(currentUser).then(function(data){
     ad=data;
     renderAll(ad);
   });
 }
+// ===== 孩子会话（只读视角） =====
+function startKidSession(parentPhone,nickname){
+  clearKidSession();
+  try{localStorage.setItem(KID_KEY,JSON.stringify({parentPhone:parentPhone,nickname:nickname}))}catch(e){}
+  sessionRole='kid';
+  currentUser=parentPhone; // 复用家长桶做只读数据源；sd/syncPush 已被 role 守卫拦截
+  document.getElementById('loginPage').classList.remove('show');
+  document.getElementById('mainHeader').style.display='';
+  document.getElementById('userSwitch').style.display='';
+  document.getElementById('usAvatar').textContent=nickname.charAt(0);
+  document.getElementById('usName').textContent=nickname;
+  applyRoleUI();
+  syncPull(parentPhone).then(function(data){
+    ad=data;
+    renderAll(ad);
+  });
+}
+// 角色相关的界面开关：孩子端隐藏 CTA/设置页签，顶栏亮出「孩子视角」徽章
+function applyRoleUI(){
+  var kid=sessionRole==='kid';
+  document.getElementById('ctaSec').style.display=kid?'none':'';
+  document.getElementById('tabSettings').style.display=kid?'none':'';
+  document.getElementById('kidBadge').style.display=kid?'':'none';
+  if(kid&&curTab==='settings')st('home');
+}
+// ===== 登录页 PIN 验证步骤 =====
+function showPinStep(){
+  document.getElementById('loginRoleSeg').style.display='none';
+  document.getElementById('parentFields').style.display='none';
+  document.getElementById('kidFields').style.display='none';
+  document.getElementById('loginSubmit').style.display='none';
+  document.getElementById('loginQuickWrap').style.display='none';
+  document.getElementById('pinStep').style.display='';
+  var pin=document.getElementById('loginPin');
+  pin.value='';
+}
+function hidePinStep(){
+  document.getElementById('pinStep').style.display='none';
+  if(document.getElementById('loginRoleSeg')){
+    document.getElementById('loginRoleSeg').style.display='';
+    document.getElementById('parentFields').style.display=loginRole==='parent'?'':'none';
+    document.getElementById('kidFields').style.display=loginRole==='kid'?'':'none';
+    document.getElementById('loginSubmit').style.display='';
+    document.getElementById('loginQuickWrap').style.display='';
+  }
+  var pin=document.getElementById('loginPin');
+  if(pin)pin.value='';
+}
+function cancelPinStep(){
+  pendingLogin=null;
+  hidePinStep();
+}
+function verifyLoginPin(){
+  if(!pendingLogin)return;
+  var pin=document.getElementById('loginPin').value.trim();
+  if(!/^\d{4}$/.test(pin)){toast('请输入 4 位数字 PIN','err');return}
+  var b=loadBucket(pendingLogin.phone);
+  if(b&&b.pinHash&&b.pinSalt&&sha256hex(b.pinSalt+pin)===b.pinHash){
+    finishParentEntry(pendingLogin.phone,pendingLogin.name);
+  }else{
+    toast('PIN 错误','err');
+  }
+}
+// 首次进入家长端补设 PIN（新账号/无 PIN 的老账号）；已设置过则不弹
+function maybePinSetup(){
+  if(sessionRole!=='parent')return;
+  var b=loadBucket(currentUser);
+  if(b&&b.pinHash)return;
+  document.getElementById('pinNew1').value='';
+  document.getElementById('pinNew2').value='';
+  document.getElementById('mPin').classList.add('show');
+}
+function saveNewPin(){
+  var p1=document.getElementById('pinNew1').value.trim();
+  var p2=document.getElementById('pinNew2').value.trim();
+  if(!/^\d{4}$/.test(p1)){toast('PIN 必须是 4 位数字','err');return}
+  if(p1!==p2){toast('两次输入不一致','err');return}
+  if(ad.pinHash){toast('已设置过 PIN，请在设置页修改','err');return}
+  var salt=genSalt();
+  ad.pinSalt=salt;
+  ad.pinHash=sha256hex(salt+p1);
+  ad.role='parent';
+  sd(ad); // 随账号数据同步上云，其他设备可校验
+  document.getElementById('mPin').classList.remove('show');
+  document.getElementById('pinNew1').value='';
+  document.getElementById('pinNew2').value='';
+  toast('家长 PIN 已设置','ok');
+  renderSettings();
+}
+// 设置页「家长 PIN」管理：修改 PIN（旧 PIN + 新 PIN 两遍）
+function openChangePin(){
+  if(sessionRole!=='parent')return;
+  var b=loadBucket(currentUser);
+  if(!(b&&b.pinHash)){toast('尚未设置 PIN','err');return}
+  document.getElementById('pinOld').value='';
+  document.getElementById('pinNew3').value='';
+  document.getElementById('pinNew4').value='';
+  document.getElementById('mPinChg').classList.add('show');
+}
+function saveChangedPin(){
+  var old=document.getElementById('pinOld').value.trim();
+  var p1=document.getElementById('pinNew3').value.trim();
+  var p2=document.getElementById('pinNew4').value.trim();
+  if(!ad.pinHash||!ad.pinSalt){toast('尚未设置 PIN','err');return}
+  if(sha256hex(ad.pinSalt+old)!==ad.pinHash){toast('旧 PIN 错误','err');return}
+  if(!/^\d{4}$/.test(p1)){toast('PIN 必须是 4 位数字','err');return}
+  if(p1!==p2){toast('两次输入不一致','err');return}
+  var salt=genSalt();
+  ad.pinSalt=salt;
+  ad.pinHash=sha256hex(salt+p1);
+  sd(ad);
+  document.getElementById('mPinChg').classList.remove('show');
+  document.getElementById('pinOld').value='';
+  document.getElementById('pinNew3').value='';
+  document.getElementById('pinNew4').value='';
+  toast('PIN 已修改','ok');
+  renderSettings();
+}
 function showSwitchModal(){
   var users=getUsers();
   var html='';
   for(var i=0;i<users.length;i++){
     var u=users[i];
-    var isCur=u.phone===currentUser;
+    var isCur=(sessionRole==='parent')&&u.phone===currentUser; // 孩子视角不高亮家长账号
     html+='<div class="switch-item'+(isCur?' current':'')+'" onclick="switchUser(\''+u.phone+'\')">';
     html+='<div class="switch-avatar" style="background:'+AVCOLORS[i%4]+'">'+u.name.charAt(0)+'</div>';
     html+='<div class="switch-info"><div class="switch-name">'+u.name+'</div><div class="switch-phone">'+u.phone.replace(/(\d{3})\d{4}(\d{4})/,'$1****$2')+'</div></div>';
@@ -963,23 +1261,27 @@ document.getElementById('switchModal').addEventListener('click',function(e){
 });
 function closeSwitchModal(){document.getElementById('switchModal').classList.remove('show')}
 function switchUser(phone){
-  currentUser=phone;
-  setCurrentPhone(phone);
+  closeSwitchModal();
   var users=getUsers();
   var u=users.find(function(x){return x.phone===phone});
-  if(u){
-    document.getElementById('usAvatar').textContent=u.name.charAt(0);
-    document.getElementById('usName').textContent=u.name;
-  }
-  closeSwitchModal();
-  syncPull(phone).then(function(data){
-    ad=data;
-    renderAll(ad);
+  pendingLogin={phone:phone,name:u?u.name:''};
+  // 有 PIN 的账号（含从孩子端切回）需先验证；无 PIN 直接进入（进入后按需补设）
+  ensurePinKnown(phone).then(function(hasPin){
+    if(hasPin){
+      // 挂起当前会话（孩子/另一家长），验证通过后才落定新身份
+      currentUser=null;
+      sessionRole=null;
+      showLoginPage();
+      showPinStep();
+    }
+    else finishParentEntry(phone,pendingLogin.name);
   });
 }
 function doLogout(){
   closeSwitchModal();
+  clearKidSession();
   currentUser=null;
+  sessionRole=null;
   setCurrentPhone('');
   document.getElementById('userSwitch').style.display='none';
   showLoginPage();
@@ -988,6 +1290,7 @@ function showLoginPage(){
   document.getElementById('loginPage').classList.add('show');
   document.getElementById('mainHeader').style.display='none';
   document.getElementById('userSwitch').style.display='none';
+  setLoginRole('parent'); // 重置登录卡为家长角色表单（PIN 步骤一并收起）
   renderQuickLogin();
 }
 function renderQuickLogin(){
@@ -1024,6 +1327,7 @@ var dpSelectedStart=null;
 var dpSelectedEnd=null;
 
 function st(tab){
+  if(sessionRole==='kid'&&tab==='settings')return; // 孩子端无设置页（tabBar 已隐藏，双保险）
   var pages=document.querySelectorAll('.pg');
   for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
   var tabs=document.querySelectorAll('.ti');
@@ -1119,7 +1423,7 @@ function renderHome(){
   var trl=document.getElementById('tr');
   if(vitems.length===0){
     trl.innerHTML=(vd===today())
-      ?'<div class="es">'+esBricks()+'<div class="et">今天还没有记录哦</div><div class="eg">点击上方按钮开始加分吧！</div></div>'
+      ?'<div class="es">'+esBricks()+'<div class="et">今天还没有记录哦</div><div class="eg">'+(sessionRole==='kid'?'家长记分后会同步显示在这里':'点击上方按钮开始加分吧！')+'</div></div>'
       :'<div class="es">'+esBricks()+'<div class="et">该日暂无记录</div></div>';
   }else{
     var html2='';
@@ -1154,7 +1458,9 @@ function renderRecord(r,currentDay){
   var sign=u?'+':'';
   var noteStr=r.note?(' · '+r.note):'';
   var timeStr=(r.date===currentDay)?fdt(r.timestamp):fd(r.date)+' '+fdt(r.timestamp);
-  return '<div class="ri"><span class="cat-dot" style="background:'+catColor(r.category)+'"></span><div class="inf"><div class="nm">'+r.name+'</div><div class="tm">'+timeStr+noteStr+'</div></div><div class="sc2 '+cls+'">'+sign+r.score+'</div><button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button></div>';
+  // 孩子端只读：不渲染删除按钮
+  var del=sessionRole==='kid'?'':'<button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button>';
+  return '<div class="ri"><span class="cat-dot" style="background:'+catColor(r.category)+'"></span><div class="inf"><div class="nm">'+r.name+'</div><div class="tm">'+timeStr+noteStr+'</div></div><div class="sc2 '+cls+'">'+sign+r.score+'</div>'+del+'</div>';
 }
 
 function renderExchange(e,currentDay){
@@ -1205,10 +1511,18 @@ function renderRecords(){
 }
 
 function renderSettings(){
+  if(sessionRole==='kid')return; // 孩子端不渲染设置页（含云端 token，绝不让孩子看到）
   document.getElementById('upCnt').textContent=ad.upItems.length+' 项';
   document.getElementById('downCnt').textContent=ad.downItems.length+' 项';
   document.getElementById('shopCnt').textContent=ad.shopItems.length+' 项';
   renderSyncSettings();
+  // 家长 PIN 状态行
+  var ps=document.getElementById('pinStateLine');
+  if(ps){
+    var pb=loadBucket(currentUser);
+    var hasPin=!!(pb&&pb.pinHash);
+    ps.innerHTML='<span class="sync-dot '+(hasPin?'ok':'off')+'"></span><span class="sync-line-t">'+(hasPin?'已设置 PIN，家长端受保护':'未设置，下次进入家长端时将要求设置')+'</span>';
+  }
 
   document.getElementById('sui').innerHTML=renderGroupedItems(ad.upItems,'up','up_main');
   document.getElementById('sdi').innerHTML=renderGroupedItems(ad.downItems,'down','down_main');
@@ -1281,6 +1595,7 @@ function toggleSection(header,stateKey){
 function setTypeFilter(t){curTypeFilter=t;renderRecords()}
 
 function openScore(){
+  if(sessionRole==='kid')return; // 孩子端只读守卫（按钮已隐藏，双保险）
   scoreType='up';
   updateSeg();
   var dateInput=document.getElementById('sdate');
@@ -1376,6 +1691,7 @@ function ss(){
 }
 
 function openExchange(){
+  if(sessionRole==='kid')return; // 孩子端只读守卫
   document.getElementById('exScore').textContent=ad.totalPoints;
   var html='';
   for(var i=0;i<ad.shopItems.length;i++){
@@ -1456,6 +1772,7 @@ function goToday(){
 }
 
 function sam(type){
+  if(sessionRole==='kid')return; // 孩子端只读守卫
   if(type==='shop'){
     document.getElementById('amt3').textContent='添加兑换项';
     document.getElementById('editShopId').value='';
@@ -1569,7 +1886,7 @@ function ccd(){
 function cm(id){document.getElementById(id).classList.remove('show')}
 var overlays=document.querySelectorAll('.mo');
 for(var i=0;i<overlays.length;i++){
-  overlays[i].addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')});
+  overlays[i].addEventListener('click',function(e){if(e.target===this&&this.id!=='mPin')this.classList.remove('show')}); // 首次设 PIN 强制完成，遮罩点击不关闭
 }
 
 // Date picker functions
@@ -1653,14 +1970,20 @@ window.addEventListener('scroll',function(){
   if(h)h.classList.toggle('scrolled',window.scrollY>4);
 },{passive:true});
 
-// 初始化：检查登录状态
+// 初始化：检查登录状态（孩子会话优先，其次家长会话）
 (function init(){
+  var kid=readKidSession();
+  if(kid&&kid.parentPhone){
+    startKidSession(kid.parentPhone,kid.nickname||'孩子');
+    return;
+  }
   var phone=getCurrentPhone();
   if(phone){
     var users=getUsers();
     var u=users.find(function(x){return x.phone===phone});
     if(u){
       currentUser=phone;
+      sessionRole='parent';
       document.getElementById('userSwitch').style.display='';
       document.getElementById('usAvatar').textContent=u.name.charAt(0);
       document.getElementById('usName').textContent=u.name;
@@ -1672,10 +1995,12 @@ window.addEventListener('scroll',function(){
     render();
     return;
   }
+  applyRoleUI();
   // 已登录，从服务端拉取数据
   syncPull(currentUser).then(function(data){
     ad=data;
-    render();
+    renderAll(data);
+    maybePinSetup(); // 老账号无 PIN：首次进入家长端补设
   });
 })();
 </script>
