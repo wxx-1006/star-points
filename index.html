@@ -412,7 +412,7 @@ body.kid-mode{padding-bottom:72px}
   <div class="rl" id="ar" style="margin:12px 16px 24px"></div>
 </div>
 
-<!-- 积分商城（孩子端）：总积分 + 奖励列表（逐项申请兑换）+ 我的申请 -->
+<!-- 积分商城（孩子端）：总积分 + 奖励列表（逐项申请兑换） -->
 <div class="pg" id="p-shop">
   <div class="pc">
     <div class="pc-brick y" aria-hidden="true"><i class="studi y"></i><i class="studi y"></i><i class="studi y"></i><i class="studi y"></i></div>
@@ -423,10 +423,6 @@ body.kid-mode{padding-bottom:72px}
   <div class="sec">
     <div class="sec-h"><div class="st-t">奖励清单</div></div>
     <div class="rl" id="kShopList" style="margin-top:8px"></div>
-  </div>
-  <div class="sec">
-    <div class="sec-h"><div class="st-t">我的申请</div><div class="ftb sm" onclick="loadMyRequests()">刷新</div></div>
-    <div class="rl" id="myReqList"></div>
   </div>
 </div>
 
@@ -1306,7 +1302,6 @@ function startKidSession(parentPhone,nickname){
   syncPull(parentPhone).then(function(data){
     ad=data;
     renderAll(ad);
-    loadMyRequests(); // 拉取我的兑换申请（独立于 sync-data.json）
   });
 }
 // 孩子端视图切换：显示记录页，轻量导航（记录/商城）高亮记录
@@ -1526,12 +1521,11 @@ function st(tab){
     document.getElementById('kt-'+tab).classList.add('on');
     curTab=tab;
     if(!currentUser){render();return}
-    // 进入记录页/商城页均重新拉取：家长桶（总积分/奖励项）+ requests.json（我的申请）
+    // 进入记录页/商城页均重新拉取：家长桶（总积分/奖励项）
     syncPull(currentUser).then(function(data){
       ad=data;
       render();
       if(tab==='shop')renderShopKid();
-      loadMyRequests();
     });
     return;
   }
@@ -2153,9 +2147,7 @@ for(var i=0;i<overlays.length;i++){
 // 绝不 PUT 家长的 sync-data.json（syncPush 的 kid 守卫保持不变）。
 var GH_REQ_FILE='requests.json';
 var GH_REQ_API='https://api.github.com/repos/'+GH_REPO+'/contents/'+GH_REQ_FILE;
-var REQ_CACHE_KEY='sp_requests_cache'; // 孩子端离线兜底缓存 {phone,list}
 var reqSHA='';       // requests.json 当前 sha（PUT 必带，409=他人已写需重拉）
-var myRequests=[];   // 孩子端：我的申请列表
 var pendingReqs=[];  // 家长端：待审批申请（驱动首页提醒条）
 var approvalList=[]; // 家长端：审批弹窗当前全量列表
 var reqBusy=false;   // 提交/审批请求进行中防抖
@@ -2222,7 +2214,7 @@ function renderShopKid(){
   box.innerHTML=html;
 }
 
-// —— 孩子端：提交申请 & 我的申请列表 ——
+// —— 孩子端：提交申请（写 requests.json，由家长端审批展示） ——
 // preId 可选：从商城页某项「申请兑换」进入时预选该项
 function openReqModal(preId){
   if(sessionRole!=='kid')return; // 只读守卫：家长端不走此入口
@@ -2273,53 +2265,11 @@ function submitRequest(){
       if(ok){
         cm('mReq');
         toast('已提交申请，等待家长审批','ok');
-        loadMyRequests();
       }else{
         toast('提交失败，请重试','err');
       }
     });
   });
-}
-function cacheMyRequests(){
-  try{localStorage.setItem(REQ_CACHE_KEY,JSON.stringify({phone:currentUser,list:myRequests}))}catch(e){}
-}
-function readCachedRequests(){
-  try{
-    var r=JSON.parse(localStorage.getItem(REQ_CACHE_KEY));
-    if(r&&r.phone===currentUser)return r.list||[];
-  }catch(e){}
-  return [];
-}
-function loadMyRequests(){
-  if(sessionRole!=='kid')return;
-  pullRequests().then(function(obj){
-    if(obj&&obj[currentUser]){myRequests=obj[currentUser];cacheMyRequests()}
-    else if(obj){myRequests=[];cacheMyRequests()}
-    else{myRequests=readCachedRequests()} // 拉取失败（离线）：用缓存兜底
-    renderMyRequests();
-  });
-}
-function renderMyRequests(){
-  var box=document.getElementById('myReqList');
-  if(!box)return;
-  var list=(myRequests||[]).slice().sort(function(a,b){return (b.createdTime||0)-(a.createdTime||0)});
-  if(!list.length){
-    box.innerHTML='<div class="es" style="padding:16px 0">'+esBricks()+'<div class="et">还没有兑换申请</div><div class="eg">点击上方按钮申请兑换</div></div>';
-    return;
-  }
-  var html='';
-  for(var i=0;i<list.length;i++){
-    var q=list[i];
-    var chip=q.status==='approved'?'<span class="rq-chip a">已通过</span>'
-            :q.status==='rejected'?'<span class="rq-chip r">已拒绝</span>'
-            :'<span class="rq-chip p">待审批</span>';
-    var noteStr=q.note?(' · '+escHtml(q.note)):'';
-    html+='<div class="ri"><span class="cat-dot" style="background:var(--yellow)"></span>'
-      +'<div class="inf"><div class="nm">'+escHtml(q.itemName)+'</div>'
-      +'<div class="tm">'+fmtTs(q.createdTime)+noteStr+'</div></div>'
-      +chip+'<div class="sc2 e">-'+q.cost+'</div></div>';
-  }
-  box.innerHTML=html;
 }
 
 // —— 家长端：待审批提醒 & 审批 ——
