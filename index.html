@@ -77,8 +77,28 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 .sync-dot.err{background:var(--red)}
 .sync-dot.off{background:var(--line)}
 .us-avatar{width:20px;height:20px;border-radius:var(--r-full);background:var(--blue-l);color:var(--blue-deep);display:flex;align-items:center;justify-content:center;font:var(--f-mini)}
-/* —— 孩子视角徽章：顶栏用户胶囊内（蓝域，与日历/筛选同一色域语言）—— */
-.kid-badge{font:var(--f-mini);font-weight:600;color:var(--blue-deep);background:var(--blue-l);border-radius:var(--r-full);padding:3px 8px;flex-shrink:0}
+/* —— 兑换申请审批流（孩子端提交 / 家长端审批）—— */
+/* 孩子登录：手机号匹配账本的提示行（绿=找到 / 灰=暂无） */
+.login-hint{font:var(--f-cap);margin-top:8px;min-height:16px}
+.login-hint.ok{color:var(--grn-deep)}
+.login-hint.na{color:var(--ink3)}
+/* 孩子端无 tabBar：正文底部留白收窄 */
+body.kid-mode{padding-bottom:24px}
+/* 申请状态 chip：待审批黄 / 已通过绿 / 已拒绝红 */
+.rq-chip{font:var(--f-cap);font-weight:600;border-radius:var(--r-full);padding:4px 8px;flex-shrink:0;white-space:nowrap}
+.rq-chip.p{color:var(--yel-deep);background:var(--yellow-l)}
+.rq-chip.a{color:var(--grn-deep);background:var(--green-l)}
+.rq-chip.r{color:var(--red-deep);background:var(--red-l)}
+/* 家长端首页待审批提醒条：黄浅底，点击进入审批 */
+.req-alert{margin:12px 16px 0;background:var(--yellow-l);color:var(--yel-deep);border-radius:var(--r-m);padding:12px 16px;font:var(--f-item);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:transform .15s}
+.req-alert:active{transform:scale(.98)}
+/* 审批按钮：通过绿域 / 拒绝红域（沿用分段控件色域语言） */
+.ap-btn{border:none;border-radius:var(--r-s);padding:8px 14px;font:var(--f-item);font-weight:600;cursor:pointer;flex-shrink:0;transition:transform .15s}
+.ap-btn:active{transform:scale(.95)}
+.ap-btn.ok{background:var(--green-l);color:var(--grn-deep)}
+.ap-btn.no{background:var(--red-l);color:var(--red-deep)}
+/* 已处理的历史申请：灰显 */
+.req-done{opacity:.55}
 
 /* —— 页面区块节奏 —— */
 .pg{display:none}
@@ -347,7 +367,6 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
   <div class="sub" id="hd"></div>
   <button class="user-switch" id="userSwitch" onclick="showSwitchModal()" style="display:none">
     <span class="sync-dot off" id="syncStatus"></span>
-    <span class="kid-badge" id="kidBadge" style="display:none">孩子视角</span>
     <span class="us-avatar" id="usAvatar"></span>
     <span id="usName"></span>
     <span>▾</span>
@@ -356,6 +375,7 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 
 <!-- 首页 -->
 <div class="pg on" id="p-home">
+  <div class="req-alert" id="reqAlert" style="display:none" onclick="openApproval()"></div>
   <div class="pc">
     <div class="pc-brick" id="pcBrick" aria-hidden="true"><i class="studi"></i><i class="studi"></i><i class="studi"></i><i class="studi"></i></div>
     <div class="lb">总积分</div>
@@ -382,6 +402,14 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 
 <!-- 记录 -->
 <div class="pg" id="p-records">
+  <!-- 孩子端专属：申请兑换入口 + 我的申请（家长端隐藏） -->
+  <div id="kidReqSec" style="display:none">
+    <div style="padding:12px 16px 0"><button class="cta2" style="width:100%" onclick="openReqModal()">申请兑换</button></div>
+    <div class="sec" style="margin-top:16px">
+      <div class="sec-h"><div class="st-t">我的申请</div><div class="ftb sm" onclick="loadMyRequests()">刷新</div></div>
+      <div class="rl" id="myReqList"></div>
+    </div>
+  </div>
   <div class="dtrig" onclick="openDatePicker()">
     <span class="dtrig-t" id="dateTriggerText">选择日期范围</span>
     <span class="dtrig-c">▾</span>
@@ -581,6 +609,36 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
   </div>
 </div>
 
+<!-- 申请兑换弹窗（孩子端） -->
+<div class="mo" id="mReq">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">申请兑换</div>
+      <button class="ml-close" onclick="cm('mReq')">✕</button>
+    </div>
+    <div class="ml-body">
+      <div class="fg"><label class="fl">选择奖励项</label><select class="fs" id="reqItem" onchange="onReqSelectChange()"></select></div>
+      <div class="fg"><label class="fl">需消耗积分</label><div class="ex-cost" id="reqCost"></div></div>
+      <div class="fg"><label class="fl">用途备注（选填）</label><input type="text" class="fi" id="reqNote" placeholder="如：周末想去"></div>
+      <button class="bn bn-p" id="reqSubmit" onclick="submitRequest()">提交申请</button>
+      <div class="sync-hint" style="margin-top:10px;text-align:center">提交后由家长审批，通过后自动扣除积分并生成兑换记录</div>
+    </div>
+  </div>
+</div>
+
+<!-- 兑换申请审批弹窗（家长端） -->
+<div class="mo" id="mReqAp">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">兑换申请审批</div>
+      <button class="ml-close" onclick="cm('mReqAp')">✕</button>
+    </div>
+    <div class="ml-body" id="reqApList"></div>
+  </div>
+</div>
+
 <div class="to" id="toast"><span class="to-dot"></span><span id="toTx"></span></div>
 <div class="co2" id="cd2">
   <div class="cb">
@@ -612,8 +670,8 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
       <div class="fg"><label class="fl">姓名</label><input type="text" class="fi" id="loginName" placeholder="请输入姓名"></div>
     </div>
     <div id="kidFields" style="display:none">
-      <div class="fg"><label class="fl">家长手机号</label><input type="tel" class="fi" id="kidPhone" placeholder="要查看的账本手机号" maxlength="11"></div>
-      <div class="fg"><label class="fl">孩子昵称</label><input type="text" class="fi" id="kidName" placeholder="如：小星"></div>
+      <div class="fg"><label class="fl">家长手机号</label><input type="tel" class="fi" id="kidPhone" placeholder="要查看的账本手机号" maxlength="11" oninput="onKidPhoneInput()" onblur="checkKidPhone()"></div>
+      <div class="login-hint" id="kidMatchHint"></div>
     </div>
     <div id="pinStep" style="display:none">
       <div class="fg"><label class="fl">输入家长 PIN</label><input type="password" class="fi" id="loginPin" inputmode="numeric" maxlength="4" placeholder="4 位数字" autocomplete="off"></div>
@@ -654,6 +712,7 @@ var GH_API='https://api.github.com/repos/'+GH_REPO+'/contents/'+GH_FILE;
 var TOKEN_KEY='sp_gh_token';
 var KID_KEY='sp_kid_session'; // 孩子端本机会话 {parentPhone,nickname}，不入 star_users、不上云
 var syncSHA='';
+var dataVersion=0;    // 本地数据写版本：sd() 每次写 +1，用于丢弃迟到的过期同步快照
 var currentUser=null;
 var sessionRole=null;   // 'parent' | 'kid' | null（未登录）。kid=只读视角：不写桶、绝不 syncPush
 var loginRole='parent'; // 登录页当前选中角色（'parent' | 'kid'）
@@ -667,7 +726,7 @@ function getCurrentPhone(){try{return localStorage.getItem(CURR_KEY)||null}catch
 function setCurrentPhone(p){try{localStorage.setItem(CURR_KEY,p)}catch(e){}}
 function userKey(phone){return SK+'_'+phone}
 function ld(){var phone=currentUser;if(!phone)return gd();try{var r=localStorage.getItem(userKey(phone));if(r)return JSON.parse(r)}catch(e){}return gd()}
-function sd(d){if(sessionRole==='kid')return;var phone=currentUser;if(!phone)return;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
+function sd(d){if(sessionRole==='kid')return;var phone=currentUser;if(!phone)return;dataVersion++;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
 function migrateOldData(phone){try{var old=localStorage.getItem(SK);if(old&&phone){var parsed=JSON.parse(old);if(parsed.records&&parsed.records.length>0){localStorage.setItem(userKey(phone),JSON.stringify(parsed));toast('已迁移历史数据')}}}catch(e){}}
 
 // ===== 家长 PIN 与角色（新增能力，不动现有字段/键） =====
@@ -749,6 +808,7 @@ function utf8ToB64(str){return btoa(unescape(encodeURIComponent(str)))}
 function b64ToUtf8(b64){return decodeURIComponent(escape(atob(b64)))}
 function syncPull(phone){
   var token=getSyncToken();
+  var verAtReq=dataVersion; // 请求发起时的本地写版本，用于过期响应守卫
   if(!token){ // 未配置：跳过，不报错
     syncStatus='off';syncErr='';
     updateSyncUI();
@@ -775,6 +835,13 @@ function syncPull(phone){
       }
       return r.json().then(function(meta){
         syncSHA=meta.sha||'';
+        // 过期响应守卫：请求期间本地已发生写入（如快速记分/兑换），云端快照已过期，
+        // 跳过缓存与应用，直接返回本地最新数据（下次拉取会自动补齐），避免旧数据覆盖新状态
+        if(dataVersion!==verAtReq){
+          syncStatus='synced';syncErr='';
+          updateSyncUI();
+          return ld();
+        }
         if(meta.content){
           try{
             var content=b64ToUtf8(meta.content);
@@ -1037,13 +1104,18 @@ function esBricks(){return '<div class="es-bricks" aria-hidden="true"><span clas
 var AVCOLORS=['var(--red)','var(--blue)','var(--green)','var(--yellow)'];
 
 // ===== 登录管理 =====
-// 登录页角色分段切换：家长=完整功能；孩子=只读视角（输入家长手机号+昵称）
+// 登录页角色分段切换：家长=完整功能；孩子=只读视角（只需输入家长手机号，昵称自动匹配账本）
 function setLoginRole(r){
   loginRole=r;
   document.getElementById('segParent').classList.toggle('on',r==='parent');
   document.getElementById('segKid').classList.toggle('on',r==='kid');
   document.getElementById('parentFields').style.display=r==='parent'?'':'none';
   document.getElementById('kidFields').style.display=r==='kid'?'':'none';
+  if(r==='kid'){
+    // 切到孩子角色：清空匹配提示，从零开始
+    var h=document.getElementById('kidMatchHint');
+    h.textContent='';h.className='login-hint';
+  }
   hidePinStep();
 }
 function doLogin(){
@@ -1066,15 +1138,71 @@ function doLogin(){
     else finishParentEntry(phone,name);
   });
 }
-// 孩子登录：输入家长手机号 + 自己的昵称；身份只存本机（sp_kid_session），
-// 不创建 star_users 账号、不建数据桶、绝不 syncPush。
+// ===== 孩子登录：只输家长手机号，昵称自动从账本匹配 =====
+// 匹配优先级：本地桶 ownerName > 本地账号名 > 「孩子」兜底。
+// 账本存在性判定：本地桶有 records/exchanges 即视为存在；否则配置了 token 时
+// 静默 syncPull 一次再查（syncPull 会把云端桶缓存进本地）。
+function matchLocalName(phone){
+  var u=getUsers().find(function(x){return x.phone===phone});
+  return u?u.name:'';
+}
+function hasLedgerData(b){return !!(b&&(b.records||b.exchanges))}
+function showKidHint(found,name){
+  var h=document.getElementById('kidMatchHint');
+  if(found){
+    h.textContent='找到账本'+(name?('：'+name):'，可以进入');
+    h.className='login-hint ok';
+  }else{
+    h.textContent='该手机号暂无账本，请让家长先登录一次';
+    h.className='login-hint na';
+  }
+}
+function clearKidHint(){
+  var h=document.getElementById('kidMatchHint');
+  h.textContent='';h.className='login-hint';
+}
+// 手机号输入满 11 位即触发静默匹配
+function onKidPhoneInput(){
+  var v=document.getElementById('kidPhone').value.trim();
+  if(v.length>=11)checkKidPhone();
+  else clearKidHint();
+}
+function checkKidPhone(){
+  var phone=document.getElementById('kidPhone').value.trim();
+  if(phone.length<11)return;
+  var localName=matchLocalName(phone);
+  var b=loadBucket(phone);
+  if(b&&hasLedgerData(b)){showKidHint(true,b.ownerName||localName);return}
+  if(!getSyncToken()){showKidHint(false,'');return}
+  // 已配置 token：静默拉云端确认账本是否存在（复用 syncPull，只读不写）
+  syncPull(phone).then(function(){
+    var b2=loadBucket(phone);
+    if(b2&&hasLedgerData(b2))showKidHint(true,b2.ownerName||localName);
+    else showKidHint(false,'');
+  });
+}
+// 孩子登录：不再输入昵称；账本不存在（无 token/云端无桶）则提示并阻止进入
 function doKidLogin(){
   var phone=document.getElementById('kidPhone').value.trim();
-  var nick=document.getElementById('kidName').value.trim();
   if(!phone||phone.length<11){toast('请输入正确的家长手机号','err');return}
-  if(!nick){toast('请输入孩子昵称','err');return}
-  startKidSession(phone,nick);
-  toast('已进入孩子视角（只读）','ok');
+  var localName=matchLocalName(phone);
+  var b=loadBucket(phone);
+  if(b&&hasLedgerData(b)){
+    startKidSession(phone,b.ownerName||localName||'孩子');
+    toast('已进入孩子视角（只读）','ok');
+    return;
+  }
+  if(!getSyncToken()){toast('该手机号暂无账本，请让家长先登录一次','err');return}
+  toast('正在查找账本…');
+  syncPull(phone).then(function(){
+    var b2=loadBucket(phone);
+    if(b2&&hasLedgerData(b2)){
+      startKidSession(phone,b2.ownerName||localName||'孩子');
+      toast('已进入孩子视角（只读）','ok');
+    }else{
+      toast('该手机号暂无账本，请让家长先登录一次','err');
+    }
+  });
 }
 function quickLogin(phone){
   var users=getUsers();
@@ -1104,6 +1232,16 @@ function upsertUser(phone,name){
   var exist=users.find(function(u){return u.phone===phone});
   if(!exist){users.push({phone:phone,name:name});saveUsers(users)}
 }
+// 家长端视图复位：孩子会话固定在记录页，切回家长时回落到首页
+function showParentHomeView(){
+  var pages=document.querySelectorAll('.pg');
+  for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
+  document.getElementById('p-home').classList.add('on');
+  var tabs=document.querySelectorAll('.ti');
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('on');
+  document.querySelector('.tb .ti:nth-child(1)').classList.add('on');
+  curTab='home';
+}
 function enterApp(){
   document.getElementById('loginPage').classList.remove('show');
   document.getElementById('mainHeader').style.display='';
@@ -1115,36 +1253,66 @@ function enterApp(){
     document.getElementById('usName').textContent=u.name;
   }
   applyRoleUI();
+  showParentHomeView(); // 家长进入一律落在首页
   // 从服务端拉取数据
   syncPull(currentUser).then(function(data){
     ad=data;
+    ensureOwnerName();
     renderAll(ad);
+    if(sessionRole==='parent')checkRequests();
   });
 }
-// ===== 孩子会话（只读视角） =====
+// 账本名回写：把家长姓名存入桶内 ownerName 字段（新增字段，不改既有字段），
+// 供孩子端登录时自动匹配「找到账本：xxx」。仅在名称变化时触发一次 sd() 同步。
+function ensureOwnerName(){
+  if(sessionRole!=='parent')return;
+  var u=getUsers().find(function(x){return x.phone===currentUser});
+  if(u&&u.name&&ad&&ad.ownerName!==u.name){
+    ad.ownerName=u.name;
+    sd(ad);
+  }
+}
+// ===== 孩子会话（只读视角，纯记录页） =====
 function startKidSession(parentPhone,nickname){
   clearKidSession();
-  try{localStorage.setItem(KID_KEY,JSON.stringify({parentPhone:parentPhone,nickname:nickname}))}catch(e){}
+  try{localStorage.setItem(KID_KEY,JSON.stringify({parentPhone:parentPhone,nickname:nickname||'孩子'}))}catch(e){}
   sessionRole='kid';
   currentUser=parentPhone; // 复用家长桶做只读数据源；sd/syncPush 已被 role 守卫拦截
   document.getElementById('loginPage').classList.remove('show');
   document.getElementById('mainHeader').style.display='';
   document.getElementById('userSwitch').style.display='';
-  document.getElementById('usAvatar').textContent=nickname.charAt(0);
-  document.getElementById('usName').textContent=nickname;
+  document.getElementById('usAvatar').textContent=(nickname||'孩').charAt(0);
+  document.getElementById('usName').textContent=nickname||'孩子';
   applyRoleUI();
+  showKidRecordsView(); // 孩子端直接落在记录页（无首页/tabBar）
   syncPull(parentPhone).then(function(data){
     ad=data;
     renderAll(ad);
+    loadMyRequests(); // 拉取我的兑换申请（独立于 sync-data.json）
   });
 }
-// 角色相关的界面开关：孩子端隐藏 CTA/设置页签，顶栏亮出「孩子视角」徽章
+// 孩子端视图切换：只显示记录页，不触碰 tabBar（已整体隐藏）
+function showKidRecordsView(){
+  var pages=document.querySelectorAll('.pg');
+  for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
+  document.getElementById('p-records').classList.add('on');
+  var tabs=document.querySelectorAll('.ti');
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('on');
+  curTab='records';
+}
+// 角色相关的界面开关：孩子端隐藏 CTA/设置页签/tabBar，展示申请兑换入口
 function applyRoleUI(){
   var kid=sessionRole==='kid';
   document.getElementById('ctaSec').style.display=kid?'none':'';
   document.getElementById('tabSettings').style.display=kid?'none':'';
-  document.getElementById('kidBadge').style.display=kid?'':'none';
-  if(kid&&curTab==='settings')st('home');
+  document.getElementById('kidReqSec').style.display=kid?'':'none';
+  var tb=document.querySelector('.tb');
+  if(tb)tb.style.display=kid?'none':'';
+  document.body.classList.toggle('kid-mode',kid);
+  if(kid){
+    var ra=document.getElementById('reqAlert');
+    if(ra)ra.style.display='none';
+  }
 }
 // ===== 登录页 PIN 验证步骤 =====
 function showPinStep(){
@@ -1327,7 +1495,7 @@ var dpSelectedStart=null;
 var dpSelectedEnd=null;
 
 function st(tab){
-  if(sessionRole==='kid'&&tab==='settings')return; // 孩子端无设置页（tabBar 已隐藏，双保险）
+  if(sessionRole==='kid'&&tab!=='records')return; // 孩子端固定记录页（tabBar 已隐藏，双保险）
   var pages=document.querySelectorAll('.pg');
   for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
   var tabs=document.querySelectorAll('.ti');
@@ -1340,6 +1508,7 @@ function st(tab){
     syncPull(currentUser).then(function(data){
       ad=data;
       render();
+      if(sessionRole==='parent')checkRequests(); // 家长端切页签时顺带检查待审批申请
     });
   }else{
     render();
@@ -1465,7 +1634,8 @@ function renderRecord(r,currentDay){
 
 function renderExchange(e,currentDay){
   var timeStr=(e.date===currentDay)?fdt(e.timestamp):fd(e.date)+' '+fdt(e.timestamp);
-  return '<div class="ri"><span class="cat-dot" style="background:var(--yellow)"></span><div class="inf"><div class="nm">'+e.name+'</div><div class="tm">'+timeStr+'</div></div><span class="ex-chip">兑换</span><div class="sc2 e">-'+e.cost+'</div></div>';
+  var noteStr=e.note?(' · '+escHtml(e.note)):'';
+  return '<div class="ri"><span class="cat-dot" style="background:var(--yellow)"></span><div class="inf"><div class="nm">'+e.name+'</div><div class="tm">'+timeStr+noteStr+'</div></div><span class="ex-chip">兑换</span><div class="sc2 e">-'+e.cost+'</div></div>';
 }
 
 function renderRecords(){
@@ -1889,6 +2059,257 @@ for(var i=0;i<overlays.length;i++){
   overlays[i].addEventListener('click',function(e){if(e.target===this&&this.id!=='mPin')this.classList.remove('show')}); // 首次设 PIN 强制完成，遮罩点击不关闭
 }
 
+// ===== 兑换申请审批流（云端 requests.json，独立于 sync-data.json） =====
+// 云端文件结构：{ 家长手机号: [{id,kidName,shopItemId,itemName,icon,cost,note,
+//   status:'pending'|'approved'|'rejected',createdTime,handledTime}] }
+// 安全边界：孩子端只读写 requests.json（pullRequests/pushRequests），
+// 绝不 PUT 家长的 sync-data.json（syncPush 的 kid 守卫保持不变）。
+var GH_REQ_FILE='requests.json';
+var GH_REQ_API='https://api.github.com/repos/'+GH_REPO+'/contents/'+GH_REQ_FILE;
+var REQ_CACHE_KEY='sp_requests_cache'; // 孩子端离线兜底缓存 {phone,list}
+var reqSHA='';       // requests.json 当前 sha（PUT 必带，409=他人已写需重拉）
+var myRequests=[];   // 孩子端：我的申请列表
+var pendingReqs=[];  // 家长端：待审批申请（驱动首页提醒条）
+var approvalList=[]; // 家长端：审批弹窗当前全量列表
+var reqBusy=false;   // 提交/审批请求进行中防抖
+function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function fmtTs(ts){var d=new Date(ts);return (d.getMonth()+1)+'月'+d.getDate()+'日 '+fdt(ts)}
+function sessionNickname(){var s=readKidSession();return (s&&s.nickname)||'孩子'}
+// 拉取 requests.json：404=空对象（新用户无申请，正常态）；
+// 网络/权限失败返回 null（调用方按失败处理，绝不用空对象覆盖云端）。
+// 注意：不触碰全局 syncStatus（与 sync-data.json 状态机解耦）。
+function pullRequests(){
+  var token=getSyncToken();
+  if(!token)return Promise.resolve(null);
+  return fetch(GH_REQ_API,{headers:{'Authorization':'token '+token}})
+    .then(function(r){
+      if(r.status===404){reqSHA='';return {}}
+      if(!r.ok)return null;
+      return r.json().then(function(meta){
+        reqSHA=meta.sha||'';
+        try{return JSON.parse(b64ToUtf8(meta.content))||{}}catch(e){return {}}
+      });
+    })
+    .catch(function(){return null});
+}
+// 整体写入 requests.json（last-write-wins，家庭规模可接受）
+function pushRequests(obj){
+  var token=getSyncToken();
+  if(!token)return Promise.resolve(false);
+  return fetch(GH_REQ_API,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:JSON.stringify({message:'sync:requests',content:utf8ToB64(JSON.stringify(obj)),sha:reqSHA})})
+    .then(function(r){
+      if(!r.ok)return false;
+      return r.json().then(function(m){reqSHA=m.sha||reqSHA;return true}).catch(function(){return true});
+    })
+    .catch(function(){return false});
+}
+
+// —— 孩子端：提交申请 & 我的申请列表 ——
+function openReqModal(){
+  if(sessionRole!=='kid')return; // 只读守卫：家长端不走此入口
+  var sel=document.getElementById('reqItem');
+  var html='';
+  for(var i=0;i<ad.shopItems.length;i++){
+    var it=ad.shopItems[i];
+    html+='<option value="'+it.id+'" data-cost="'+it.cost+'">'+escHtml(it.name)+' (-'+it.cost+'分)</option>';
+  }
+  if(!html)html='<option value="">暂无奖励项，请让家长先配置</option>';
+  sel.innerHTML=html;
+  document.getElementById('reqNote').value='';
+  onReqSelectChange();
+  document.getElementById('mReq').classList.add('show');
+}
+function onReqSelectChange(){
+  var sel=document.getElementById('reqItem');
+  var opt=sel.options[sel.selectedIndex];
+  document.getElementById('reqCost').textContent=(opt&&opt.dataset.cost)?(opt.dataset.cost+' 分'):'';
+}
+function submitRequest(){
+  if(reqBusy||sessionRole!=='kid')return;
+  var sel=document.getElementById('reqItem');
+  var it=null;
+  for(var i=0;i<ad.shopItems.length;i++){if(ad.shopItems[i].id===sel.value){it=ad.shopItems[i];break}}
+  if(!it){toast('暂无奖励项，请让家长先配置','err');return}
+  var note=document.getElementById('reqNote').value.trim();
+  reqBusy=true;
+  var btn=document.getElementById('reqSubmit');
+  btn.disabled=true;
+  toast('正在提交申请…');
+  pullRequests().then(function(obj){
+    if(obj===null){ // 网络失败：不动云端，避免误创建覆盖
+      reqBusy=false;btn.disabled=false;
+      toast('网络异常，提交失败，请重试','err');
+      return;
+    }
+    var list=obj[currentUser]||[];
+    list.unshift({id:'rq_'+Date.now(),kidName:sessionNickname(),shopItemId:it.id,itemName:it.name,icon:it.icon||'',cost:it.cost,note:note,status:'pending',createdTime:Date.now(),handledTime:null});
+    obj[currentUser]=list;
+    pushRequests(obj).then(function(ok){
+      reqBusy=false;btn.disabled=false;
+      if(ok){
+        cm('mReq');
+        toast('已提交申请，等待家长审批','ok');
+        loadMyRequests();
+      }else{
+        toast('提交失败，请重试','err');
+      }
+    });
+  });
+}
+function cacheMyRequests(){
+  try{localStorage.setItem(REQ_CACHE_KEY,JSON.stringify({phone:currentUser,list:myRequests}))}catch(e){}
+}
+function readCachedRequests(){
+  try{
+    var r=JSON.parse(localStorage.getItem(REQ_CACHE_KEY));
+    if(r&&r.phone===currentUser)return r.list||[];
+  }catch(e){}
+  return [];
+}
+function loadMyRequests(){
+  if(sessionRole!=='kid')return;
+  pullRequests().then(function(obj){
+    if(obj&&obj[currentUser]){myRequests=obj[currentUser];cacheMyRequests()}
+    else if(obj){myRequests=[];cacheMyRequests()}
+    else{myRequests=readCachedRequests()} // 拉取失败（离线）：用缓存兜底
+    renderMyRequests();
+  });
+}
+function renderMyRequests(){
+  var box=document.getElementById('myReqList');
+  if(!box)return;
+  var list=(myRequests||[]).slice().sort(function(a,b){return (b.createdTime||0)-(a.createdTime||0)});
+  if(!list.length){
+    box.innerHTML='<div class="es" style="padding:16px 0">'+esBricks()+'<div class="et">还没有兑换申请</div><div class="eg">点击上方按钮申请兑换</div></div>';
+    return;
+  }
+  var html='';
+  for(var i=0;i<list.length;i++){
+    var q=list[i];
+    var chip=q.status==='approved'?'<span class="rq-chip a">已通过</span>'
+            :q.status==='rejected'?'<span class="rq-chip r">已拒绝</span>'
+            :'<span class="rq-chip p">待审批</span>';
+    var noteStr=q.note?(' · '+escHtml(q.note)):'';
+    html+='<div class="ri"><span class="cat-dot" style="background:var(--yellow)"></span>'
+      +'<div class="inf"><div class="nm">'+escHtml(q.itemName)+'</div>'
+      +'<div class="tm">'+fmtTs(q.createdTime)+noteStr+'</div></div>'
+      +chip+'<div class="sc2 e">-'+q.cost+'</div></div>';
+  }
+  box.innerHTML=html;
+}
+
+// —— 家长端：待审批提醒 & 审批 ——
+// 登录/切页签时调用：拉取申请，刷新首页提醒条
+function checkRequests(){
+  if(sessionRole!=='parent')return;
+  pullRequests().then(function(obj){
+    if(obj===null)return; // 拉取失败：保持现状，不打扰
+    pendingReqs=(obj[currentUser]||[]).filter(function(q){return q.status==='pending'});
+    renderReqAlert();
+  });
+}
+function renderReqAlert(){
+  var el=document.getElementById('reqAlert');
+  if(!el)return;
+  if(sessionRole!=='parent'||!pendingReqs.length){el.style.display='none';return}
+  el.style.display='';
+  el.textContent='有 '+pendingReqs.length+' 条兑换申请待审批 ›';
+}
+function openApproval(){
+  if(sessionRole!=='parent')return;
+  document.getElementById('mReqAp').classList.add('show');
+  loadApproval();
+}
+function loadApproval(){
+  if(sessionRole!=='parent')return;
+  pullRequests().then(function(obj){
+    if(obj===null){toast('网络异常，加载失败','err');return}
+    approvalList=obj[currentUser]||[];
+    pendingReqs=approvalList.filter(function(q){return q.status==='pending'});
+    renderApproval();
+    renderReqAlert();
+  });
+}
+function renderApproval(){
+  var box=document.getElementById('reqApList');
+  if(!box)return;
+  var list=(approvalList||[]).slice().sort(function(a,b){return (b.createdTime||0)-(a.createdTime||0)});
+  var pend=list.filter(function(q){return q.status==='pending'});
+  var done=list.filter(function(q){return q.status!=='pending'});
+  var html='';
+  if(!pend.length){
+    html+='<div class="es" style="padding:16px 0">'+esBricks()+'<div class="et">暂无待审批申请</div></div>';
+  }
+  for(var i=0;i<pend.length;i++){
+    var q=pend[i];
+    html+='<div class="ri" style="flex-wrap:wrap"><span class="cat-dot" style="background:var(--yellow)"></span>'
+      +'<div class="inf"><div class="nm">'+escHtml(q.kidName||'孩子')+' · '+escHtml(q.itemName)+'</div>'
+      +'<div class="tm">'+fmtTs(q.createdTime)+(q.note?(' · '+escHtml(q.note)):'')+'</div></div>'
+      +'<div class="sc2 e">-'+q.cost+'</div>'
+      +'<div style="width:100%;display:flex;gap:8px;justify-content:flex-end;margin-top:6px">'
+      +'<button class="ap-btn ok" onclick="approveRequest(\''+q.id+'\')">通过</button>'
+      +'<button class="ap-btn no" onclick="rejectRequest(\''+q.id+'\')">拒绝</button>'
+      +'</div></div>';
+  }
+  if(done.length)html+='<div class="sec-h" style="margin-top:16px"><div class="st-t">已处理</div></div>';
+  for(var j=0;j<done.length;j++){
+    var d2=done[j];
+    var chip=d2.status==='approved'?'<span class="rq-chip a">已通过</span>':'<span class="rq-chip r">已拒绝</span>';
+    html+='<div class="ri req-done"><span class="cat-dot" style="background:var(--ink3)"></span>'
+      +'<div class="inf"><div class="nm">'+escHtml(d2.kidName||'孩子')+' · '+escHtml(d2.itemName)+'</div>'
+      +'<div class="tm">'+fmtTs(d2.handledTime||d2.createdTime)+'</div></div>'+chip+'</div>';
+  }
+  box.innerHTML=html;
+}
+// 通过：校验积分 → 先更新 requests.json 状态，成功后再本地扣分 + 兑换记录 + 桶同步
+function approveRequest(id){
+  if(sessionRole!=='parent'||reqBusy)return;
+  reqBusy=true;
+  toast('正在处理…');
+  pullRequests().then(function(obj){
+    if(obj===null){reqBusy=false;toast('网络异常，操作失败，请重试','err');return}
+    var list=obj[currentUser]||[];
+    var hit=null;
+    for(var i=0;i<list.length;i++){if(list[i].id===id&&list[i].status==='pending'){hit=list[i];break}}
+    if(!hit){reqBusy=false;toast('该申请已处理或不存在','err');loadApproval();return}
+    if(ad.totalPoints<hit.cost){reqBusy=false;toast('积分不足，无法通过该申请','err');return}
+    hit.status='approved';
+    hit.handledTime=Date.now();
+    pushRequests(obj).then(function(ok){
+      reqBusy=false;
+      if(!ok){toast('同步失败，请重试','err');return}
+      // 云端状态已落定：本地扣分 + 生成兑换记录（走现有 sd 同步家长桶）
+      ad.totalPoints-=hit.cost;
+      ad.exchanges.push({id:'ex_'+Date.now(),date:today(),timestamp:Date.now(),shopItemId:hit.shopItemId||'',name:hit.itemName,icon:hit.icon||'',cost:hit.cost,note:hit.note||''});
+      sd(ad);
+      toast('已通过申请，扣除 '+hit.cost+' 分','ok');
+      render();
+      loadApproval();
+    });
+  });
+}
+// 拒绝：仅更新 requests.json 状态，积分与记录无任何变化
+function rejectRequest(id){
+  if(sessionRole!=='parent'||reqBusy)return;
+  reqBusy=true;
+  toast('正在处理…');
+  pullRequests().then(function(obj){
+    if(obj===null){reqBusy=false;toast('网络异常，操作失败，请重试','err');return}
+    var list=obj[currentUser]||[];
+    var hit=null;
+    for(var i=0;i<list.length;i++){if(list[i].id===id&&list[i].status==='pending'){hit=list[i];break}}
+    if(!hit){reqBusy=false;toast('该申请已处理或不存在','err');loadApproval();return}
+    hit.status='rejected';
+    hit.handledTime=Date.now();
+    pushRequests(obj).then(function(ok){
+      reqBusy=false;
+      if(!ok){toast('同步失败，请重试','err');return}
+      toast('已拒绝该申请');
+      loadApproval();
+    });
+  });
+}
+
 // Date picker functions
 function openDatePicker(){
   dpMonth=new Date();
@@ -1999,7 +2420,9 @@ window.addEventListener('scroll',function(){
   // 已登录，从服务端拉取数据
   syncPull(currentUser).then(function(data){
     ad=data;
+    ensureOwnerName();
     renderAll(data);
+    checkRequests(); // 家长端登录时检查待审批兑换申请
     maybePinSetup(); // 老账号无 PIN：首次进入家长端补设
   });
 })();
