@@ -82,8 +82,8 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 .login-hint{font:var(--f-cap);margin-top:8px;min-height:16px}
 .login-hint.ok{color:var(--grn-deep)}
 .login-hint.na{color:var(--ink3)}
-/* 孩子端无 tabBar：正文底部留白收窄 */
-body.kid-mode{padding-bottom:24px}
+/* 孩子端有轻量导航（记录/商城两页签，复用 .tb 结构）：底部留白与家长端同高 */
+body.kid-mode{padding-bottom:72px}
 /* 申请状态 chip：待审批黄 / 已通过绿 / 已拒绝红 */
 .rq-chip{font:var(--f-cap);font-weight:600;border-radius:var(--r-full);padding:4px 8px;flex-shrink:0;white-space:nowrap}
 .rq-chip.p{color:var(--yel-deep);background:var(--yellow-l)}
@@ -164,6 +164,8 @@ body.kid-mode{padding-bottom:24px}
 .sc2.d{color:var(--red-deep)}
 .sc2.e{color:var(--yel-deep)}
 .ex-chip{font:var(--f-cap);font-weight:500;color:var(--yel-deep);background:var(--yellow-l);border-radius:var(--r-full);padding:4px 8px;flex-shrink:0}
+/* 兑换来源标注：孩子申请=蓝域，家长直接兑换沿用黄域「兑换」 */
+.ex-chip.kid{color:var(--blue-deep);background:var(--blue-l)}
 .dl{width:32px;height:32px;border:none;border-radius:var(--r-s);background:transparent;color:var(--ink3);font:var(--f-item);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:-8px}
 .dl:active{background:var(--fill);color:var(--red-deep)}
 
@@ -402,20 +404,30 @@ body.kid-mode{padding-bottom:24px}
 
 <!-- 记录 -->
 <div class="pg" id="p-records">
-  <!-- 孩子端专属：申请兑换入口 + 我的申请（家长端隐藏） -->
-  <div id="kidReqSec" style="display:none">
-    <div style="padding:12px 16px 0"><button class="cta2" style="width:100%" onclick="openReqModal()">申请兑换</button></div>
-    <div class="sec" style="margin-top:16px">
-      <div class="sec-h"><div class="st-t">我的申请</div><div class="ftb sm" onclick="loadMyRequests()">刷新</div></div>
-      <div class="rl" id="myReqList"></div>
-    </div>
-  </div>
   <div class="dtrig" onclick="openDatePicker()">
     <span class="dtrig-t" id="dateTriggerText">选择日期范围</span>
     <span class="dtrig-c">▾</span>
   </div>
   <div class="ft" id="typeFilter"></div>
   <div class="rl" id="ar" style="margin:12px 16px 24px"></div>
+</div>
+
+<!-- 积分商城（孩子端）：总积分 + 奖励列表（逐项申请兑换）+ 我的申请 -->
+<div class="pg" id="p-shop">
+  <div class="pc">
+    <div class="pc-brick y" aria-hidden="true"><i class="studi y"></i><i class="studi y"></i><i class="studi y"></i><i class="studi y"></i></div>
+    <div class="lb">当前总积分</div>
+    <div class="pts" id="kShopPts">0</div>
+  </div>
+  <div style="padding:12px 16px 0"><button class="cta2" style="width:100%" onclick="openReqModal()">申请兑换</button></div>
+  <div class="sec">
+    <div class="sec-h"><div class="st-t">奖励清单</div></div>
+    <div class="rl" id="kShopList" style="margin-top:8px"></div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><div class="st-t">我的申请</div><div class="ftb sm" onclick="loadMyRequests()">刷新</div></div>
+    <div class="rl" id="myReqList"></div>
+  </div>
 </div>
 
 <!-- 设置 -->
@@ -472,11 +484,17 @@ body.kid-mode{padding-bottom:24px}
   </div>
 </div>
 
-<!-- Tab Bar -->
-<div class="tb">
+<!-- Tab Bar（家长端） -->
+<div class="tb" id="tbMain">
   <div class="ti on" onclick="st('home')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">首页</span></div>
   <div class="ti" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
   <div class="ti" id="tabSettings" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
+</div>
+
+<!-- Tab Bar（孩子端轻量导航：记录 / 商城，applyRoleUI 切换显隐） -->
+<div class="tb" id="kidTb" style="display:none">
+  <div class="ti on" id="kt-records" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
+  <div class="ti" id="kt-shop" onclick="st('shop')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">商城</span></div>
 </div>
 
 <!-- 记录分数弹窗 -->
@@ -1291,23 +1309,25 @@ function startKidSession(parentPhone,nickname){
     loadMyRequests(); // 拉取我的兑换申请（独立于 sync-data.json）
   });
 }
-// 孩子端视图切换：只显示记录页，不触碰 tabBar（已整体隐藏）
+// 孩子端视图切换：显示记录页，轻量导航（记录/商城）高亮记录
 function showKidRecordsView(){
   var pages=document.querySelectorAll('.pg');
   for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
   document.getElementById('p-records').classList.add('on');
-  var tabs=document.querySelectorAll('.ti');
-  for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('on');
+  var tabs=document.querySelectorAll('#kidTb .ti');
+  for(var j=0;j<tabs.length;j++) tabs[j].classList.remove('on');
+  document.getElementById('kt-records').classList.add('on');
   curTab='records';
 }
-// 角色相关的界面开关：孩子端隐藏 CTA/设置页签/tabBar，展示申请兑换入口
+// 角色相关的界面开关：孩子端隐藏 CTA/设置页签/家长 tabBar，显示孩子轻量导航（记录/商城）
 function applyRoleUI(){
   var kid=sessionRole==='kid';
   document.getElementById('ctaSec').style.display=kid?'none':'';
   document.getElementById('tabSettings').style.display=kid?'none':'';
-  document.getElementById('kidReqSec').style.display=kid?'':'none';
-  var tb=document.querySelector('.tb');
+  var tb=document.getElementById('tbMain');
   if(tb)tb.style.display=kid?'none':'';
+  var ktb=document.getElementById('kidTb');
+  if(ktb)ktb.style.display=kid?'':'none';
   document.body.classList.toggle('kid-mode',kid);
   if(kid){
     var ra=document.getElementById('reqAlert');
@@ -1495,7 +1515,26 @@ var dpSelectedStart=null;
 var dpSelectedEnd=null;
 
 function st(tab){
-  if(sessionRole==='kid'&&tab!=='records')return; // 孩子端固定记录页（tabBar 已隐藏，双保险）
+  if(sessionRole==='kid'){
+    // 孩子端仅两页：记录 / 商城（家长页签一律拦截，双保险）
+    if(tab!=='records'&&tab!=='shop')return;
+    var pages=document.querySelectorAll('.pg');
+    for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
+    document.getElementById('p-'+tab).classList.add('on');
+    var ktabs=document.querySelectorAll('#kidTb .ti');
+    for(var j=0;j<ktabs.length;j++) ktabs[j].classList.remove('on');
+    document.getElementById('kt-'+tab).classList.add('on');
+    curTab=tab;
+    if(!currentUser){render();return}
+    // 进入记录页/商城页均重新拉取：家长桶（总积分/奖励项）+ requests.json（我的申请）
+    syncPull(currentUser).then(function(data){
+      ad=data;
+      render();
+      if(tab==='shop')renderShopKid();
+      loadMyRequests();
+    });
+    return;
+  }
   var pages=document.querySelectorAll('.pg');
   for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
   var tabs=document.querySelectorAll('.ti');
@@ -1520,6 +1559,8 @@ function render(){
   renderHome();
   renderRecords();
   renderSettings();
+  // 孩子端商城页在屏时，跟随数据刷新总积分与奖励列表
+  if(sessionRole==='kid'&&curTab==='shop')renderShopKid();
 }
 
 function renderHome(){
@@ -1635,7 +1676,53 @@ function renderRecord(r,currentDay){
 function renderExchange(e,currentDay){
   var timeStr=(e.date===currentDay)?fdt(e.timestamp):fd(e.date)+' '+fdt(e.timestamp);
   var noteStr=e.note?(' · '+escHtml(e.note)):'';
-  return '<div class="ri"><span class="cat-dot" style="background:var(--yellow)"></span><div class="inf"><div class="nm">'+e.name+'</div><div class="tm">'+timeStr+noteStr+'</div></div><span class="ex-chip">兑换</span><div class="sc2 e">-'+e.cost+'</div></div>';
+  // 来源标注：source==='kid_request' 显示蓝域「孩子申请」；家长直接兑换及无 source 的旧数据显示「兑换」
+  var src=e.source==='kid_request'
+    ?'<span class="ex-chip kid">孩子申请</span>'
+    :'<span class="ex-chip">兑换</span>';
+  // 孩子端只读：不渲染删除按钮
+  var del=sessionRole==='kid'?'':'<button class="dl" onclick="deleteExchange(\''+e.id+'\')">✕</button>';
+  return '<div class="ri"><span class="cat-dot" style="background:var(--yellow)"></span><div class="inf"><div class="nm">'+escHtml(e.name)+'</div><div class="tm">'+timeStr+noteStr+'</div></div>'+src+'<div class="sc2 e">-'+e.cost+'</div>'+del+'</div>';
+}
+
+// ===== 家长端：删除兑换记录（退分 + 移除记录 + 联动删除关联申请单） =====
+// 退分 = totalPoints += cost（记分删除 deleteRecord 的对称操作）。
+// 若该兑换由孩子申请审批产生（source==='kid_request' 且含 requestId）：
+// 先取最新 requests.json（取最新 sha）→ 移除对应申请单 → PUT 成功后才动本地桶，
+// 保证 requests.json 与 sync-data.json 不出现半途状态；网络失败则整体中止。
+// 无 requestId（家长直接兑换）只退分 + 移除记录，不触碰 requests.json。
+// 孩子端无删除入口（renderExchange 只读守卫），此处再加角色守卫双保险。
+function deleteExchange(id){
+  if(sessionRole!=='parent')return;
+  var ex=null;
+  for(var i=0;i<ad.exchanges.length;i++){if(ad.exchanges[i].id===id){ex=ad.exchanges[i];break}}
+  if(!ex)return;
+  var hasReq=ex.source==='kid_request'&&!!ex.requestId;
+  var msg='将删除该兑换记录并退还 '+ex.cost+' 分'+(hasReq?'；该兑换来自孩子申请，对应申请单将一并移除。':'。');
+  sc2('删除兑换记录',msg,function(){
+    var doLocal=function(){
+      ad.totalPoints+=ex.cost; // 退分
+      ad.exchanges=ad.exchanges.filter(function(x){return x.id!==id});
+      sd(ad);
+      toast('已删除，退还 '+ex.cost+' 分','ok');
+      render();
+    };
+    if(!hasReq){doLocal();return}
+    // 关联申请单：先处理 requests.json，成功后再动本地桶
+    if(reqBusy)return;
+    reqBusy=true;
+    toast('正在删除关联申请…');
+    pullRequests().then(function(obj){
+      if(obj===null){reqBusy=false;toast('网络异常，删除失败，请重试','err');return}
+      var list=obj[currentUser]||[];
+      obj[currentUser]=list.filter(function(q){return q.id!==ex.requestId});
+      pushRequests(obj).then(function(ok){
+        reqBusy=false;
+        if(!ok){toast('申请单同步失败，请重试','err');return}
+        doLocal();
+      });
+    });
+  });
 }
 
 function renderRecords(){
@@ -2104,8 +2191,40 @@ function pushRequests(obj){
     .catch(function(){return false});
 }
 
+// ===== 孩子端：积分商城页渲染 =====
+// 数据来源：家长桶（totalPoints/shopItems，经 syncPull 只读缓存）。
+// 积分不足的项置灰但保留「申请兑换」入口（孩子先申请、家长审批时校验积分）。
+function renderShopKid(){
+  if(sessionRole!=='kid')return;
+  var pts=document.getElementById('kShopPts');
+  if(pts){
+    pts.textContent=ad.totalPoints;
+    pts.classList.toggle('zero',!ad.totalPoints);
+  }
+  var box=document.getElementById('kShopList');
+  if(!box)return;
+  if(!ad.shopItems.length){
+    box.innerHTML='<div class="es" style="padding:16px 0">'+esBricks()+'<div class="et">暂无奖励项</div><div class="eg">请让家长在兑换项管理中添加</div></div>';
+    return;
+  }
+  var html='';
+  for(var i=0;i<ad.shopItems.length;i++){
+    var it=ad.shopItems[i];
+    var enough=ad.totalPoints>=it.cost;
+    var desc=it.desc?escHtml(it.desc)+' · ':'';
+    html+='<div class="ri'+(enough?'':' req-done')+'">'
+      +'<span class="cat-dot" style="background:var(--yellow)"></span>'
+      +'<div class="inf"><div class="nm">'+escHtml(it.name)+'</div>'
+      +'<div class="tm">'+desc+(enough?'当前积分可兑换':'积分不足，仍可申请')+'</div></div>'
+      +'<div class="sc2 e">-'+it.cost+'</div>'
+      +'<button class="ap-btn ok" onclick="openReqModal(\''+it.id+'\')">申请兑换</button></div>';
+  }
+  box.innerHTML=html;
+}
+
 // —— 孩子端：提交申请 & 我的申请列表 ——
-function openReqModal(){
+// preId 可选：从商城页某项「申请兑换」进入时预选该项
+function openReqModal(preId){
   if(sessionRole!=='kid')return; // 只读守卫：家长端不走此入口
   var sel=document.getElementById('reqItem');
   var html='';
@@ -2115,6 +2234,11 @@ function openReqModal(){
   }
   if(!html)html='<option value="">暂无奖励项，请让家长先配置</option>';
   sel.innerHTML=html;
+  if(preId){
+    var has=false;
+    for(var j=0;j<sel.options.length;j++){if(sel.options[j].value===preId){has=true;break}}
+    if(has)sel.value=preId; // 项已被家长删除时保持默认选中，避免静默错选
+  }
   document.getElementById('reqNote').value='';
   onReqSelectChange();
   document.getElementById('mReq').classList.add('show');
@@ -2279,8 +2403,9 @@ function approveRequest(id){
       reqBusy=false;
       if(!ok){toast('同步失败，请重试','err');return}
       // 云端状态已落定：本地扣分 + 生成兑换记录（走现有 sd 同步家长桶）
+      // 新增 source/requestId：来源标注 + 关联申请单（家长删除兑换时联动清理）
       ad.totalPoints-=hit.cost;
-      ad.exchanges.push({id:'ex_'+Date.now(),date:today(),timestamp:Date.now(),shopItemId:hit.shopItemId||'',name:hit.itemName,icon:hit.icon||'',cost:hit.cost,note:hit.note||''});
+      ad.exchanges.push({id:'ex_'+Date.now(),date:today(),timestamp:Date.now(),shopItemId:hit.shopItemId||'',name:hit.itemName,icon:hit.icon||'',cost:hit.cost,note:hit.note||'',source:'kid_request',requestId:hit.id});
       sd(ad);
       toast('已通过申请，扣除 '+hit.cost+' 分','ok');
       render();
