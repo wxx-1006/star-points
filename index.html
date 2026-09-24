@@ -403,14 +403,14 @@ body.kid-mode{padding-bottom:72px}
 .qz-nbtn{flex:1 1 0;min-width:0;height:44px;border:var(--bd);border-radius:var(--r-m);background:var(--card);color:var(--ink);font:var(--f-item);font-weight:600;cursor:pointer;transition:opacity .15s}
 .qz-nbtn:active{background:var(--fill)}
 .qz-nbtn:disabled{opacity:.35}
-.qz-nbtn.rand{flex:0 0 auto;padding:0 10px;background:var(--yellow-l);border-color:var(--yellow-l);color:var(--yel-deep)}
+.qz-nbtn.rand{background:var(--yellow-l);border-color:var(--yellow-l);color:var(--yel-deep)}
 /* 判分按钮（家长口头考问后点判定）：答对了=绿底奖励 / 答错了=红底不加分；与导航同排定宽 */
-.qz-okbtn,.qz-ngbtn{flex:0 0 auto;padding:0 12px;height:44px;border:none;border-radius:var(--r-m);font:var(--f-item);font-weight:700;cursor:pointer;transition:transform .15s}
+/* 与 .qz-nbtn 保持同一 1px 边框盒模型（透明边框），确保 5 个按钮实测等宽 */
+.qz-okbtn,.qz-ngbtn{flex:1 1 0;min-width:0;padding:0;height:44px;border:1px solid transparent;border-radius:var(--r-m);font:var(--f-item);font-weight:700;cursor:pointer;transition:transform .15s}
 .qz-okbtn:active,.qz-ngbtn:active{transform:scale(.97)}
 .qz-okbtn{background:var(--green);color:var(--card)}
 .qz-ngbtn{background:var(--red-l);color:var(--red-deep)}
 .qz-okbtn:disabled,.qz-ngbtn:disabled{opacity:.35}
-.qz-sep{flex:0 0 auto;width:1px;height:24px;background:var(--line)}
 .qz-fin{text-align:center;padding:32px 12px}
 .qz-fin-t{font:var(--f-h2);margin-bottom:8px}
 .qz-fin-p{font:var(--f-item);color:var(--ink2);margin-bottom:20px}
@@ -488,7 +488,7 @@ body.kid-mode{padding-bottom:72px}
     <div class="qz-top-row">
       <div>
         <div class="qz-tt">逻辑推理题</div>
-        <div class="qz-sub">四年级+ · 共 100 题</div>
+        <div class="qz-sub" id="qzSub">四年级+ · 共 100 题</div>
       </div>
       <button class="qz-reset" onclick="qzResetProgress()">重置进度</button>
     </div>
@@ -503,7 +503,6 @@ body.kid-mode{padding-bottom:72px}
     <button class="qz-nbtn" id="qzPrev" onclick="qzPrev()">上一题</button>
     <button class="qz-nbtn rand" onclick="qzRandomPick()">随机</button>
     <button class="qz-nbtn" id="qzNext" onclick="qzNext()">下一题</button>
-    <span class="qz-sep" aria-hidden="true"></span>
     <button class="qz-okbtn" id="qzOk" onclick="qzMarkCorrect()">答对了</button>
     <button class="qz-ngbtn" id="qzNg" onclick="qzMarkWrong()">答错了</button>
   </div>
@@ -1754,8 +1753,8 @@ function renderRecord(r,currentDay){
   var sign=u?'+':'';
   var noteStr=r.note?(' · '+r.note):'';
   var timeStr=(r.date===currentDay)?fdt(r.timestamp):fd(r.date)+' '+fdt(r.timestamp);
-  // 孩子端只读：不渲染删除按钮
-  var del=sessionRole==='kid'?'':'<button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button>';
+  // 孩子端只读 + 系统发放的积分（刷题答题奖励 itemId==='quiz_reward'）不可删除 → 均不渲染删除按钮
+  var del=(sessionRole==='kid'||r.itemId==='quiz_reward')?'':'<button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button>';
   return '<div class="ri"><span class="cat-dot" style="background:'+catColor(r.category)+'"></span><div class="inf"><div class="nm">'+r.name+'</div><div class="tm">'+timeStr+noteStr+'</div></div><div class="sc2 '+cls+'">'+sign+r.score+'</div>'+del+'</div>';
 }
 
@@ -2090,6 +2089,8 @@ function deleteRecord(id){
   var r=null;
   for(var i=0;i<ad.records.length;i++){if(ad.records[i].id===id){r=ad.records[i];break}}
   if(!r)return;
+  // 系统发放的积分（刷题答题奖励）不可删除：列表已不渲染删除入口，此处兜底拦截任何调用路径
+  if(r.itemId==='quiz_reward'){toast('答题奖励不可删除','err');return}
   var sign=r.score>0?'+':'';
   var action=r.score>0?'减少':'增加';
   sc2('删除记录','删除「'+r.name+'」('+sign+r.score+'分)？总分将'+action+Math.abs(r.score)+'分。',function(){
@@ -2612,6 +2613,20 @@ var DATA = [
 { c:6, t:"烧水泡茶（统筹法）", q:"妈妈让小明烧水泡茶：洗水壶1分钟、烧开水10分钟、洗茶壶2分钟、洗茶杯2分钟、拿茶叶1分钟。做完这五件事最少要几分钟才能开始泡茶？", a:"11分钟。先洗水壶（1分钟）→烧水（10分钟），烧水的同时洗茶壶、洗茶杯、拿茶叶（共5分钟，完全来得及）。总共1+10=11分钟。这是数学家华罗庚推广的『统筹法』：找出必须串行的关键路径，其他事情见缝插针并行做。" }
 ];
 
+// ---------- 分类维度索引（一次性从静态 DATA 派生，用于分类统计与分类内题号） ----------
+// QZ_CAT_TOTALS[c] = 分类 c 的总题数（全部 = DATA.length）
+// QZ_CAT_RANK[i]   = 第 i 题在其所属分类完整题目序列中的 1-based 位次（与 DATA 声明顺序一致，不受完成/筛选影响）
+var QZ_CAT_TOTALS=(function(){
+  var a=[];for(var i=0;i<CATS.length;i++)a.push(0);
+  for(var j=0;j<DATA.length;j++)a[DATA[j].c]++;
+  return a;
+})();
+var QZ_CAT_RANK=(function(){
+  var seen=[],a=[];for(var i=0;i<CATS.length;i++)seen.push(0);
+  for(var j=0;j<DATA.length;j++)a[j]=++seen[DATA[j].c];
+  return a;
+})();
+
 // ---------- 刷题状态与逻辑（与原版 logicDone 语义一致，独立键 sp_quiz_done） ----------
 var QZ_KEY='sp_quiz_done';
 var qzCat=-1;      // -1 = 全部分类
@@ -2637,9 +2652,24 @@ function qzRebuild(keepId){
   }
 }
 
+// 当前口径（全部/某分类）下的已完成数与总题数；已完成数按该口径过滤，天然容错历史脏数据
+function qzCatScope(){
+  var total=(qzCat===-1)?DATA.length:QZ_CAT_TOTALS[qzCat];
+  var done=0;
+  qzDone.forEach(function(i){
+    if(i<0||i>=DATA.length)return;
+    if(qzCat===-1||DATA[i].c===qzCat)done++;
+  });
+  return {done:done,total:total};
+}
+
+// 进度条 + 统计文案 + 副标题随当前分类口径刷新（分类选中时即该分类维度）
 function qzUpdateStats(){
-  document.getElementById('qzStats').textContent=qzDone.size+'/100';
-  document.getElementById('qzBar').style.width=qzDone.size+'%';
+  var s=qzCatScope();
+  document.getElementById('qzStats').textContent=s.done+'/'+s.total;
+  document.getElementById('qzBar').style.width=(s.total?s.done/s.total*100:0)+'%';
+  var sub=document.getElementById('qzSub');
+  if(sub)sub.textContent='四年级+ · 共 '+s.total+' 题';
 }
 
 function qzRenderChips(){
@@ -2663,7 +2693,7 @@ function qzRender(){
     // 无进行中的题目（全完成/分类做完）时判分按钮同样禁用，避免无题可判
     okBtn.disabled=true;
     ngBtn.disabled=true;
-    var allDone=qzDone.size===DATA.length;
+    var allDone=qzCatScope().done===DATA.length;
     card.innerHTML='<div class="qz-fin">'
       +'<div class="qz-fin-t">'+(allDone?'100 题全部完成！':'这个分类做完了')+'</div>'
       +'<div class="qz-fin-p">'+(allDone
@@ -2680,8 +2710,12 @@ function qzRender(){
   nextBtn.disabled=qzPos>=qzList.length-1;
   okBtn.disabled=false;
   ngBtn.disabled=false;
+  // 题号徽章：全部口径 → 全库序号/100；分类口径 → 该题在分类完整序列中的位次/该分类总题数
+  var badge=(qzCat===-1)
+    ?((qi+1)+' / '+DATA.length)
+    :(QZ_CAT_RANK[qi]+' / '+QZ_CAT_TOTALS[qzCat]);
   card.innerHTML='<div class="qz-meta">'
-    +'<span class="qz-num num">'+(qi+1)+' / 100</span>'
+    +'<span class="qz-num num">'+badge+'</span>'
     +'<span class="qz-cat">'+CATS[d.c].note+'</span></div>'
     +'<div class="qz-title">'+d.t+'</div>'
     +'<div class="qz-body">'+d.q+'</div>'
