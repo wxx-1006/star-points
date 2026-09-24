@@ -372,8 +372,15 @@ body.kid-mode{padding-bottom:72px}
 .qz-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .qz-tt{font:var(--f-title)}
 .qz-sub{font:var(--f-cap);color:var(--ink2);margin-top:2px}
-.qz-reset{border:var(--bd);background:var(--card);color:var(--ink2);border-radius:var(--r-full);padding:6px 14px;font:var(--f-cap);font-weight:600;cursor:pointer;flex-shrink:0;transition:transform .15s}
+.qz-top-btns{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.qz-reset{border:var(--bd);background:var(--card);color:var(--ink2);border-radius:var(--r-full);padding:6px 10px;font:var(--f-cap);font-weight:600;cursor:pointer;flex-shrink:0;transition:transform .15s;white-space:nowrap}
 .qz-reset:active{transform:scale(.95);background:var(--fill)}
+/* 错题集入口（与「重置进度」同排，位于其左侧）：蓝色系强调；错题集视图内呈选中态；0 题时置灰禁用 */
+.qz-wrongbtn{border:var(--bd);background:var(--card);color:var(--blue-deep);border-radius:var(--r-full);padding:6px 10px;font:var(--f-cap);font-weight:600;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:transform .15s,background .2s,border-color .2s,color .2s}
+.qz-wrongbtn:active{transform:scale(.95);background:var(--fill)}
+.qz-wrongbtn.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue-deep)}
+.qz-wrongbtn:disabled{cursor:default}
+.qz-wrongbtn-off{opacity:.45}
 .qz-stats{display:flex;align-items:center;gap:10px;margin-top:10px}
 .qz-bar{flex:1;height:10px;background:var(--fill);border-radius:var(--r-full);overflow:hidden}
 .qz-bar i{display:block;height:100%;width:0;background:var(--yellow);border-radius:var(--r-full);transition:width .3s}
@@ -492,7 +499,10 @@ body.kid-mode{padding-bottom:72px}
         <div class="qz-tt">逻辑推理题</div>
         <div class="qz-sub" id="qzSub">四年级+ · 共 100 题</div>
       </div>
-      <button class="qz-reset" onclick="qzResetProgress()">重置进度</button>
+      <div class="qz-top-btns">
+        <button class="qz-wrongbtn qz-wrongbtn-off" id="qzWrongBtn" onclick="qzSetCat(-2)" disabled>错题集 (0)</button>
+        <button class="qz-reset" onclick="qzResetProgress()">重置进度</button>
+      </div>
     </div>
     <div class="qz-stats">
       <div class="qz-bar"><i id="qzBar"></i></div>
@@ -2490,8 +2500,8 @@ function rejectRequest(id){
 // 重置（走 App 内确认框 sc2）、进度条与统计实时更新、分类做完的空态/全部完成庆祝态。
 // 增量：家长判分 —— 看答案后出现「答对了」「答错了」；答对给当前账号 +5 分（可重复得分），
 // 答错不加分，两者都标记完成并跳下一题。判分仅家长端开放（孩子端无入口）。
-// 增量：错题集 —— 答错自动归集（去重），分类 chips 末尾「错题集 (N)」入口，集内可重做；
-// 集内答对即移出（清空显示空态），答错保留；重置进度不影响错题集。
+// 增量：错题集 —— 答错自动归集（去重），头部行「错题集 (N)」按钮（与「重置进度」同排、位于其左侧）入口，
+// 集内可重做；集内答对即移出（清空显示空态），答错保留；重置进度不影响错题集。
 var CATS = [
   { name: "经典情境", note: "经典情境推理" },
   { name: "真话假话", note: "真话与假话" },
@@ -2713,20 +2723,29 @@ function qzUpdateStats(){
   if(sub)sub.textContent='四年级+ · 共 '+s.total+' 题';
 }
 
-// 分类 chips：末尾追加「错题集 (N)」；N=0 时置灰并 disabled（仍显示，不可点）
+// 分类 chips：只渲染「全部 + 各分类」（错题集入口已移至头部行，见 qzRefreshWrongBtn）
 function qzRenderChips(){
   var h='<button class="qz-chip'+(qzCat===-1?' on':'')+'" onclick="qzSetCat(-1)">全部</button>';
   for(var i=0;i<CATS.length;i++){
     h+='<button class="qz-chip'+(qzCat===i?' on':'')+'" onclick="qzSetCat('+i+')">'+CATS[i].name+'</button>';
   }
-  var wn=qzWrong.size;
-  h+='<button class="qz-chip'+(qzCat===QZ_WRONG?' on':'')+(wn===0?' qz-chip-off':'')+'"'
-    +(wn===0?' disabled':'')+' onclick="qzSetCat('+QZ_WRONG+')">错题集 ('+wn+')</button>';
   document.getElementById('qzCatBar').innerHTML=h;
+}
+
+// 头部「错题集 (N)」按钮实时刷新：文案带数量；N=0 → 置灰 + disabled 不可点；错题集视图内 → 选中态。
+// 统一由 qzRender() 调用，覆盖答错归集 / 答对出集 / 分类切换 / 重置 / 进入刷题页等全部路径。
+function qzRefreshWrongBtn(){
+  var b=document.getElementById('qzWrongBtn');
+  if(!b)return;
+  var wn=qzWrong.size;
+  b.textContent='错题集 ('+wn+')';
+  b.disabled=(wn===0);
+  b.className='qz-wrongbtn'+(qzCat===QZ_WRONG?' on':'')+(wn===0?' qz-wrongbtn-off':'');
 }
 
 // 渲染当前题目（含全部完成/分类做完的空态）
 function qzRender(){
+  qzRefreshWrongBtn(); // 错题集按钮文案/禁用态/选中态随本次渲染同步刷新（含下方各提前 return 分支）
   var card=document.getElementById('qzCard');
   var prevBtn=document.getElementById('qzPrev');
   var nextBtn=document.getElementById('qzNext');
