@@ -382,6 +382,8 @@ body.kid-mode{padding-bottom:72px}
 .qz-cats::-webkit-scrollbar{display:none}
 .qz-chip{flex-shrink:0;border:var(--bd);background:var(--card);color:var(--ink2);padding:7px 14px;border-radius:var(--r-full);font:var(--f-item);white-space:nowrap;cursor:pointer;transition:all .2s;user-select:none}
 .qz-chip.on{background:var(--blue-l);border-color:var(--blue-l);color:var(--blue-deep);font-weight:600}
+.qz-chip:disabled{cursor:default}
+.qz-chip-off{opacity:.45}
 .qz-stage{padding:12px 16px 4px}
 .qz-card{background:var(--card);border:var(--bd);border-radius:var(--r-l);box-shadow:var(--sh-card);padding:20px 16px;display:flex;flex-direction:column}
 .qz-meta{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -482,7 +484,7 @@ body.kid-mode{padding-bottom:72px}
   </div>
 </div>
 
-<!-- 刷题（100 道逻辑推理题）：进度仅存本机 localStorage（sp_quiz_done），不上云 -->
+<!-- 刷题（100 道逻辑推理题）：进度/错题仅存本机 localStorage（sp_quiz_done / sp_quiz_wrong），不上云 -->
 <div class="pg" id="p-quiz">
   <div class="qz-top">
     <div class="qz-top-row">
@@ -2481,12 +2483,15 @@ function rejectRequest(id){
 // ===== 刷题页：100 道逻辑推理题 =====
 // 来源：「100道逻辑推理题-四年级.html」原样集成（CATS/DATA 一字未改）。
 // 进度存储：localStorage key 'sp_quiz_done'（已完成题目下标数组 JSON），
-// 仅存本机，不上云、不进 sync-data.json/requests.json（设计决定：避免动同步协议）。
+// 错题存储：localStorage key 'sp_quiz_wrong'（错题集题目下标数组 JSON，去重），两者相互独立、仅存本机，
+// 不上云、不进 sync-data.json/requests.json（设计决定：避免动同步协议）。
 // 命名说明：为避免与账本既有全局函数（如 render）冲突，刷题函数统一加 qz 前缀；
 // 功能与原版一致：分类筛选、完成标记并自动跳下一题、上/下一题、随机、
 // 重置（走 App 内确认框 sc2）、进度条与统计实时更新、分类做完的空态/全部完成庆祝态。
 // 增量：家长判分 —— 看答案后出现「答对了」「答错了」；答对给当前账号 +5 分（可重复得分），
 // 答错不加分，两者都标记完成并跳下一题。判分仅家长端开放（孩子端无入口）。
+// 增量：错题集 —— 答错自动归集（去重），分类 chips 末尾「错题集 (N)」入口，集内可重做；
+// 集内答对即移出（清空显示空态），答错保留；重置进度不影响错题集。
 var CATS = [
   { name: "经典情境", note: "经典情境推理" },
   { name: "真话假话", note: "真话与假话" },
@@ -2629,20 +2634,49 @@ var QZ_CAT_RANK=(function(){
 
 // ---------- 刷题状态与逻辑（与原版 logicDone 语义一致，独立键 sp_quiz_done） ----------
 var QZ_KEY='sp_quiz_done';
-var qzCat=-1;      // -1 = 全部分类
-var qzList=[];     // 当前可见（未完成）的题目下标
+var QZ_WRONG_KEY='sp_quiz_wrong'; // 错题集（题目下标数组，去重），与已完成进度相互独立
+var QZ_WRONG=-2;   // 伪分类值：错题集视图（-1 仍表示「全部」）
+var qzCat=-1;      // -1 = 全部分类；-2 = 错题集
+var qzList=[];     // 当前可见的题目下标（普通视图=未完成+分类过滤；错题集视图=错题集内容）
 var qzPos=0;       // qzList 中的位置
 var qzDone=new Set((function(){try{return JSON.parse(localStorage.getItem(QZ_KEY)||'[]')}catch(e){return[]}})());
 
 function qzSave(){try{localStorage.setItem(QZ_KEY,JSON.stringify(Array.from(qzDone)))}catch(e){}}
 
-// 重新计算可见列表（未完成 + 分类过滤）
+// ---------- 错题集状态（独立键 sp_quiz_wrong；仅家长端可写，重置进度不影响） ----------
+// 载入时过滤非法/越界下标并去重，容错历史脏数据
+var qzWrong=new Set((function(){
+  var arr=[];try{arr=JSON.parse(localStorage.getItem(QZ_WRONG_KEY)||'[]')}catch(e){arr=[]}
+  if(Object.prototype.toString.call(arr)!=='[object Array]')arr=[];
+  var out=[];
+  for(var i=0;i<arr.length;i++){var n=arr[i];
+    if(typeof n==='number'&&n>=0&&n<DATA.length&&isFinite(n)&&Math.floor(n)===n&&out.indexOf(n)<0)out.push(n);}
+  return out;
+})());
+function qzSaveWrong(){
+  try{localStorage.setItem(QZ_WRONG_KEY,JSON.stringify(Array.from(qzWrong).sort(function(a,b){return a-b}))) }catch(e){}
+}
+// 归集：同一题重复答错只保留一条（Set 天然去重，仅在新增时落盘）
+function qzWrongAdd(i){
+  if(i===undefined||i===null||i<0||i>=DATA.length)return;
+  if(!qzWrong.has(i)){qzWrong.add(i);qzSaveWrong()}
+}
+// 出集：答对即从错题集移除（不存在则不动）
+function qzWrongRemove(i){if(qzWrong.has(i)){qzWrong.delete(i);qzSaveWrong()}}
+
+// 重新计算可见列表
+//   普通视图：未完成 + 分类过滤
+//   错题集视图：错题集内全部题目（不受「已完成」过滤影响），按 DATA 原始顺序
 function qzRebuild(keepId){
   qzList=[];
-  for(var i=0;i<DATA.length;i++){
-    if(qzDone.has(i))continue;
-    if(qzCat!==-1&&DATA[i].c!==qzCat)continue;
-    qzList.push(i);
+  if(qzCat===QZ_WRONG){
+    for(var w=0;w<DATA.length;w++){if(qzWrong.has(w))qzList.push(w)}
+  }else{
+    for(var i=0;i<DATA.length;i++){
+      if(qzDone.has(i))continue;
+      if(qzCat!==-1&&DATA[i].c!==qzCat)continue;
+      qzList.push(i);
+    }
   }
   if(keepId!==undefined){
     var p=qzList.indexOf(keepId);
@@ -2664,7 +2698,14 @@ function qzCatScope(){
 }
 
 // 进度条 + 统计文案 + 副标题随当前分类口径刷新（分类选中时即该分类维度）
+//   错题集视图：统计显示「错题 N 题」，进度条表示错题占全库比例（N/100），副标题保持题库总量口径
 function qzUpdateStats(){
+  if(qzCat===QZ_WRONG){
+    var n=qzWrong.size;
+    document.getElementById('qzStats').textContent='错题 '+n+' 题';
+    document.getElementById('qzBar').style.width=(DATA.length?n/DATA.length*100:0)+'%';
+    return;
+  }
   var s=qzCatScope();
   document.getElementById('qzStats').textContent=s.done+'/'+s.total;
   document.getElementById('qzBar').style.width=(s.total?s.done/s.total*100:0)+'%';
@@ -2672,11 +2713,15 @@ function qzUpdateStats(){
   if(sub)sub.textContent='四年级+ · 共 '+s.total+' 题';
 }
 
+// 分类 chips：末尾追加「错题集 (N)」；N=0 时置灰并 disabled（仍显示，不可点）
 function qzRenderChips(){
   var h='<button class="qz-chip'+(qzCat===-1?' on':'')+'" onclick="qzSetCat(-1)">全部</button>';
   for(var i=0;i<CATS.length;i++){
     h+='<button class="qz-chip'+(qzCat===i?' on':'')+'" onclick="qzSetCat('+i+')">'+CATS[i].name+'</button>';
   }
+  var wn=qzWrong.size;
+  h+='<button class="qz-chip'+(qzCat===QZ_WRONG?' on':'')+(wn===0?' qz-chip-off':'')+'"'
+    +(wn===0?' disabled':'')+' onclick="qzSetCat('+QZ_WRONG+')">错题集 ('+wn+')</button>';
   document.getElementById('qzCatBar').innerHTML=h;
 }
 
@@ -2690,9 +2735,17 @@ function qzRender(){
   if(qzList.length===0){
     prevBtn.disabled=true;
     nextBtn.disabled=true;
-    // 无进行中的题目（全完成/分类做完）时判分按钮同样禁用，避免无题可判
+    // 无进行中的题目（全完成/分类做完/错题集已清空）时判分按钮同样禁用，避免无题可判
     okBtn.disabled=true;
     ngBtn.disabled=true;
+    if(qzCat===QZ_WRONG){
+      card.innerHTML='<div class="qz-fin">'
+        +'<div class="qz-fin-t">暂无错题，太棒了！</div>'
+        +'<div class="qz-fin-p">做错的题会自动收进这里，方便随时重做。</div>'
+        +'</div>';
+      qzUpdateStats();
+      return;
+    }
     var allDone=qzCatScope().done===DATA.length;
     card.innerHTML='<div class="qz-fin">'
       +'<div class="qz-fin-t">'+(allDone?'100 题全部完成！':'这个分类做完了')+'</div>'
@@ -2710,10 +2763,15 @@ function qzRender(){
   nextBtn.disabled=qzPos>=qzList.length-1;
   okBtn.disabled=false;
   ngBtn.disabled=false;
-  // 题号徽章：全部口径 → 全库序号/100；分类口径 → 该题在分类完整序列中的位次/该分类总题数
-  var badge=(qzCat===-1)
-    ?((qi+1)+' / '+DATA.length)
-    :(QZ_CAT_RANK[qi]+' / '+QZ_CAT_TOTALS[qzCat]);
+  // 题号徽章：全部口径 → 全库序号/100；错题集口径 → 该题在错题集中的位次/错题总数；分类口径 → 分类内位次/分类总题数
+  var badge;
+  if(qzCat===QZ_WRONG){
+    badge=(qzPos+1)+' / '+qzWrong.size;
+  }else if(qzCat===-1){
+    badge=(qi+1)+' / '+DATA.length;
+  }else{
+    badge=QZ_CAT_RANK[qi]+' / '+QZ_CAT_TOTALS[qzCat];
+  }
   card.innerHTML='<div class="qz-meta">'
     +'<span class="qz-num num">'+badge+'</span>'
     +'<span class="qz-cat">'+CATS[d.c].note+'</span></div>'
@@ -2741,17 +2799,24 @@ function qzHasQuestion(){
     &&qzList[qzPos]!==undefined&&qzList[qzPos]!==null);
 }
 
-// 判分：答对了 → 奖励积分（每题不限次、可重复作答重复得分）→ 标记完成并跳下一题。
+// 判分：答对了 → 奖励积分（每题不限次、可重复作答重复得分）→ 从错题集移除该题（若存在）→ 标记完成并跳下一题。
 // 原子性：qzAward() 未成功（孩子端/未登录/账本桶未加载）时直接返回，绝不只标记完成——
 // 否则会出现「题目消失但没加分」的静默丢失（init 首次 syncPull 返回前的窗口期即此情形）。
 function qzMarkCorrect(){
   if(!qzHasQuestion())return;
   if(!qzAward()){toast('数据还在加载，请稍候再点');return}
+  qzWrongRemove(qzList[qzPos]); // 答对即出集（任何视图通用；不存在则无副作用）
   qzMarkDone();
 }
-// 判分：答错了 → 不加分，仅标记完成并跳下一题（不依赖账本，窗口期也可正常标记）
+// 判分：答错了 → 记入错题集（去重）+ 不加分，仅标记完成并跳下一题（不依赖账本，窗口期也可正常标记）。
+// 错题集视图内答错：该题本就在集内，保留并跳到下一题。
 function qzMarkWrong(){
   if(!qzHasQuestion())return;
+  qzWrongAdd(qzList[qzPos]);
+  if(qzCat===QZ_WRONG){
+    if(qzPos<qzList.length-1){qzPos++;qzRender()}
+    return;
+  }
   qzMarkDone();
 }
 
@@ -2773,7 +2838,7 @@ function qzAward(){
   return true;
 }
 
-// 标记完成 → 隐藏此题并自动跳到下一题
+// 标记完成 → 隐藏此题并自动跳到下一题（错题集数量随判分实时刷新）
 function qzMarkDone(){
   if(!qzHasQuestion())return; // 空列表/越界时不得 add(undefined)，否则 qzDone 会被 null 永久污染
   var qi=qzList[qzPos];
@@ -2782,6 +2847,7 @@ function qzMarkDone(){
   qzSave();
   if(wasLast&&qzPos>0)qzPos--;
   qzRebuild();
+  qzRenderChips();
   qzRender();
 }
 
@@ -2804,8 +2870,9 @@ function qzRandomPick(){
 }
 
 // 重置进度：走 App 内确认框（与删除记录/清除数据同一交互语言）
+// 仅清空「已完成」（sp_quiz_done）；错题集（sp_quiz_wrong）不受影响，只在错题集里答对才移出。
 function qzResetProgress(){
-  sc2('重置刷题进度','所有已完成的题目会重新显示，确定要继续吗？',function(){
+  sc2('重置刷题进度','所有已完成的题目会重新显示。错题集不受影响（只有在错题集里答对才会移出）。确定要继续吗？',function(){
     qzDone.clear();
     qzSave();
     qzPos=0;
