@@ -396,16 +396,21 @@ body.kid-mode{padding-bottom:72px}
 .qz-abtn{flex:1;height:44px;border:none;border-radius:var(--r-m);font:var(--f-body);font-weight:700;cursor:pointer;transition:transform .15s}
 .qz-abtn:active{transform:scale(.97)}
 .qz-abtn{background:var(--blue-l);color:var(--blue-deep)}
-/* 判分按钮（家长口头考问后点判定）：答对了=绿底奖励 / 答错了=中性底不加分 */
-.qz-okbtn,.qz-ngbtn{flex:1;height:44px;border:none;border-radius:var(--r-m);font:var(--f-body);font-weight:700;cursor:pointer;transition:transform .15s}
-.qz-okbtn:active,.qz-ngbtn:active{transform:scale(.97)}
-.qz-okbtn{background:var(--green);color:var(--card)}
-.qz-ngbtn{background:var(--fill);color:var(--ink2);border:var(--bd)}
-.qz-nav{display:flex;gap:8px;padding:10px 16px 16px}
-.qz-nbtn{flex:1;height:44px;border:var(--bd);border-radius:var(--r-m);background:var(--card);color:var(--ink);font:var(--f-item);font-weight:600;cursor:pointer;transition:opacity .15s}
+/* —— 吸顶操作条（题目卡上方）：上一题/随机/下一题 + 判分（答对了/答错了）同排常显 ——
+   吸顶 top 由 qzSetStickyTop() 依顶栏高度写入 --qz-top，避免被 sticky 顶栏遮住；
+   下缘 1px 描边 + 轻阴影；背景取页面底色，滚动时该行始终可见。 */
+.qz-sticky{position:sticky;top:var(--qz-top,0);z-index:60;display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 2px 8px rgba(74,66,56,.04)}
+.qz-nbtn{flex:1 1 0;min-width:0;height:44px;border:var(--bd);border-radius:var(--r-m);background:var(--card);color:var(--ink);font:var(--f-item);font-weight:600;cursor:pointer;transition:opacity .15s}
 .qz-nbtn:active{background:var(--fill)}
 .qz-nbtn:disabled{opacity:.35}
-.qz-nbtn.rand{background:var(--yellow-l);border-color:var(--yellow-l);color:var(--yel-deep)}
+.qz-nbtn.rand{flex:0 0 auto;padding:0 10px;background:var(--yellow-l);border-color:var(--yellow-l);color:var(--yel-deep)}
+/* 判分按钮（家长口头考问后点判定）：答对了=绿底奖励 / 答错了=红底不加分；与导航同排定宽 */
+.qz-okbtn,.qz-ngbtn{flex:0 0 auto;padding:0 12px;height:44px;border:none;border-radius:var(--r-m);font:var(--f-item);font-weight:700;cursor:pointer;transition:transform .15s}
+.qz-okbtn:active,.qz-ngbtn:active{transform:scale(.97)}
+.qz-okbtn{background:var(--green);color:var(--card)}
+.qz-ngbtn{background:var(--red-l);color:var(--red-deep)}
+.qz-okbtn:disabled,.qz-ngbtn:disabled{opacity:.35}
+.qz-sep{flex:0 0 auto;width:1px;height:24px;background:var(--line)}
 .qz-fin{text-align:center;padding:32px 12px}
 .qz-fin-t{font:var(--f-h2);margin-bottom:8px}
 .qz-fin-p{font:var(--f-item);color:var(--ink2);margin-bottom:20px}
@@ -493,12 +498,16 @@ body.kid-mode{padding-bottom:72px}
     </div>
   </div>
   <div class="qz-cats" id="qzCatBar"></div>
-  <div class="qz-stage"><div class="qz-card" id="qzCard"></div></div>
-  <div class="qz-nav">
+  <!-- 吸顶操作条：导航 + 判分同排常显（判分不再依赖「看答案」展开） -->
+  <div class="qz-sticky">
     <button class="qz-nbtn" id="qzPrev" onclick="qzPrev()">上一题</button>
     <button class="qz-nbtn rand" onclick="qzRandomPick()">随机</button>
     <button class="qz-nbtn" id="qzNext" onclick="qzNext()">下一题</button>
+    <span class="qz-sep" aria-hidden="true"></span>
+    <button class="qz-okbtn" id="qzOk" onclick="qzMarkCorrect()">答对了</button>
+    <button class="qz-ngbtn" id="qzNg" onclick="qzMarkWrong()">答错了</button>
   </div>
+  <div class="qz-stage"><div class="qz-card" id="qzCard"></div></div>
 </div>
 
 <!-- 设置 -->
@@ -1606,6 +1615,9 @@ function st(tab){
     });
     return;
   }
+  // 刷题页：进度存本机 localStorage，与云同步解耦 → 先备好题目列表再显示页面，
+  // 避免 syncPull 返回前的窗口期内判分按钮已可点、而 qzList 仍为空
+  if(tab==='quiz')qzShow();
   var pages=document.querySelectorAll('.pg');
   for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
   var tabs=document.querySelectorAll('.ti');
@@ -2642,9 +2654,14 @@ function qzRender(){
   var card=document.getElementById('qzCard');
   var prevBtn=document.getElementById('qzPrev');
   var nextBtn=document.getElementById('qzNext');
+  var okBtn=document.getElementById('qzOk');
+  var ngBtn=document.getElementById('qzNg');
   if(qzList.length===0){
     prevBtn.disabled=true;
     nextBtn.disabled=true;
+    // 无进行中的题目（全完成/分类做完）时判分按钮同样禁用，避免无题可判
+    okBtn.disabled=true;
+    ngBtn.disabled=true;
     var allDone=qzDone.size===DATA.length;
     card.innerHTML='<div class="qz-fin">'
       +'<div class="qz-fin-t">'+(allDone?'100 题全部完成！':'这个分类做完了')+'</div>'
@@ -2660,6 +2677,8 @@ function qzRender(){
   var d=DATA[qi];
   prevBtn.disabled=qzPos<=0;
   nextBtn.disabled=qzPos>=qzList.length-1;
+  okBtn.disabled=false;
+  ngBtn.disabled=false;
   card.innerHTML='<div class="qz-meta">'
     +'<span class="qz-num num">'+(qi+1)+' / 100</span>'
     +'<span class="qz-cat">'+CATS[d.c].note+'</span></div>'
@@ -2668,31 +2687,34 @@ function qzRender(){
     +'<div class="qz-ans" id="qzAns"><span class="qz-ans-lb">答案：</span>'+d.a+'</div>'
     +'<div class="qz-actions">'
     +'<button class="qz-abtn" id="qzAnsBtn" onclick="qzToggleAnswer()">看答案</button>'
-    +'</div>'
-    +'<div class="qz-actions" id="qzJudge" style="display:none">'
-    +'<button class="qz-okbtn" onclick="qzMarkCorrect()">答对了</button>'
-    +'<button class="qz-ngbtn" onclick="qzMarkWrong()">答错了</button>'
     +'</div>';
   qzUpdateStats();
 }
 
+// 「看答案」仅切换答案区显隐；判分按钮已移至吸顶条常显，不再由此控制
 function qzToggleAnswer(){
   var box=document.getElementById('qzAns');
   var btn=document.getElementById('qzAnsBtn');
-  var judge=document.getElementById('qzJudge');
   var showing=box.classList.toggle('show');
   btn.textContent=showing?'收起答案':'看答案';
-  // 看答案后出现判分按钮（答对了/答错了）；一旦出现即保留，收起答案不清除，避免误触后无法判分
-  if(showing&&judge)judge.style.display='flex';
+}
+
+// 是否有可判分的题目：列表非空 + qzPos 落在有效区间 + 该题下标有效。
+// 用于封堵「st('quiz') 已显示页面、qzShow() 尚未跑」窗口期内判分按钮可点却无题可判的场景。
+function qzHasQuestion(){
+  return !!(qzList&&qzList.length&&qzPos>=0&&qzPos<qzList.length
+    &&qzList[qzPos]!==undefined&&qzList[qzPos]!==null);
 }
 
 // 判分：答对了 → 奖励积分（每题不限次、可重复作答重复得分）→ 标记完成并跳下一题
 function qzMarkCorrect(){
+  if(!qzHasQuestion())return;
   qzAward();
   qzMarkDone();
 }
 // 判分：答错了 → 不加分，仅标记完成并跳下一题
 function qzMarkWrong(){
+  if(!qzHasQuestion())return;
   qzMarkDone();
 }
 
@@ -2702,6 +2724,7 @@ var QZ_REWARD=5;
 function qzAward(){
   if(sessionRole!=='parent')return; // 仅家长端开放：孩子端只读，绝不写账本
   if(!currentUser||!ad)return;
+  if(!qzHasQuestion())return; // 无题目可判时绝不写账本（空列表/越界索引兜底）
   var rec={id:'r_'+Date.now(),date:today(),timestamp:Date.now(),type:'up',
     itemId:'quiz_reward',name:'答题获取',category:'学习',score:QZ_REWARD,note:'逻辑推理题答对'};
   ad.records.push(rec);
@@ -2713,6 +2736,7 @@ function qzAward(){
 
 // 标记完成 → 隐藏此题并自动跳到下一题
 function qzMarkDone(){
+  if(!qzHasQuestion())return; // 空列表/越界时不得 add(undefined)，否则 qzDone 会被 null 永久污染
   var qi=qzList[qzPos];
   var wasLast=qzPos>=qzList.length-1;
   qzDone.add(qi);
@@ -2722,8 +2746,9 @@ function qzMarkDone(){
   qzRender();
 }
 
-function qzPrev(){if(qzPos>0){qzPos--;qzRender()}}
-function qzNext(){if(qzPos<qzList.length-1){qzPos++;qzRender()}}
+// 导航：列表未就绪（空/未初始化）时直接返回，避免在无题状态下触发渲染
+function qzPrev(){if(!qzList||!qzList.length)return;if(qzPos>0){qzPos--;qzRender()}}
+function qzNext(){if(!qzList||!qzList.length)return;if(qzPos<qzList.length-1){qzPos++;qzRender()}}
 
 function qzSetCat(i){
   qzCat=i;
@@ -2734,7 +2759,7 @@ function qzSetCat(i){
 }
 
 function qzRandomPick(){
-  if(!qzList.length)return;
+  if(!qzList||!qzList.length)return;
   qzPos=Math.floor(Math.random()*qzList.length);
   qzRender();
 }
@@ -2752,8 +2777,16 @@ function qzResetProgress(){
   });
 }
 
+// 吸顶操作条的 top 偏移 = sticky 顶栏高度（顶栏隐藏时为 0），避免被顶栏遮住
+function qzSetStickyTop(){
+  var h=document.getElementById('mainHeader');
+  var top=(h&&h.offsetHeight)||0;
+  document.documentElement.style.setProperty('--qz-top',top+'px');
+}
+
 // 进入刷题页时调用（st('quiz')）：进度与分类保持内存态，重建视图即可
 function qzShow(){
+  qzSetStickyTop();
   qzRenderChips();
   qzRebuild();
   qzRender();
@@ -2839,6 +2872,9 @@ window.addEventListener('scroll',function(){
   var h=document.getElementById('mainHeader');
   if(h)h.classList.toggle('scrolled',window.scrollY>4);
 },{passive:true});
+
+// 顶栏高度随视口变化：同步刷题页吸顶条偏移
+window.addEventListener('resize',function(){typeof qzSetStickyTop==='function'&&qzSetStickyTop()},{passive:true});
 
 // 初始化：检查登录状态（孩子会话优先，其次家长会话）
 (function init(){
