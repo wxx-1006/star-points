@@ -813,6 +813,7 @@ var KID_KEY='sp_kid_session'; // 孩子端本机会话 {parentPhone,nickname}，
 var syncSHA='';
 var dataVersion=0;    // 本地数据写版本：sd() 每次写 +1，用于丢弃迟到的过期同步快照
 var currentUser=null;
+var ad=null;            // 当前账号数据桶；init 首次 syncPull 返回前为 null（显式声明，避免读 ad 抛 ReferenceError）
 var sessionRole=null;   // 'parent' | 'kid' | null（未登录）。kid=只读视角：不写桶、绝不 syncPush
 var loginRole='parent'; // 登录页当前选中角色（'parent' | 'kid'）
 var pendingLogin=null;  // PIN 验证期间挂起的家长身份 {phone,name}
@@ -2706,13 +2707,15 @@ function qzHasQuestion(){
     &&qzList[qzPos]!==undefined&&qzList[qzPos]!==null);
 }
 
-// 判分：答对了 → 奖励积分（每题不限次、可重复作答重复得分）→ 标记完成并跳下一题
+// 判分：答对了 → 奖励积分（每题不限次、可重复作答重复得分）→ 标记完成并跳下一题。
+// 原子性：qzAward() 未成功（孩子端/未登录/账本桶未加载）时直接返回，绝不只标记完成——
+// 否则会出现「题目消失但没加分」的静默丢失（init 首次 syncPull 返回前的窗口期即此情形）。
 function qzMarkCorrect(){
   if(!qzHasQuestion())return;
-  qzAward();
+  if(!qzAward()){toast('数据还在加载，请稍候再点');return}
   qzMarkDone();
 }
-// 判分：答错了 → 不加分，仅标记完成并跳下一题
+// 判分：答错了 → 不加分，仅标记完成并跳下一题（不依赖账本，窗口期也可正常标记）
 function qzMarkWrong(){
   if(!qzHasQuestion())return;
   qzMarkDone();
@@ -2720,11 +2723,12 @@ function qzMarkWrong(){
 
 // 奖励写入当前登录账号的账本：字段与 ss() 记录一致（id/date/timestamp/type/itemId/name/category/score/note）。
 // 走 sd(ad)：本地落桶 + syncPush 上云；孩子端被 sd() 的角色守卫拦截（此处再守卫一次，绝不写桶）。
+// 返回 true=已写入账本；false=未写入（不可判分/孩子端/未登录/账本未就绪）。
 var QZ_REWARD=5;
 function qzAward(){
-  if(sessionRole!=='parent')return; // 仅家长端开放：孩子端只读，绝不写账本
-  if(!currentUser||!ad)return;
-  if(!qzHasQuestion())return; // 无题目可判时绝不写账本（空列表/越界索引兜底）
+  if(sessionRole!=='parent')return false; // 仅家长端开放：孩子端只读，绝不写账本
+  if(!currentUser||!ad)return false;      // 账本未就绪（init syncPull 未返回时 ad 为 null）
+  if(!qzHasQuestion())return false;       // 无题目可判时绝不写账本（空列表/越界索引兜底）
   var rec={id:'r_'+Date.now(),date:today(),timestamp:Date.now(),type:'up',
     itemId:'quiz_reward',name:'答题获取',category:'学习',score:QZ_REWARD,note:'逻辑推理题答对'};
   ad.records.push(rec);
@@ -2732,6 +2736,7 @@ function qzAward(){
   sd(ad);
   render();
   toast('答对了！+'+QZ_REWARD+' 分','ok');
+  return true;
 }
 
 // 标记完成 → 隐藏此题并自动跳到下一题
