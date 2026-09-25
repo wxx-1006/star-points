@@ -425,6 +425,27 @@ body.kid-mode{padding-bottom:72px}
 .qz-fin-p{font:var(--f-item);color:var(--ink2);margin-bottom:20px}
 .qz-fin-b{background:var(--blue);color:var(--card);border:none;border-radius:var(--r-m);padding:12px 24px;font:var(--f-body);font-weight:700;cursor:pointer}
 .qz-fin-b:active{transform:scale(.97)}
+/* —— 题库切换器：标题文字 + CSS chevron（仅多套题库时可点；chevron 为纯边框绘制，非字符） —— */
+.qz-title-btn{display:inline-flex;align-items:center;gap:7px;background:none;border:none;padding:0;font:inherit;color:var(--ink);text-align:left;max-width:100%}
+.qz-title-btn.multi{cursor:pointer}
+.qz-title-btn.multi:active{opacity:.65}
+.qz-chev{display:none;width:7px;height:7px;border-right:1.6px solid var(--ink2);border-bottom:1.6px solid var(--ink2);transform:rotate(45deg);margin-top:-4px;flex-shrink:0}
+.qz-title-btn.multi .qz-chev{display:block}
+/* 题库名过长时省略，chevron 始终可见 */
+.qz-tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 内置兜底提示：明确但不刺眼的小字 */
+.qz-hint{font:var(--f-cap);color:var(--ink3);margin-top:2px}
+/* —— 选择题库弹窗：每套题库一行（选中态高亮 + 边框画勾） —— */
+.bank-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--card);border:var(--bd);border-radius:var(--r-m);padding:12px 14px;margin-bottom:8px;font:var(--f-body);color:var(--ink);cursor:pointer;transition:transform .15s,border-color .2s,background .2s}
+.bank-row:active{transform:scale(.99);background:var(--fill)}
+.bank-row.on{border-color:var(--blue);background:var(--blue-l)}
+.bank-row-main{flex:1;min-width:0}
+.bank-row-name{display:block;font-weight:600}
+.bank-row-sub{display:block;font:var(--f-cap);color:var(--ink2);margin-top:2px}
+.bank-row-tick{display:none;width:5px;height:10px;border-right:2px solid var(--blue-deep);border-bottom:2px solid var(--blue-deep);transform:rotate(45deg);margin-top:-4px;flex-shrink:0}
+.bank-row.on .bank-row-tick{display:block}
+.bank-row.na{opacity:.45;cursor:default}
+.bank-row.na .bank-row-sub{color:var(--ink3)}
 </style>
 </head>
 <body>
@@ -491,13 +512,18 @@ body.kid-mode{padding-bottom:72px}
   </div>
 </div>
 
-<!-- 刷题（100 道逻辑推理题）：进度/错题仅存本机 localStorage（sp_quiz_done / sp_quiz_wrong），不上云 -->
+<!-- 刷题（题库由 quiz/index.json 配置驱动，可多套切换）：进度/错题按题库隔离存本机
+     （sp_quiz_done__<bankId> / sp_quiz_wrong__<bankId>，当前题库 id 存 sp_quiz_bank），不上云 -->
 <div class="pg" id="p-quiz">
   <div class="qz-top">
     <div class="qz-top-row">
-      <div>
-        <div class="qz-tt">逻辑推理题</div>
+      <div style="min-width:0">
+        <button class="qz-title-btn" id="qzTitleBtn" type="button" onclick="qzOpenBankPicker()">
+          <span class="qz-tt" id="qzTt">逻辑推理题</span>
+          <span class="qz-chev" aria-hidden="true"></span>
+        </button>
         <div class="qz-sub" id="qzSub">四年级+ · 共 100 题</div>
+        <div class="qz-hint" id="qzHint" style="display:none"></div>
       </div>
       <div class="qz-top-btns">
         <button class="qz-wrongbtn qz-wrongbtn-off" id="qzWrongBtn" onclick="qzSetCat(-2)" disabled>错题集 (0)</button>
@@ -746,6 +772,18 @@ body.kid-mode{padding-bottom:72px}
       <button class="ml-close" onclick="cm('mReqAp')">✕</button>
     </div>
     <div class="ml-body" id="reqApList"></div>
+  </div>
+</div>
+
+<!-- 选择题库弹窗（仅多套题库时可打开；复用 App 现有弹窗语言 .mo/.ml + cm() 关闭） -->
+<div class="mo" id="mBank">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">选择题库</div>
+      <button class="ml-close" onclick="cm('mBank')">✕</button>
+    </div>
+    <div class="ml-body" id="bankList"></div>
   </div>
 </div>
 
@@ -2490,18 +2528,20 @@ function rejectRequest(id){
   });
 }
 
-// ===== 刷题页：100 道逻辑推理题 =====
-// 来源：「100道逻辑推理题-四年级.html」原样集成（CATS/DATA 一字未改）。
-// 进度存储：localStorage key 'sp_quiz_done'（已完成题目下标数组 JSON），
-// 错题存储：localStorage key 'sp_quiz_wrong'（错题集题目下标数组 JSON，去重），两者相互独立、仅存本机，
-// 不上云、不进 sync-data.json/requests.json（设计决定：避免动同步协议）。
+// ===== 刷题页：题库可配置（quiz/index.json + quiz/<bank>.json） =====
+// 数据来源：进入刷题页时 fetch quiz/index.json（题库清单）→ 按需 fetch 当前题库文件；
+//   取不到时回退到下方内置兜底题库（bankId=builtin），保证页面永远可用。
+// 进度/错题按题库隔离：localStorage key 'sp_quiz_done__<bankId>' / 'sp_quiz_wrong__<bankId>'，
+//   当前题库 id 存 'sp_quiz_bank'；仅存本机，不上云、不进 sync-data.json/requests.json（避免动同步协议）。
 // 命名说明：为避免与账本既有全局函数（如 render）冲突，刷题函数统一加 qz 前缀；
 // 功能与原版一致：分类筛选、完成标记并自动跳下一题、上/下一题、随机、
-// 重置（走 App 内确认框 sc2）、进度条与统计实时更新、分类做完的空态/全部完成庆祝态。
+// 重置（走 App 内确认框 sc2，仅重置当前题库）、进度条与统计实时更新、分类做完的空态/全部完成庆祝态。
 // 增量：家长判分 —— 看答案后出现「答对了」「答错了」；答对给当前账号 +5 分（可重复得分），
 // 答错不加分，两者都标记完成并跳下一题。判分仅家长端开放（孩子端无入口）。
 // 增量：错题集 —— 答错自动归集（去重），头部行「错题集 (N)」按钮（与「重置进度」同排、位于其左侧）入口，
 // 集内可重做；集内答对即移出（清空显示空态），答错保留；重置进度不影响错题集。
+// 说明：下方 CATS / DATA 为「内置兜底题库」（来源：「100道逻辑推理题-四年级.html」原样集成），
+//   与 quiz/logic-4.json 内容逐字一致；运行时数据源一律是「当前题库」（qzCats / qzData）。
 var CATS = [
   { name: "经典情境", note: "经典情境推理" },
   { name: "真话假话", note: "真话与假话" },
@@ -2628,47 +2668,143 @@ var DATA = [
 { c:6, t:"烧水泡茶（统筹法）", q:"妈妈让小明烧水泡茶：洗水壶1分钟、烧开水10分钟、洗茶壶2分钟、洗茶杯2分钟、拿茶叶1分钟。做完这五件事最少要几分钟才能开始泡茶？", a:"11分钟。先洗水壶（1分钟）→烧水（10分钟），烧水的同时洗茶壶、洗茶杯、拿茶叶（共5分钟，完全来得及）。总共1+10=11分钟。这是数学家华罗庚推广的『统筹法』：找出必须串行的关键路径，其他事情见缝插针并行做。" }
 ];
 
-// ---------- 分类维度索引（一次性从静态 DATA 派生，用于分类统计与分类内题号） ----------
-// QZ_CAT_TOTALS[c] = 分类 c 的总题数（全部 = DATA.length）
-// QZ_CAT_RANK[i]   = 第 i 题在其所属分类完整题目序列中的 1-based 位次（与 DATA 声明顺序一致，不受完成/筛选影响）
-var QZ_CAT_TOTALS=(function(){
-  var a=[];for(var i=0;i<CATS.length;i++)a.push(0);
-  for(var j=0;j<DATA.length;j++)a[DATA[j].c]++;
-  return a;
-})();
-var QZ_CAT_RANK=(function(){
-  var seen=[],a=[];for(var i=0;i<CATS.length;i++)seen.push(0);
-  for(var j=0;j<DATA.length;j++)a[j]=++seen[DATA[j].c];
-  return a;
-})();
+// ---------- 题库层：当前题库 = 运行时唯一数据源（qzCats / qzData） ----------
+// 内置兜底题库：CATS/DATA 原样复用，仅在配置加载失败时启用（bankId='builtin'）
+var QZ_BUILTIN_BANK={id:'builtin',name:'逻辑推理题（内置）',subtitle:'四年级+',cats:CATS,questions:DATA,builtin:true};
+var QZ_BANK_KEY='sp_quiz_bank';   // 当前题库 id
+var QZ_INDEX_URL='quiz/index.json';
+var QZ_BANKS=[];                  // 题库清单（index.json 的 banks）
+var QZ_BANK_CACHE={};             // bankId -> 已加载题库对象（内存缓存：同一会话重复切换不重复请求）
+var QZ_FALLBACK=false;            // 是否正在使用内置兜底题库（用于 UI 提示）
+var qzBank=null;                  // 当前题库对象 {id,name,subtitle,cats,questions,builtin}
+var qzCats=[];                    // 当前题库分类（cats 原样）
+var qzData=[];                    // 当前题库题目（内部统一 {c,t,q,a}，由 cat/title/question/answer 归一化而来）
+var QZ_CAT_TOTALS=[];             // QZ_CAT_TOTALS[c] = 当前题库分类 c 的总题数
+var QZ_CAT_RANK=[];               // QZ_CAT_RANK[i]   = 第 i 题在其所属分类内的 1-based 位次
+var qzLoadPromise=null;           // 首次加载中的 Promise（避免并发重复请求清单）
 
-// ---------- 刷题状态与逻辑（与原版 logicDone 语义一致，独立键 sp_quiz_done） ----------
-var QZ_KEY='sp_quiz_done';
-var QZ_WRONG_KEY='sp_quiz_wrong'; // 错题集（题目下标数组，去重），与已完成进度相互独立
+function qzBankId(){return (qzBank&&qzBank.id)||'builtin'}
+function qzDoneKey(id){return 'sp_quiz_done__'+id}    // 进度按题库隔离
+function qzWrongKey(id){return 'sp_quiz_wrong__'+id}  // 错题集按题库隔离
+
+// 由当前题库重建派生量（分类统计 / 分类内题号；口径与原先一致：只看题库内题目声明顺序，不受完成/筛选影响）
+function qzBuildDerived(){
+  qzCats=(qzBank&&qzBank.cats)||[];
+  qzData=(qzBank&&qzBank.questions)||[];
+  var totals=[],seen=[],ranks=[],i,c;
+  for(i=0;i<qzCats.length;i++){totals.push(0);seen.push(0)}
+  for(i=0;i<qzData.length;i++){
+    c=qzData[i].c;
+    if(typeof c==='number'&&c>=0&&c<totals.length){totals[c]++;seen[c]++;ranks.push(seen[c])}
+    else{ranks.push(0)}   // 分类下标越界：不参与分类统计，题号位次记 0
+  }
+  QZ_CAT_TOTALS=totals;
+  QZ_CAT_RANK=ranks;
+}
+
+function qzStr(v){return (typeof v==='string')?v:(v===null||v===undefined?'':String(v))}
+function qzBankMeta(id){
+  for(var i=0;i<QZ_BANKS.length;i++)if(QZ_BANKS[i].id===id)return QZ_BANKS[i];
+  return null;
+}
+// 配置题目 → 内部字段（cat/title/question/answer → c/t/q/a），渲染层零改动
+function qzNormalizeQuestions(arr){
+  var out=[];
+  if(Object.prototype.toString.call(arr)!=='[object Array]')return out;
+  for(var i=0;i<arr.length;i++){
+    var it=arr[i]||{};
+    var c=(typeof it.cat==='number')?it.cat:((typeof it.c==='number')?it.c:0);
+    out.push({c:c,t:qzStr(it.title),q:qzStr(it.question),a:qzStr(it.answer)});
+  }
+  return out;
+}
+// 网络读取：no-store 规避缓存；非 2xx / JSON 解析失败 / 断网一律 reject，交由上层降级
+function qzFetchJSON(url){
+  return fetch(url,{cache:'no-store'}).then(function(r){
+    if(!r||!r.ok)throw new Error('HTTP '+(r?r.status:'0'));
+    return r.json();
+  });
+}
+// 读取题库清单；失败 → 空清单（由上层转内置兜底）
+function qzLoadIndex(){
+  return qzFetchJSON(QZ_INDEX_URL).then(function(j){
+    var arr=(j&&Object.prototype.toString.call(j.banks)==='[object Array]')?j.banks:[];
+    var out=[];
+    for(var i=0;i<arr.length;i++){
+      var b=arr[i]||{};
+      if(!b.id||!b.file)continue;   // 缺 id / file 的条目直接跳过
+      out.push({id:String(b.id),name:qzStr(b.name)||String(b.id),subtitle:qzStr(b.subtitle),file:String(b.file)});
+    }
+    QZ_BANKS=out;
+    return out;
+  }).catch(function(){QZ_BANKS=[];return[]});
+}
+// 按需加载单套题库（内存缓存；失败标记 _unavailable 并 resolve(null)，由上层回退）
+function qzLoadBank(id){
+  if(QZ_BANK_CACHE[id])return Promise.resolve(QZ_BANK_CACHE[id]);
+  var meta=qzBankMeta(id);
+  if(!meta)return Promise.resolve(null);
+  return qzFetchJSON('quiz/'+meta.file).then(function(j){
+    var bank={id:meta.id,
+      name:qzStr(j&&j.name)||qzStr(meta.name)||meta.id,
+      subtitle:qzStr(j&&j.subtitle)||qzStr(meta.subtitle),
+      cats:(j&&Object.prototype.toString.call(j.cats)==='[object Array]')?j.cats:[],
+      questions:qzNormalizeQuestions(j&&j.questions),
+      builtin:false};
+    QZ_BANK_CACHE[id]=bank;
+    return bank;
+  }).catch(function(){meta._unavailable=true;return null});
+}
+// 一次性迁移：旧的无后缀键 → 清单第一套题库（默认 logic-4）；该题库新键已存在则不覆盖（不删旧键）
+function qzMigrateLegacy(){
+  if(!QZ_BANKS.length)return;
+  var fid=QZ_BANKS[0].id;
+  var pairs=[['sp_quiz_done',qzDoneKey(fid)],['sp_quiz_wrong',qzWrongKey(fid)]];
+  for(var i=0;i<pairs.length;i++){
+    try{
+      if(localStorage.getItem(pairs[i][1])!==null)continue;
+      var old=localStorage.getItem(pairs[i][0]);
+      if(old!==null)localStorage.setItem(pairs[i][1],old);
+    }catch(e){}
+  }
+}
+
+// ---------- 刷题状态与逻辑（键按题库隔离：sp_quiz_done__<bankId>；未激活题库前为空集） ----------
 var QZ_WRONG=-2;   // 伪分类值：错题集视图（-1 仍表示「全部」）
 var qzCat=-1;      // -1 = 全部分类；-2 = 错题集
 var qzList=[];     // 当前可见的题目下标（普通视图=未完成+分类过滤；错题集视图=错题集内容）
 var qzPos=0;       // qzList 中的位置
-var qzDone=new Set((function(){try{return JSON.parse(localStorage.getItem(QZ_KEY)||'[]')}catch(e){return[]}})());
+var qzDone=new Set();   // 当前题库已完成题目下标
+var qzWrong=new Set();  // 当前题库错题集下标（去重）
 
-function qzSave(){try{localStorage.setItem(QZ_KEY,JSON.stringify(Array.from(qzDone)))}catch(e){}}
-
-// ---------- 错题集状态（独立键 sp_quiz_wrong；仅家长端可写，重置进度不影响） ----------
-// 载入时过滤非法/越界下标并去重，容错历史脏数据
-var qzWrong=new Set((function(){
-  var arr=[];try{arr=JSON.parse(localStorage.getItem(QZ_WRONG_KEY)||'[]')}catch(e){arr=[]}
-  if(Object.prototype.toString.call(arr)!=='[object Array]')arr=[];
-  var out=[];
-  for(var i=0;i<arr.length;i++){var n=arr[i];
-    if(typeof n==='number'&&n>=0&&n<DATA.length&&isFinite(n)&&Math.floor(n)===n&&out.indexOf(n)<0)out.push(n);}
-  return out;
-})());
+function qzSave(){
+  if(!qzBank)return;
+  try{localStorage.setItem(qzDoneKey(qzBankId()),JSON.stringify(Array.from(qzDone)))}catch(e){}
+}
 function qzSaveWrong(){
-  try{localStorage.setItem(QZ_WRONG_KEY,JSON.stringify(Array.from(qzWrong).sort(function(a,b){return a-b}))) }catch(e){}
+  if(!qzBank)return;
+  try{localStorage.setItem(qzWrongKey(qzBankId()),JSON.stringify(Array.from(qzWrong).sort(function(a,b){return a-b})))}catch(e){}
+}
+// 载入「当前题库」的进度与错题集：切换题库时重建，各题库互不干扰
+function qzLoadBankState(){
+  var id=qzBankId(),i,n;
+  var done=[];try{done=JSON.parse(localStorage.getItem(qzDoneKey(id))||'[]')}catch(e){done=[]}
+  if(Object.prototype.toString.call(done)!=='[object Array]')done=[];
+  var dset=new Set();
+  for(i=0;i<done.length;i++){n=done[i];
+    if(typeof n==='number'&&n>=0&&isFinite(n)&&Math.floor(n)===n)dset.add(n);}
+  qzDone=dset;
+  // 错题集载入时过滤非法/越界下标并去重，容错历史脏数据（越界以当前题库题数为准）
+  var wa=[];try{wa=JSON.parse(localStorage.getItem(qzWrongKey(id))||'[]')}catch(e){wa=[]}
+  if(Object.prototype.toString.call(wa)!=='[object Array]')wa=[];
+  var wset=new Set();
+  for(i=0;i<wa.length;i++){n=wa[i];
+    if(typeof n==='number'&&n>=0&&n<qzData.length&&isFinite(n)&&Math.floor(n)===n)wset.add(n);}
+  qzWrong=wset;
 }
 // 归集：同一题重复答错只保留一条（Set 天然去重，仅在新增时落盘）
 function qzWrongAdd(i){
-  if(i===undefined||i===null||i<0||i>=DATA.length)return;
+  if(i===undefined||i===null||i<0||i>=qzData.length)return;
   if(!qzWrong.has(i)){qzWrong.add(i);qzSaveWrong()}
 }
 // 出集：答对即从错题集移除（不存在则不动）
@@ -2676,15 +2812,15 @@ function qzWrongRemove(i){if(qzWrong.has(i)){qzWrong.delete(i);qzSaveWrong()}}
 
 // 重新计算可见列表
 //   普通视图：未完成 + 分类过滤
-//   错题集视图：错题集内全部题目（不受「已完成」过滤影响），按 DATA 原始顺序
+//   错题集视图：错题集内全部题目（不受「已完成」过滤影响），按题库题目原始顺序
 function qzRebuild(keepId){
   qzList=[];
   if(qzCat===QZ_WRONG){
-    for(var w=0;w<DATA.length;w++){if(qzWrong.has(w))qzList.push(w)}
+    for(var w=0;w<qzData.length;w++){if(qzWrong.has(w))qzList.push(w)}
   }else{
-    for(var i=0;i<DATA.length;i++){
+    for(var i=0;i<qzData.length;i++){
       if(qzDone.has(i))continue;
-      if(qzCat!==-1&&DATA[i].c!==qzCat)continue;
+      if(qzCat!==-1&&qzData[i].c!==qzCat)continue;
       qzList.push(i);
     }
   }
@@ -2698,36 +2834,36 @@ function qzRebuild(keepId){
 
 // 当前口径（全部/某分类）下的已完成数与总题数；已完成数按该口径过滤，天然容错历史脏数据
 function qzCatScope(){
-  var total=(qzCat===-1)?DATA.length:QZ_CAT_TOTALS[qzCat];
+  var total=(qzCat===-1)?qzData.length:QZ_CAT_TOTALS[qzCat];
   var done=0;
   qzDone.forEach(function(i){
-    if(i<0||i>=DATA.length)return;
-    if(qzCat===-1||DATA[i].c===qzCat)done++;
+    if(i<0||i>=qzData.length)return;
+    if(qzCat===-1||qzData[i].c===qzCat)done++;
   });
   return {done:done,total:total};
 }
 
 // 进度条 + 统计文案 + 副标题随当前分类口径刷新（分类选中时即该分类维度）
-//   错题集视图：统计显示「错题 N 题」，进度条表示错题占全库比例（N/100），副标题保持题库总量口径
+//   错题集视图：统计显示「错题 N 题」，进度条表示错题占当前题库比例，副标题保持题库口径
 function qzUpdateStats(){
   if(qzCat===QZ_WRONG){
     var n=qzWrong.size;
     document.getElementById('qzStats').textContent='错题 '+n+' 题';
-    document.getElementById('qzBar').style.width=(DATA.length?n/DATA.length*100:0)+'%';
+    document.getElementById('qzBar').style.width=(qzData.length?n/qzData.length*100:0)+'%';
     return;
   }
   var s=qzCatScope();
   document.getElementById('qzStats').textContent=s.done+'/'+s.total;
   document.getElementById('qzBar').style.width=(s.total?s.done/s.total*100:0)+'%';
   var sub=document.getElementById('qzSub');
-  if(sub)sub.textContent='四年级+ · 共 '+s.total+' 题';
+  if(sub)sub.textContent=(qzBank&&qzBank.subtitle?qzBank.subtitle+' · ':'')+'共 '+s.total+' 题';
 }
 
 // 分类 chips：只渲染「全部 + 各分类」（错题集入口已移至头部行，见 qzRefreshWrongBtn）
 function qzRenderChips(){
   var h='<button class="qz-chip'+(qzCat===-1?' on':'')+'" onclick="qzSetCat(-1)">全部</button>';
-  for(var i=0;i<CATS.length;i++){
-    h+='<button class="qz-chip'+(qzCat===i?' on':'')+'" onclick="qzSetCat('+i+')">'+CATS[i].name+'</button>';
+  for(var i=0;i<qzCats.length;i++){
+    h+='<button class="qz-chip'+(qzCat===i?' on':'')+'" onclick="qzSetCat('+i+')">'+escHtml(qzCats[i].name||'')+'</button>';
   }
   document.getElementById('qzCatBar').innerHTML=h;
 }
@@ -2765,9 +2901,9 @@ function qzRender(){
       qzUpdateStats();
       return;
     }
-    var allDone=qzCatScope().done===DATA.length;
+    var allDone=qzCatScope().done===qzData.length;
     card.innerHTML='<div class="qz-fin">'
-      +'<div class="qz-fin-t">'+(allDone?'100 题全部完成！':'这个分类做完了')+'</div>'
+      +'<div class="qz-fin-t">'+(allDone?qzData.length+' 题全部完成！':'这个分类做完了')+'</div>'
       +'<div class="qz-fin-p">'+(allDone
         ?'和孩子一起坚持下来真了不起！可以重置进度，再来一轮。'
         :'换一个分类看看，或者重置进度重新挑战。')+'</div>'
@@ -2777,26 +2913,27 @@ function qzRender(){
     return;
   }
   var qi=qzList[qzPos];
-  var d=DATA[qi];
+  var d=qzData[qi];
   prevBtn.disabled=qzPos<=0;
   nextBtn.disabled=qzPos>=qzList.length-1;
   okBtn.disabled=false;
   ngBtn.disabled=false;
-  // 题号徽章：全部口径 → 全库序号/100；错题集口径 → 该题在错题集中的位次/错题总数；分类口径 → 分类内位次/分类总题数
+  // 题号徽章：全部口径 → 题库内序号/题库总题数；错题集口径 → 该题在错题集中的位次/错题总数；分类口径 → 分类内位次/分类总题数
   var badge;
   if(qzCat===QZ_WRONG){
     badge=(qzPos+1)+' / '+qzWrong.size;
   }else if(qzCat===-1){
-    badge=(qi+1)+' / '+DATA.length;
+    badge=(qi+1)+' / '+qzData.length;
   }else{
     badge=QZ_CAT_RANK[qi]+' / '+QZ_CAT_TOTALS[qzCat];
   }
+  var cn=(qzCats[d.c]&&(qzCats[d.c].note||qzCats[d.c].name))||'';
   card.innerHTML='<div class="qz-meta">'
     +'<span class="qz-num num">'+badge+'</span>'
-    +'<span class="qz-cat">'+CATS[d.c].note+'</span></div>'
-    +'<div class="qz-title">'+d.t+'</div>'
-    +'<div class="qz-body">'+d.q+'</div>'
-    +'<div class="qz-ans" id="qzAns"><span class="qz-ans-lb">答案：</span>'+d.a+'</div>'
+    +'<span class="qz-cat">'+escHtml(cn)+'</span></div>'
+    +'<div class="qz-title">'+escHtml(d.t)+'</div>'
+    +'<div class="qz-body">'+escHtml(d.q)+'</div>'
+    +'<div class="qz-ans" id="qzAns"><span class="qz-ans-lb">答案：</span>'+escHtml(d.a)+'</div>'
     +'<div class="qz-actions">'
     +'<button class="qz-abtn" id="qzAnsBtn" onclick="qzToggleAnswer()">看答案</button>'
     +'</div>';
@@ -2848,7 +2985,8 @@ function qzAward(){
   if(!currentUser||!ad)return false;      // 账本未就绪（init syncPull 未返回时 ad 为 null）
   if(!qzHasQuestion())return false;       // 无题目可判时绝不写账本（空列表/越界索引兜底）
   var rec={id:'r_'+Date.now(),date:today(),timestamp:Date.now(),type:'up',
-    itemId:'quiz_reward',name:'答题获取',category:'学习',score:QZ_REWARD,note:'逻辑推理题答对'};
+    itemId:'quiz_reward',name:'答题获取',category:'学习',score:QZ_REWARD,
+    note:(qzBank?qzBank.name:'逻辑推理题')+'答对'};
   ad.records.push(rec);
   ad.totalPoints+=QZ_REWARD;
   sd(ad);
@@ -2889,7 +3027,8 @@ function qzRandomPick(){
 }
 
 // 重置进度：走 App 内确认框（与删除记录/清除数据同一交互语言）
-// 仅清空「已完成」（sp_quiz_done）；错题集（sp_quiz_wrong）不受影响，只在错题集里答对才移出。
+// 只重置「当前题库」的已完成（sp_quiz_done__<当前题库id>），不影响其他题库；
+// 错题集（sp_quiz_wrong__<当前题库id>）不受影响，只在错题集里答对才移出。
 function qzResetProgress(){
   sc2('重置刷题进度','所有已完成的题目会重新显示。错题集不受影响（只有在错题集里答对才会移出）。确定要继续吗？',function(){
     qzDone.clear();
@@ -2909,9 +3048,142 @@ function qzSetStickyTop(){
   document.documentElement.style.setProperty('--qz-top',top+'px');
 }
 
-// 进入刷题页时调用（st('quiz')）：进度与分类保持内存态，重建视图即可
+// ---------- 题库切换 UI ----------
+// 标题 = 当前题库 name；右侧 chevron 仅「多套题库」时显示且可点；内置兜底时给一行小字提示
+function qzRenderTitle(){
+  var t=document.getElementById('qzTt');
+  if(t&&qzBank)t.textContent=qzBank.name;
+  var btn=document.getElementById('qzTitleBtn');
+  if(btn)btn.classList.toggle('multi',QZ_BANKS.length>1);
+  var hint=document.getElementById('qzHint');
+  if(hint){
+    hint.textContent=QZ_FALLBACK?'配置未加载，当前为内置题库':'';
+    hint.style.display=QZ_FALLBACK?'':'none';
+  }
+}
+
+// 选择题库弹窗：每套题库一行（题库名 + 副标题/题量；当前题库高亮打勾；不可用置灰）
+function qzRenderBankList(){
+  var box=document.getElementById('bankList');
+  if(!box)return;
+  var h='';
+  for(var i=0;i<QZ_BANKS.length;i++){
+    var m=QZ_BANKS[i],bank=QZ_BANK_CACHE[m.id],sub=qzStr(m.subtitle);
+    var on=!!(qzBank&&qzBank.id===m.id),na=!!m._unavailable;
+    var n=(bank&&bank.questions)?bank.questions.length:null;
+    if(na)sub='文件加载失败，暂不可用';
+    else if(n!==null)sub=(sub?sub+' · ':'')+'共 '+n+' 题';
+    h+='<button type="button" class="bank-row'+(on?' on':'')+(na?' na':'')+'"'+(na?' disabled':'')
+      +' onclick="qzPickBankAt('+i+')">'
+      +'<span class="bank-row-main"><span class="bank-row-name">'+escHtml(m.name)+'</span>'
+      +'<span class="bank-row-sub">'+escHtml(sub)+'</span></span>'
+      +'<span class="bank-row-tick" aria-hidden="true"></span></button>';
+  }
+  h+='<button type="button" class="bn bn-q" style="margin-top:8px" onclick="cm(\'mBank\')">取消</button>';
+  box.innerHTML=h;
+}
+
+// 打开弹窗（仅多套题库）：打开时后台补齐未加载题库，用于显示题量 / 标注不可用（不阻塞弹窗打开）
+function qzOpenBankPicker(){
+  if(QZ_BANKS.length<=1)return;
+  qzRenderBankList();
+  document.getElementById('mBank').classList.add('show');
+  var pending=[];
+  for(var i=0;i<QZ_BANKS.length;i++){
+    var m=QZ_BANKS[i];
+    if(!QZ_BANK_CACHE[m.id]&&!m._unavailable)pending.push(qzLoadBank(m.id));
+  }
+  if(pending.length)Promise.all(pending).then(function(){
+    var mo=document.getElementById('mBank');
+    if(mo&&mo.classList.contains('show'))qzRenderBankList();
+  });
+}
+
+// 选中第 i 套题库：不可用则提示；已是当前题库则只关弹窗
+function qzPickBankAt(i){
+  var m=QZ_BANKS[i];
+  if(!m)return;
+  if(m._unavailable){toast('该题库暂不可用');return}
+  cm('mBank');
+  if(qzBank&&qzBank.id===m.id)return;
+  qzSwitchBank(m.id);
+}
+
+// 切换题库：重建题目列表、恢复该题库的进度与错题集、刷新统计/题号/错题集按钮/分类 chips，并回到第一题
+function qzSwitchBank(id){
+  qzRenderLoading();
+  qzLoadBank(id).then(function(bank){
+    if(!bank){toast('该题库暂不可用');qzActivate(qzBank||QZ_BUILTIN_BANK);return}
+    qzActivate(bank);
+    toast('已切换到「'+bank.name+'」','ok');
+  });
+}
+
+// 激活题库：落盘当前 id → 重建派生量 → 载入该题库进度/错题集 → 回到第一题 → 全量刷新
+function qzActivate(bank){
+  qzBank=bank;
+  QZ_FALLBACK=!!bank.builtin;
+  try{localStorage.setItem(QZ_BANK_KEY,qzBankId())}catch(e){}
+  qzBuildDerived();
+  qzLoadBankState();
+  qzCat=-1;
+  qzPos=0;
+  qzRenderTitle();
+  qzRenderChips();
+  qzRebuild();
+  qzRender();
+}
+
+// 依次尝试加载（第一套成功即用；全部失败 → null）
+function qzLoadSeq(ids,i){
+  if(i>=ids.length)return Promise.resolve(null);
+  return qzLoadBank(ids[i]).then(function(b){return b||qzLoadSeq(ids,i+1)});
+}
+
+// 首次加载：清单 → 迁移旧进度 → 选定题库（上次选中的优先，否则清单第一套）→ 全失败回退内置兜底
+function qzEnsureLoaded(){
+  if(qzLoadPromise)return qzLoadPromise;
+  qzLoadPromise=qzLoadIndex().then(function(){
+    qzMigrateLegacy();
+    var want='';try{want=localStorage.getItem(QZ_BANK_KEY)||''}catch(e){}
+    var ids=[];
+    if(want&&qzBankMeta(want))ids.push(want);
+    for(var i=0;i<QZ_BANKS.length;i++)if(ids.indexOf(QZ_BANKS[i].id)<0)ids.push(QZ_BANKS[i].id);
+    return qzLoadSeq(ids,0);
+  }).then(function(bank){
+    qzActivate(bank||QZ_BUILTIN_BANK); // 清单不可用 / 题库全部取不到 → 内置兜底
+    return qzBank;
+  }).catch(function(){
+    qzActivate(QZ_BUILTIN_BANK);
+    return qzBank;
+  });
+  return qzLoadPromise;
+}
+
+// 加载中占位（复用空态卡片样式）：清空分类/统计并禁用导航与判分按钮
+function qzRenderLoading(){
+  var bar=document.getElementById('qzCatBar');
+  if(bar)bar.innerHTML='';
+  var card=document.getElementById('qzCard');
+  if(card)card.innerHTML='<div class="qz-fin"><div class="qz-fin-t">正在加载题目…</div></div>';
+  var st=document.getElementById('qzStats');
+  if(st)st.textContent='0/0';
+  var b=document.getElementById('qzBar');
+  if(b)b.style.width='0%';
+  var wb=document.getElementById('qzWrongBtn');
+  if(wb){wb.textContent='错题集 (0)';wb.disabled=true;wb.className='qz-wrongbtn qz-wrongbtn-off'}
+  qzDisableControls(true);
+}
+function qzDisableControls(dis){
+  var ids=['qzPrev','qzNext','qzOk','qzNg'];
+  for(var i=0;i<ids.length;i++){var el=document.getElementById(ids[i]);if(el)el.disabled=dis}
+}
+
+// 进入刷题页时调用（st('quiz')）：首次进入先显示 loading，加载完成由 qzActivate 渲染；
+// 已激活则进度与分类保持内存态，重建视图即可
 function qzShow(){
   qzSetStickyTop();
+  if(!qzBank){qzRenderLoading();qzEnsureLoaded();return}
   qzRenderChips();
   qzRebuild();
   qzRender();
