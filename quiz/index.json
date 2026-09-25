@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "banks": [
+    {
+      "id": "logic-4",
+      "name": "逻辑推理题",
+      "subtitle": "四年级+",
+      "file": "logic-4.json"
+    }
+  ]
+}
