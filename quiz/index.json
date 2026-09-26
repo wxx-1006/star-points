@@ -6,6 +6,12 @@
       "name": "逻辑推理题",
       "subtitle": "四年级+",
       "file": "logic-4.json"
+    },
+    {
+      "id": "qianshiao-4",
+      "name": "四年级浅奥数",
+      "subtitle": "数学思维拓展",
+      "file": "qianshiao-4.json"
     }
   ]
 }
