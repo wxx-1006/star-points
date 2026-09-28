@@ -12,6 +12,12 @@
       "name": "四年级浅奥数",
       "subtitle": "数学思维拓展",
       "file": "qianshiao-4.json"
+    },
+    {
+      "id": "recite-46",
+      "name": "语文背诵·四至六年级",
+      "subtitle": "统编版 · 一课一题",
+      "file": "recite-46.json"
     }
   ]
 }
