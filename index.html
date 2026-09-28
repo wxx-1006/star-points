@@ -82,6 +82,7 @@ body{font:var(--f-body);background:var(--bg);color:var(--ink);min-height:100vh;p
 .login-hint{font:var(--f-cap);margin-top:8px;min-height:16px}
 .login-hint.ok{color:var(--grn-deep)}
 .login-hint.na{color:var(--ink3)}
+.login-hint.nu{color:var(--blue-deep)}
 /* 孩子端有轻量导航（记录/商城两页签，复用 .tb 结构）：底部留白与家长端同高 */
 body.kid-mode{padding-bottom:72px}
 /* 申请状态 chip：待审批黄 / 已通过绿 / 已拒绝红 */
@@ -218,6 +219,8 @@ body.kid-mode{padding-bottom:72px}
 /* —— 底部弹窗：把手 + 居中标题 + ✕ —— */
 .mo{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay);z-index:200;display:none;align-items:flex-end;justify-content:center}
 .mo.show{display:flex;animation:fdin .2s ease}
+/* 登录页上的弹窗（注册创建账本 / 老账号补设 PIN）：login-page 为 z-index:500 全屏层，弹窗必须高于其上 */
+#mReg,#mPinInit{z-index:600}
 @keyframes fdin{from{opacity:0}to{opacity:1}}
 .ml{background:var(--card);border-radius:var(--r-l) var(--r-l) 0 0;width:100%;max-height:85vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);animation:su .25s ease-out}
 @keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -754,6 +757,35 @@ body.kid-mode{padding-bottom:72px}
   </div>
 </div>
 
+<!-- 注册/创建账本弹窗（登录页新用户分流：姓名 + PIN 两遍；可关闭返回登录表单） -->
+<div class="mo" id="mReg">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header"><div class="ml-title">创建账本</div><button class="ml-close" onclick="closeRegister()">✕</button></div>
+    <div class="ml-body">
+      <div class="sync-hint" id="regNotice" style="margin-bottom:12px"></div>
+      <div class="fg"><label class="fl">姓名</label><input type="text" class="fi" id="regName" placeholder="家长姓名" maxlength="12"></div>
+      <div class="fg"><label class="fl">设置 PIN（4 位数字）</label><input type="password" class="fi" id="regPin1" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <div class="fg"><label class="fl">再次输入确认</label><input type="password" class="fi" id="regPin2" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <button class="bn bn-p" onclick="confirmRegister()">创建并进入</button>
+    </div>
+  </div>
+</div>
+
+<!-- 老账号补设 PIN 弹窗（登录页：账号桶存在但无 pinHash，仅设 PIN，姓名沿用桶内已有；不覆盖任何已有数据） -->
+<div class="mo" id="mPinInit">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header"><div class="ml-title">设置 PIN</div><button class="ml-close" onclick="closePinInit()">✕</button></div>
+    <div class="ml-body">
+      <div class="sync-hint" id="pinInitNotice" style="margin-bottom:12px"></div>
+      <div class="fg"><label class="fl">设置 PIN（4 位数字）</label><input type="password" class="fi" id="pinInit1" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <div class="fg"><label class="fl">再次输入确认</label><input type="password" class="fi" id="pinInit2" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      <button class="bn bn-p" onclick="saveInitPin()">确认设置</button>
+    </div>
+  </div>
+</div>
+
 <!-- 申请兑换弹窗（孩子端） -->
 <div class="mo" id="mReq">
   <div class="ml">
@@ -823,8 +855,9 @@ body.kid-mode{padding-bottom:72px}
       </div>
     </div>
     <div id="parentFields">
-      <div class="fg"><label class="fl">手机号</label><input type="tel" class="fi" id="loginPhone" placeholder="请输入手机号" maxlength="11"></div>
-      <div class="fg"><label class="fl">姓名</label><input type="text" class="fi" id="loginName" placeholder="请输入姓名"></div>
+      <div class="fg"><label class="fl">手机号</label><input type="tel" class="fi" id="loginPhone" placeholder="请输入手机号" maxlength="11" oninput="onLoginPhoneInput()" onblur="checkLoginPhone()"></div>
+      <div class="fg"><label class="fl">PIN 码</label><input type="password" class="fi" id="loginPinInput" inputmode="numeric" maxlength="4" placeholder="4 位数字" autocomplete="off"></div>
+      <div class="login-hint" id="loginDetectHint"></div>
     </div>
     <div id="kidFields" style="display:none">
       <div class="fg"><label class="fl">家长手机号</label><input type="tel" class="fi" id="kidPhone" placeholder="要查看的账本手机号" maxlength="11" oninput="onKidPhoneInput()" onblur="checkKidPhone()"></div>
@@ -1281,25 +1314,180 @@ function setLoginRole(r){
   }
   hidePinStep();
 }
+// ===== 家长登录：手机号 + PIN（密码式登录）=====
+// 流程：手机号输入满 11 位/失焦 → 静默检测（本地桶 → 有 token 时拉云端桶）区分
+// 老用户（有 pinHash，输 PIN 验证）/ 老老账号（有桶无 pinHash，登录时补设）/ 新用户（无桶，弹注册）。
+// 姓名仅在注册时设置（写入 star_users + 桶 ownerName），登录不再校验/更新姓名，
+// 避免把老账号姓名覆盖为空。PIN 机制不变：sha256(salt+pin)。
+// 手机号检测：输入满 11 位防抖 400ms 触发，失焦立即触发；detectSeq 丢弃过期响应
+var detectTimer=null,detectSeq=0;
+function setLoginDetectHint(t,cls){var h=document.getElementById('loginDetectHint');if(!h)return;h.textContent=t;h.className='login-hint'+(cls?' '+cls:'')}
+function onLoginPhoneInput(){
+  var v=document.getElementById('loginPhone').value.trim();
+  if(v.length<11){clearTimeout(detectTimer);setLoginDetectHint('','');return}
+  clearTimeout(detectTimer);
+  detectTimer=setTimeout(checkLoginPhone,400);
+}
+function checkLoginPhone(){
+  var phone=document.getElementById('loginPhone').value.trim();
+  if(phone.length<11){setLoginDetectHint('','');return}
+  var seq=++detectSeq;
+  var b=loadBucket(phone);
+  if(b&&b.pinHash){setLoginDetectHint('找到账本，输入 PIN 登录','ok');return}
+  if(b&&!getSyncToken()){setLoginDetectHint('该账本尚未设置 PIN，点击登录后设置','ok');return}
+  if(!b&&!getSyncToken()){setLoginDetectHint('新用户：点击登录后将创建账本（未配置同步，仅本机使用）','nu');return}
+  setLoginDetectHint('正在查找账本…','na');
+  syncPull(phone).then(function(){
+    if(seq!==detectSeq)return; // 过期检测：手机号已改动，丢弃本次结果
+    var b2=loadBucket(phone);
+    if(b2&&b2.pinHash)setLoginDetectHint('找到账本，输入 PIN 登录','ok');
+    else if(b2)setLoginDetectHint('该账本尚未设置 PIN，点击登录后设置','ok');
+    else setLoginDetectHint('新用户：点击登录后将创建账本','nu');
+  });
+}
 function doLogin(){
   if(loginRole==='kid'){doKidLogin();return}
   var phone=document.getElementById('loginPhone').value.trim();
-  var name=document.getElementById('loginName').value.trim();
-  if(!phone||phone.length<11){toast('请输入正确的手机号','err');return}
-  if(!name){toast('请输入姓名','err');return}
-  var users=getUsers();
-  var exist=users.find(function(u){return u.phone===phone});
-  if(!exist){
-    if(users.length>=3){toast('最多支持3个账号','err');return}
-    users.push({phone:phone,name:name});
-    saveUsers(users);
+  if(!/^\d{11}$/.test(phone)){toast('请输入正确的手机号','err');return}
+  var b=loadBucket(phone);
+  if(!b&&getSyncToken()){
+    // 本地无桶：登录前静默拉一次云端兜底，防止防抖未完成时误判为新用户
+    setLoginDetectHint('正在查找账本…','na');
+    syncPull(phone).then(function(){doLoginResolve(phone,loadBucket(phone),true)});
+    return;
   }
-  pendingLogin={phone:phone,name:name};
-  // 账号已有 PIN（本地桶或云端）→ 先验证；无 PIN（新账号/老账号首次）→ 进入后补设
-  ensurePinKnown(phone).then(function(hasPin){
-    if(hasPin)showPinStep();
-    else finishParentEntry(phone,name);
-  });
+  doLoginResolve(phone,b,false);
+}
+function doLoginResolve(phone,b,pulled){
+  if(!b){openRegister(phone);return}
+  if(b.pinHash){
+    var pin=document.getElementById('loginPinInput').value.trim();
+    if(!/^\d{4}$/.test(pin)){toast('请输入 4 位数字 PIN','err');return}
+    if(b.pinSalt&&sha256hex(b.pinSalt+pin)===b.pinHash){
+      finishParentEntry(phone,b.ownerName||matchLocalName(phone));
+      return;
+    }
+    // 本地 PIN 不匹配：配置了 token 时拉云端重试一次（覆盖「其他设备改过 PIN」的本地旧桶场景）
+    if(!getSyncToken()){toast('PIN 错误','err');return}
+    setLoginDetectHint('正在校验 PIN…','na');
+    syncPull(phone).then(function(){
+      var b2=loadBucket(phone);
+      if(b2&&b2.pinHash&&b2.pinSalt&&sha256hex(b2.pinSalt+pin)===b2.pinHash)finishParentEntry(phone,b2.ownerName||matchLocalName(phone));
+      else toast('PIN 错误','err'); // 家庭场景：次数不设限
+    });
+    return;
+  }
+  // 桶存在但无 pinHash（老老账号）：token 可用时先拉云端刷新，避免本地旧桶误判
+  if(!pulled&&getSyncToken()){
+    setLoginDetectHint('正在查找账本…','na');
+    syncPull(phone).then(function(){doLoginResolve(phone,loadBucket(phone),true)});
+    return;
+  }
+  openPinInit(phone);
+}
+// ===== 注册（创建账本）弹窗：新用户设置姓名 + PIN =====
+var regCtx=null; // {phone}
+function openRegister(phone){
+  var users=getUsers();
+  if(!users.find(function(u){return u.phone===phone})&&users.length>=3){toast('最多支持3个账号','err');return}
+  regCtx={phone:phone};
+  document.getElementById('regName').value='';
+  document.getElementById('regPin1').value='';
+  document.getElementById('regPin2').value='';
+  document.getElementById('regNotice').textContent=getSyncToken()
+    ?'4 位数字 PIN 用于保护家长端，其他设备登录时输入手机号+PIN 即可，请牢记。'
+    :'未配置同步，建议先在设置页配置以找回已有账本'; // 不阻断
+  document.getElementById('mReg').classList.add('show');
+}
+function closeRegister(){regCtx=null;document.getElementById('mReg').classList.remove('show')}
+function confirmRegister(){
+  if(!regCtx)return;
+  var phone=regCtx.phone;
+  var name=document.getElementById('regName').value.trim();
+  if(!name){toast('请输入姓名','err');return}
+  var p1=document.getElementById('regPin1').value.trim();
+  var p2=document.getElementById('regPin2').value.trim();
+  if(!/^\d{4}$/.test(p1)){toast('PIN 必须是 4 位数字','err');return}
+  if(p1!==p2){toast('两次输入不一致','err');return}
+  // 竞态保护：检测与创建之间云端桶刚出现 → 不新建，转 PIN 验证
+  var b=loadBucket(phone);
+  if(b&&b.pinHash){
+    closeRegister();
+    toast('该手机号已有账本，请输入 PIN 登录','err');
+    setLoginDetectHint('找到账本，输入 PIN 登录','ok');
+    return;
+  }
+  var salt=genSalt();
+  var pinFields={pinSalt:salt,pinHash:sha256hex(salt+p1)};
+  if(!b){b=gd()}
+  b.pinSalt=pinFields.pinSalt;b.pinHash=pinFields.pinHash;b.role='parent';b.ownerName=name;
+  try{localStorage.setItem(userKey(phone),JSON.stringify(b))}catch(e){}
+  upsertUser(phone,name);
+  regCtx=null;
+  document.getElementById('mReg').classList.remove('show');
+  finishParentEntry(phone,name);
+  ensureBucketPin(phone,pinFields,name); // migrateOldData 若迁移旧全局数据覆盖了新桶，恢复 PIN 字段
+  maybePinSetup(); // 兜底：正常路径桶已含 pinHash，不会弹
+  pushBucketAfterEntry(); // 已配 token 时立即上云，其他设备即可用手机号+PIN 登录
+}
+// ===== 老老账号补设 PIN 弹窗（仅 PIN，姓名沿用桶内已有；绝不覆盖桶内已有数据）=====
+var legacyCtx=null; // {phone,name}
+function openPinInit(phone){
+  var b=loadBucket(phone)||{};
+  var name=b.ownerName||matchLocalName(phone)||'';
+  legacyCtx={phone:phone,name:name};
+  document.getElementById('pinInit1').value='';
+  document.getElementById('pinInit2').value='';
+  document.getElementById('pinInitNotice').textContent=name
+    ?'账本「'+name+'」尚未设置 PIN，设置后即可用手机号+PIN 登录。'
+    :'该账本尚未设置 PIN，设置后即可用手机号+PIN 登录。';
+  document.getElementById('mPinInit').classList.add('show');
+}
+function closePinInit(){legacyCtx=null;document.getElementById('mPinInit').classList.remove('show')}
+function saveInitPin(){
+  if(!legacyCtx)return;
+  var p1=document.getElementById('pinInit1').value.trim();
+  var p2=document.getElementById('pinInit2').value.trim();
+  if(!/^\d{4}$/.test(p1)){toast('PIN 必须是 4 位数字','err');return}
+  if(p1!==p2){toast('两次输入不一致','err');return}
+  var phone=legacyCtx.phone;
+  var name=legacyCtx.name;
+  // 覆盖保护：此刻桶里已有 pinHash（云端刚拉到）→ 不设置，转 PIN 验证
+  var b=loadBucket(phone);
+  if(b&&b.pinHash){
+    closePinInit();
+    toast('该账本已设置过 PIN，请输入 PIN 登录','err');
+    setLoginDetectHint('找到账本，输入 PIN 登录','ok');
+    return;
+  }
+  var salt=genSalt();
+  var pinFields={pinSalt:salt,pinHash:sha256hex(salt+p1)};
+  if(!b){b=gd()}
+  b.pinSalt=pinFields.pinSalt;b.pinHash=pinFields.pinHash;b.role='parent';
+  if(name&&!b.ownerName)b.ownerName=name;
+  try{localStorage.setItem(userKey(phone),JSON.stringify(b))}catch(e){}
+  if(name)upsertUser(phone,name);
+  legacyCtx=null;
+  document.getElementById('mPinInit').classList.remove('show');
+  finishParentEntry(phone,name);
+  ensureBucketPin(phone,pinFields,name);
+  maybePinSetup(); // 兜底
+  pushBucketAfterEntry(); // 把 pinHash 上云，其他设备可验证
+}
+// 迁移守卫：migrateOldData 可能把旧全局数据（SK）写入账号桶并覆盖 PIN 字段；
+// 此处只补回 PIN 三字段与缺失的 ownerName，不触碰迁移来的其他数据（字段只增不改）
+function ensureBucketPin(phone,pinFields,name){
+  var b=loadBucket(phone);
+  if(b&&b.pinHash)return;
+  b=b||gd();
+  b.pinSalt=pinFields.pinSalt;b.pinHash=pinFields.pinHash;b.role='parent';
+  if(name&&!b.ownerName)b.ownerName=name;
+  try{localStorage.setItem(userKey(phone),JSON.stringify(b))}catch(e){}
+}
+// 进入后按现有节奏上云：把含 pinHash 的桶推到云端（无 token 时静默跳过）
+function pushBucketAfterEntry(){
+  if(!getSyncToken())return;
+  if(currentUser&&sessionRole==='parent'){ad=ld();sd(ad)}
 }
 // ===== 孩子登录：只输家长手机号，昵称自动从账本匹配 =====
 // 匹配优先级：本地桶 ownerName > 本地账号名 > 「孩子」兜底。
@@ -1374,10 +1562,13 @@ function quickLogin(phone){
   pendingLogin={phone:phone,name:name};
   ensurePinKnown(phone).then(function(hasPin){
     if(hasPin)showPinStep();
-    else finishParentEntry(phone,name);
+    else{finishParentEntry(phone,name);maybePinSetup()} // 无 PIN 历史账号：进入后强制补设
   });
 }
-// 家长身份落定：清理孩子会话 → 设为 parent 会话 → 进入 App → 无 PIN 则补设
+// 家长身份落定：清理孩子会话 → 设为 parent 会话 → 进入 App。
+// 注意：不再在此处调用 maybePinSetup——新流程下各登录入口保证桶内 pinHash 先于进入落定
+// （注册/补设后还可能被 migrateOldData 覆盖，须先由 ensureBucketPin 恢复再判定）；
+// switchUser/quickLogin 的无 PIN 分支在调用后显式补设。
 function finishParentEntry(phone,name){
   clearKidSession();
   currentUser=phone;
@@ -1389,7 +1580,6 @@ function finishParentEntry(phone,name){
   pendingLogin=null;
   hidePinStep();
   enterApp();
-  maybePinSetup();
 }
 function upsertUser(phone,name){
   var users=getUsers();
@@ -1532,11 +1722,16 @@ function saveNewPin(){
   var p2=document.getElementById('pinNew2').value.trim();
   if(!/^\d{4}$/.test(p1)){toast('PIN 必须是 4 位数字','err');return}
   if(p1!==p2){toast('两次输入不一致','err');return}
-  if(ad.pinHash){toast('已设置过 PIN，请在设置页修改','err');return}
+  if(!currentUser||sessionRole!=='parent')return;
+  // 按桶写入而非 ad：switchUser/quickLogin 补设发生在 enterApp 异步拉取落定前，
+  // ad 可能仍是上一账号数据，直接写 ad 会把别人的数据写进新账号桶（防串号）
+  var b=loadBucket(currentUser)||gd();
+  if(b.pinHash){toast('已设置过 PIN，请在设置页修改','err');return}
   var salt=genSalt();
-  ad.pinSalt=salt;
-  ad.pinHash=sha256hex(salt+p1);
-  ad.role='parent';
+  b.pinSalt=salt;
+  b.pinHash=sha256hex(salt+p1);
+  b.role='parent';
+  ad=b;
   sd(ad); // 随账号数据同步上云，其他设备可校验
   document.getElementById('mPin').classList.remove('show');
   document.getElementById('pinNew1').value='';
@@ -1599,7 +1794,8 @@ function switchUser(phone){
   var users=getUsers();
   var u=users.find(function(x){return x.phone===phone});
   pendingLogin={phone:phone,name:u?u.name:''};
-  // 有 PIN 的账号（含从孩子端切回）需先验证；无 PIN 直接进入（进入后按需补设）
+  // 有 PIN 的账号（含从孩子端切回）需先验证；无 PIN 直接进入（进入后补设，
+  // 不再存在「重设云端已有 PIN」路径：hasPin 判定含云端拉取）
   ensurePinKnown(phone).then(function(hasPin){
     if(hasPin){
       // 挂起当前会话（孩子/另一家长），验证通过后才落定新身份
@@ -1608,7 +1804,7 @@ function switchUser(phone){
       showLoginPage();
       showPinStep();
     }
-    else finishParentEntry(phone,pendingLogin.name);
+    else{finishParentEntry(phone,pendingLogin.name);maybePinSetup()}
   });
 }
 function doLogout(){
