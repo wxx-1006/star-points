@@ -292,8 +292,8 @@ body.kid-mode{padding-bottom:72px}
 .et{font:var(--f-item);color:var(--ink2)}
 .eg{font:var(--f-cap);color:var(--ink3);margin-top:4px}
 
-/* —— toast：深底白字 + 状态色点 —— */
-.to{position:fixed;top:20%;left:50%;transform:translate(-50%,-12px);background:var(--ink);color:var(--card);padding:12px 20px;border-radius:var(--r-full);font:var(--f-item);font-weight:600;z-index:400;display:none;align-items:center;gap:8px;max-width:80%}
+/* —— toast：深底白字 + 状态色点（全站最顶层 650：须盖过登录页 500 / 注册与补设弹窗 600，任何场景提示可见）—— */
+.to{position:fixed;top:20%;left:50%;transform:translate(-50%,-12px);background:var(--ink);color:var(--card);padding:12px 20px;border-radius:var(--r-full);font:var(--f-item);font-weight:600;z-index:650;display:none;align-items:center;gap:8px;max-width:80%}
 .to.show{display:flex;animation:fdin .2s ease}
 .to-dot{display:none;width:8px;height:8px;border-radius:var(--r-full);flex-shrink:0}
 .to.ok .to-dot{display:block;background:var(--green)}
@@ -595,6 +595,17 @@ body.kid-mode{padding-bottom:72px}
     </div>
     <div class="sec">
       <div class="sg">
+        <div class="sgh" style="cursor:default"><div class="sgt"><span class="gh-dot" style="background:var(--green)" aria-hidden="true"></span>孩子姓名</div></div>
+        <div style="padding:12px 16px 16px">
+          <div class="sync-hint">账本和积分的主人。顶栏、孩子端登录提示「找到账本」均显示此名字，填错可随时修改。</div>
+          <div class="sync-line"><span class="sync-line-t">当前：<span id="kidNameCur"></span></span></div>
+          <div class="fg" style="margin:10px 0 0"><label class="fl">孩子姓名</label><input type="text" class="fi" id="kidNameInput" maxlength="20" placeholder="孩子的名字或昵称"></div>
+          <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="saveKidName()">保存</button>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sg">
         <div class="sgh" style="cursor:default"><div class="sgt"><span class="gh-dot" style="background:var(--blue)" aria-hidden="true"></span>云端同步</div></div>
         <div style="padding:12px 16px 16px">
           <div class="sync-hint">填入仅授权 star-points-data 仓库的 GitHub token，多设备填同一 token 即可同步；新仓库首次使用时云端为空属正常，记分后自动创建</div>
@@ -757,14 +768,14 @@ body.kid-mode{padding-bottom:72px}
   </div>
 </div>
 
-<!-- 注册/创建账本弹窗（登录页新用户分流：姓名 + PIN 两遍；可关闭返回登录表单） -->
+<!-- 注册/创建账本弹窗（登录页新用户分流：孩子姓名 + PIN 两遍；可关闭返回登录表单） -->
 <div class="mo" id="mReg">
   <div class="ml">
     <span class="ml-handle" aria-hidden="true"></span>
     <div class="ml-header"><div class="ml-title">创建账本</div><button class="ml-close" onclick="closeRegister()">✕</button></div>
     <div class="ml-body">
       <div class="sync-hint" id="regNotice" style="margin-bottom:12px"></div>
-      <div class="fg"><label class="fl">姓名</label><input type="text" class="fi" id="regName" placeholder="家长姓名" maxlength="12"></div>
+      <div class="fg"><label class="fl">孩子姓名</label><input type="text" class="fi" id="regName" placeholder="孩子的名字或昵称" maxlength="20"></div>
       <div class="fg"><label class="fl">设置 PIN（4 位数字）</label><input type="password" class="fi" id="regPin1" inputmode="numeric" maxlength="4" autocomplete="off"></div>
       <div class="fg"><label class="fl">再次输入确认</label><input type="password" class="fi" id="regPin2" inputmode="numeric" maxlength="4" autocomplete="off"></div>
       <button class="bn bn-p" onclick="confirmRegister()">创建并进入</button>
@@ -1404,7 +1415,7 @@ function confirmRegister(){
   if(!regCtx)return;
   var phone=regCtx.phone;
   var name=document.getElementById('regName').value.trim();
-  if(!name){toast('请输入姓名','err');return}
+  if(!name){toast('请输入孩子姓名','err');return}
   var p1=document.getElementById('regPin1').value.trim();
   var p2=document.getElementById('regPin2').value.trim();
   if(!/^\d{4}$/.test(p1)){toast('PIN 必须是 4 位数字','err');return}
@@ -1617,7 +1628,7 @@ function enterApp(){
     if(sessionRole==='parent')checkRequests();
   });
 }
-// 账本名回写：把家长姓名存入桶内 ownerName 字段（新增字段，不改既有字段），
+// 账本名回写：把账本主人（孩子）姓名存入桶内 ownerName 字段（新增字段，不改既有字段），
 // 供孩子端登录时自动匹配「找到账本：xxx」。仅在名称变化时触发一次 sd() 同步。
 function ensureOwnerName(){
   if(sessionRole!=='parent')return;
@@ -1767,6 +1778,34 @@ function saveChangedPin(){
   document.getElementById('pinNew4').value='';
   toast('PIN 已修改','ok');
   renderSettings();
+}
+// 设置页「孩子姓名」修改入口：账本/积分的主人=孩子（账号=家长手机号+PIN），
+// 历史注册可能误填家长名，由本入口自行修正（不改历史数据）。
+// 保存：写 star_users（顶栏/头像/切换列表）+ 桶 ownerName（孩子端「找到账本」匹配名）
+// → sd() 本地落盘并上云 → 顶栏即时刷新。仅家长端可达（孩子端无设置页）。
+function saveKidName(){
+  if(sessionRole!=='parent')return;
+  var v=document.getElementById('kidNameInput').value.trim();
+  if(!v){toast('请输入孩子姓名','err');return}
+  if(v.length>20){toast('孩子姓名不能超过 20 个字','err');return}
+  var changed=false;
+  // 账号表：存在则更新，缺失则补建
+  var users=getUsers();
+  var u=users.find(function(x){return x.phone===currentUser});
+  if(u){
+    if(u.name!==v){u.name=v;saveUsers(users);changed=true}
+  }else{
+    upsertUser(currentUser,v);
+    changed=true;
+  }
+  // 桶 ownerName：孩子端「找到账本：xxx」取此字段
+  if(ad.ownerName!==v){ad.ownerName=v;changed=true}
+  if(!changed){toast('名字未变化');return}
+  sd(ad); // 本地桶 + 上云（syncPush 已按 role 守卫，家长端可达）
+  document.getElementById('usAvatar').textContent=v.charAt(0);
+  document.getElementById('usName').textContent=v;
+  renderSettings(); // 回填「当前：xxx」展示
+  toast('孩子姓名已更新','ok');
 }
 function showSwitchModal(){
   var users=getUsers();
@@ -2127,6 +2166,18 @@ function renderSettings(){
     var pb=loadBucket(currentUser);
     var hasPin=!!(pb&&pb.pinHash);
     ps.innerHTML='<span class="sync-dot '+(hasPin?'ok':'off')+'"></span><span class="sync-line-t">'+(hasPin?'已设置 PIN，家长端受保护':'未设置，下次进入家长端时将要求设置')+'</span>';
+  }
+
+  // 孩子姓名展示与回填（输入框聚焦时不回填，避免打断输入）
+  var knCur=document.getElementById('kidNameCur');
+  var knInp=document.getElementById('kidNameInput');
+  if(knCur&&knInp){
+    var curName='';
+    var ku=getUsers().find(function(x){return x.phone===currentUser});
+    if(ku&&ku.name)curName=ku.name;
+    else{var kb=loadBucket(currentUser);if(kb&&kb.ownerName)curName=kb.ownerName}
+    knCur.textContent=curName||'未设置';
+    if(document.activeElement!==knInp)knInp.value=curName;
   }
 
   document.getElementById('sui').innerHTML=renderGroupedItems(ad.upItems,'up','up_main');
