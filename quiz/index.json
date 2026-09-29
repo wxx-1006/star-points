@@ -26,28 +26,10 @@
       "file": "kepu-46.json"
     },
     {
-      "id": "eng-46",
-      "name": "英语单词·四至六年级",
-      "subtitle": "PEP 词汇 · 双向卡",
-      "file": "eng-46.json"
-    },
-    {
       "id": "chengyu-46",
       "name": "成语积累·四至六年级",
       "subtitle": "典故 · 释义 · 接龙",
       "file": "chengyu-46.json"
-    },
-    {
-      "id": "duoyin-46",
-      "name": "多音字与易错字·四至六年级",
-      "subtitle": "读音 · 字形 · 组词",
-      "file": "duoyin-46.json"
-    },
-    {
-      "id": "xiaoguwen-46",
-      "name": "小古文·读与理解",
-      "subtitle": "读故事 · 懂道理",
-      "file": "xiaoguwen-46.json"
     },
     {
       "id": "culture-46",
