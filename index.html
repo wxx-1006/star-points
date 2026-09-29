@@ -2808,7 +2808,8 @@ function rejectRequest(id){
 // 增量：家长判分 —— 看答案后出现「答对了」「答错了」；答对给当前账号 +5 分（可重复得分），
 // 答错不加分但同样走 sd() 链路把错题变化推上云（多设备同步），两者都标记完成并跳下一题。判分仅家长端开放。
 // 增量：错题集 —— 答错自动归集（去重），头部行「错题集 (N)」按钮（与「重置进度」同排、位于其左侧）入口，
-// 集内可重做；集内答对即移出（清空显示空态），答错保留；重置进度不影响错题集。
+// 全局汇总所有题库的错题（N 为全部题库合计，每题标注出处题库）；集内可重做；集内答对即移出
+// （清空显示空态），答错保留；重置进度不影响错题集。
 // 增量：剔除题目 —— 题目卡「剔除」按钮（仅家长端）→ 确认后加入 excluded：
 //   剔除题视同不存在（所有视图/统计分母/题号位次/错题集展示/随机范围全部排除，数据保留），
 //   恢复入口在题库选择弹窗底部「已剔除题目 (N)」，剔除与恢复均按 bankId 分键、按账号上云。
@@ -3067,6 +3068,8 @@ var qzPos=0;       // qzList 中的位置
 var qzDone=new Set();     // 当前题库已完成题目下标
 var qzWrong=new Set();    // 当前题库错题集下标（去重；剔除题数据保留，仅展示过滤）
 var qzExcluded=new Set(); // 当前题库已剔除题目下标（剔除题视同不存在，可恢复）
+var qzGQ=[];              // 全局错题视图的合并题目：[{b:bankId,i:题下标,d:题目,cn:分类名,bank:题库对象}]（错题数据仍按题库分键存储，仅视图汇总）
+var qzGPending=0;         // 全局错题视图后台补载中的题库数（>0 且列表为空时显示加载态）
 
 // —— 账号级存取：一个键存该账号全部刷题数据 {done:{bank:[i]},wrong:{...},excluded:{...}} ——
 function qzAccKey(){return QZ_ACC_KEY_PREFIX+(currentUser||'')}
@@ -3220,26 +3223,101 @@ function qzWrongAdd(i){
 }
 // 出集：答对即从错题集移除（不存在则不动）
 function qzWrongRemove(i){if(qzWrong.has(i)){qzWrong.delete(i);qzSaveWrong()}}
-// 错题集可见数 = 集内非剔除题数（剔除题数据保留，仅从展示与计数排除）
+// 全局错题可见数 = 各题库（含内置兜底）错题数之和，剔除题不计（数据保留，仅从展示与计数排除）。
+// 一律以账号级 store 为准：当前题库内存 Set 的每次增删都会即时落盘，二者恒一致。
 function qzWrongVisibleCount(){
-  var n=0;qzWrong.forEach(function(i){if(!qzExcluded.has(i))n++});
+  var store=qzAccStore(),n=0;
+  var scan=function(bankId){
+    var w=store.wrong&&store.wrong[bankId];
+    if(Object.prototype.toString.call(w)!=='[object Array]')return;
+    var ex=store.excluded&&store.excluded[bankId];
+    var exs=(Object.prototype.toString.call(ex)==='[object Array]')?new Set(ex):null;
+    for(var k=0;k<w.length;k++){var i=w[k];
+      if(typeof i!=='number'||i<0||!isFinite(i))continue;
+      if(exs&&exs.has(i))continue;
+      n++;}
+  };
+  scan('builtin');
+  for(var j=0;j<QZ_BANKS.length;j++)scan(QZ_BANKS[j].id);
   return n;
 }
 
+// —— 全局错题视图：按题库顺序（内置兜底最前 → index.json 清单顺序）合并各题库错题 ——
+// 错题数据仍按「账号×题库」分键存储，此处仅是跨题库的汇总视图：
+// 只收录题库已加载的错题（未加载的由 qzWrongAsyncRefresh 补载后重渲染），剔除题排除。
+function qzBuildGlobalWrong(){
+  qzGQ=[];
+  var store=qzAccStore();
+  var ids=['builtin'];
+  for(var j=0;j<QZ_BANKS.length;j++)if(QZ_BANKS[j].id!=='builtin')ids.push(QZ_BANKS[j].id);
+  for(var k=0;k<ids.length;k++){
+    var bank=(ids[k]==='builtin')?QZ_BUILTIN_BANK:QZ_BANK_CACHE[ids[k]];
+    if(!bank||!bank.questions)continue; // 题库未加载/不可用：加载完成后异步刷新补入
+    var w=store.wrong&&store.wrong[ids[k]];
+    if(Object.prototype.toString.call(w)!=='[object Array]')continue;
+    var ex=store.excluded&&store.excluded[ids[k]];
+    var exs=(Object.prototype.toString.call(ex)==='[object Array]')?new Set(ex):null;
+    var ws=w.slice().sort(function(a,b){return a-b});
+    for(var m=0;m<ws.length;m++){
+      var i=ws[m];
+      if(typeof i!=='number'||i<0||i>=bank.questions.length)continue;
+      if(exs&&exs.has(i))continue;
+      var d=bank.questions[i];
+      qzGQ.push({b:ids[k],i:i,d:d,bank:bank,
+        cn:(bank.cats[d.c]&&(bank.cats[d.c].note||bank.cats[d.c].name))||''});
+    }
+  }
+  qzList=[];
+  for(var z=0;z<qzGQ.length;z++)qzList.push(z);
+}
+// 全局错题视图后台补载：把清单内未加载的题库全部拉齐后重渲染（仅当仍停留在错题集视图）
+function qzWrongAsyncRefresh(){
+  var pending=[];
+  for(var i=0;i<QZ_BANKS.length;i++){var m=QZ_BANKS[i];
+    if(!QZ_BANK_CACHE[m.id]&&!m._unavailable)pending.push(qzLoadBank(m.id))}
+  if(!pending.length){qzGPending=0;return}
+  qzGPending=pending.length;
+  Promise.all(pending).then(function(){
+    qzGPending=0;
+    if(qzCat!==QZ_WRONG)return;
+    qzRebuild();
+    qzRender();
+  });
+}
+// —— 跨题库三表写入口（全局错题视图用）：对指定题库的 done/wrong/excluded 增删一条 →
+// 落盘账号键 + 镜像账号桶随 sd() 上云；目标是当前题库时同步内存 Set，保证内存与落盘一致 ——
+function qzBankMutate(bankId,part,i,add){
+  if(sessionRole==='kid'||!currentUser)return;
+  var store=qzAccStore();
+  if(!store[part]||typeof store[part]!=='object')store[part]={};
+  var arr=store[part][bankId];
+  if(Object.prototype.toString.call(arr)!=='[object Array]')arr=[];
+  var has=arr.indexOf(i)>=0;
+  if(add&&!has)arr=arr.concat([i]).sort(function(a,b){return a-b});
+  else if(!add&&has)arr=arr.filter(function(x){return x!==i});
+  else return; // 状态不变：不产生无意义的落盘与上云
+  store[part][bankId]=arr;
+  qzSaveAccStore(store);
+  var mem={done:qzDone,wrong:qzWrong,excluded:qzExcluded}[part];
+  if(bankId===qzBankId()){if(add)mem.add(i);else mem.delete(i)}
+  if(ad){ad.quizDone=store.done;ad.quizWrong=store.wrong;ad.quizExcluded=store.excluded;sd(ad)}
+  else dataVersion++;
+}
 // 重新计算可见列表
 //   普通视图：未完成 + 分类过滤 + 排除剔除题
-//   错题集视图：错题集内全部「未剔除」题目（不受「已完成」过滤影响），按题库题目原始顺序
+//   错题集视图：全局汇总 —— 所有题库的错题（非剔除）按题库顺序合并；不受「已完成」过滤影响
 function qzRebuild(keepId){
   qzList=[];
   if(qzCat===QZ_WRONG){
-    for(var w=0;w<qzData.length;w++){if(qzWrong.has(w)&&!qzExcluded.has(w))qzList.push(w)}
-  }else{
-    for(var i=0;i<qzData.length;i++){
-      if(qzDone.has(i))continue;
-      if(qzExcluded.has(i))continue; // 剔除题视同不存在
-      if(qzCat!==-1&&qzData[i].c!==qzCat)continue;
-      qzList.push(i);
-    }
+    qzBuildGlobalWrong();
+    if(qzPos>=qzList.length)qzPos=Math.max(0,qzList.length-1);
+    return;
+  }
+  for(var i=0;i<qzData.length;i++){
+    if(qzDone.has(i))continue;
+    if(qzExcluded.has(i))continue; // 剔除题视同不存在
+    if(qzCat!==-1&&qzData[i].c!==qzCat)continue;
+    qzList.push(i);
   }
   if(keepId!==undefined){
     var p=qzList.indexOf(keepId);
@@ -3269,9 +3347,12 @@ function qzCatScope(cat){
 function qzUpdateStats(){
   if(qzCat===QZ_WRONG){
     var n=qzWrongVisibleCount();
-    // 错题集视图：统计行标注当前题库名（一眼看出错题出自哪套题库；切题库后随 qzBank 刷新）
-    document.getElementById('qzStats').textContent=(qzBank&&qzBank.name?qzBank.name+' · ':'')+'错题 '+n+' 题';
-    document.getElementById('qzBar').style.width=(QZ_ALL_TOTAL?n/QZ_ALL_TOTAL*100:0)+'%';
+    // 错题集视图（全局汇总）：统计行标注「全部题库」；进度条 = 错题数 / 已加载题库总题数
+    document.getElementById('qzStats').textContent='全部题库 · 错题 '+n+' 题';
+    var tot=0;
+    for(var i=0;i<QZ_BANKS.length;i++){var cb=QZ_BANK_CACHE[QZ_BANKS[i].id];if(cb&&cb.questions)tot+=cb.questions.length}
+    if(qzBank&&qzBank.builtin)tot+=qzData.length;
+    document.getElementById('qzBar').style.width=(tot?n/tot*100:0)+'%';
     return;
   }
   var s=qzCatScope();
@@ -3299,7 +3380,7 @@ function qzRefreshWrongBtn(){
   if(!b)return;
   var wn=qzWrongVisibleCount(); // 剔除题不计入错题集按钮计数（数据保留，恢复后回来）
   b.textContent='错题集 ('+wn+')';
-  b.title=(qzBank&&qzBank.name)?'错题出自：'+qzBank.name:''; // 桌面端 hover 提示题库归属
+  b.title='汇总所有题库的错题'; // 桌面端 hover 提示
   b.disabled=(wn===0);
   b.className='qz-wrongbtn'+(qzCat===QZ_WRONG?' on':'')+(wn===0?' qz-wrongbtn-off':'');
 }
@@ -3320,8 +3401,10 @@ function qzRender(){
     ngBtn.disabled=true;
     if(qzCat===QZ_WRONG){
       card.innerHTML='<div class="qz-fin">'
-        +'<div class="qz-fin-t">暂无错题，太棒了！</div>'
-        +'<div class="qz-fin-p">做错的题会自动收进这里，方便随时重做。</div>'
+        +(qzGPending>0
+          ?'<div class="qz-fin-t">正在加载错题…</div>'
+          :'<div class="qz-fin-t">暂无错题，太棒了！</div>'
+            +'<div class="qz-fin-p">所有题库的错题都会汇总在这里，方便随时重做。</div>')
         +'</div>';
       qzUpdateStats();
       return;
@@ -3339,7 +3422,8 @@ function qzRender(){
     return;
   }
   var qi=qzList[qzPos];
-  var d=qzData[qi];
+  var gw=(qzCat===QZ_WRONG)?qzGQ[qi]:null; // 全局错题视图：条目携带出处题库
+  var d=gw?gw.d:qzData[qi];
   prevBtn.disabled=qzPos<=0;
   nextBtn.disabled=qzPos>=qzList.length-1;
   okBtn.disabled=false;
@@ -3348,7 +3432,7 @@ function qzRender(){
   // 分类口径 → 分类内非剔除序列位次/分类非剔除总数
   var badge;
   if(qzCat===QZ_WRONG){
-    badge=(qzPos+1)+' / '+qzWrongVisibleCount();
+    badge=(qzPos+1)+' / '+qzGQ.length;
   }else if(qzCat===-1){
     badge=QZ_ALL_RANK[qi]+' / '+QZ_ALL_TOTAL;
   }else{
@@ -3359,8 +3443,8 @@ function qzRender(){
   var exBtn=(sessionRole==='parent')?'<button type="button" class="qz-exbtn" onclick="qzExcludeCurrent()">剔除</button>':'';
   // 错题集视图：meta 行以「出自：题库名」小标签替代分类说明（题库归属是错题集的关键信息，
   // 且 360 宽下徽章+标签+说明+剔除四者同排放不下；分类信息可由题目内容与 chips 判断）
-  var metaMid=(qzCat===QZ_WRONG&&qzBank&&qzBank.name)
-    ?'<span class="qz-src">出自：'+escHtml(qzBank.name)+'</span>'
+  var metaMid=(qzCat===QZ_WRONG&&gw)
+    ?'<span class="qz-src">出自：'+escHtml(gw.bank.name||'')+'</span>'
     :'<span class="qz-cat">'+escHtml(cn)+'</span>';
   card.innerHTML='<div class="qz-meta">'
     +'<span class="qz-num num">'+badge+'</span>'
@@ -3394,19 +3478,33 @@ function qzHasQuestion(){
 // 否则会出现「题目消失但没加分」的静默丢失（init 首次 syncPull 返回前的窗口期即此情形）。
 function qzMarkCorrect(){
   if(!qzHasQuestion())return;
+  if(qzCat===QZ_WRONG){
+    var e=qzGQ[qzList[qzPos]];
+    if(!e)return;
+    if(!qzAward(e.bank.name)){toast('数据还在加载，请稍候再点');return}
+    qzBankMutate(e.b,'wrong',e.i,false); // 答对即从「出处题库」的错题集移除
+    qzBankMutate(e.b,'done',e.i,true);   // 并在出处题库标记完成
+    if(qzPos<qzList.length-1)qzPos++;
+    else if(qzPos>0)qzPos--;
+    qzRebuild();
+    qzRender();
+    return;
+  }
   if(!qzAward()){toast('数据还在加载，请稍候再点');return}
-  qzWrongRemove(qzList[qzPos]); // 答对即出集（任何视图通用；不存在则无副作用）
+  qzWrongRemove(qzList[qzPos]); // 答对即出集（不存在则无副作用）
   qzMarkDone();
 }
 // 判分：答错了 → 记入错题集（去重）+ 不加分，仅标记完成并跳下一题（不依赖账本，窗口期也可正常标记）。
 // 错题集视图内答错：该题本就在集内，保留并跳到下一题。
 function qzMarkWrong(){
   if(!qzHasQuestion())return;
-  qzWrongAdd(qzList[qzPos]);
   if(qzCat===QZ_WRONG){
+    // 全局错题视图内答错：该题本就在出处题库的错题集里，保留并跳下一题
+    // （不可调用 qzWrongAdd——全局视图的 qzList 是合并列表下标，误加会污染当前题库错题集）
     if(qzPos<qzList.length-1){qzPos++;qzRender()}
     return;
   }
+  qzWrongAdd(qzList[qzPos]);
   qzMarkDone();
 }
 
@@ -3414,13 +3512,13 @@ function qzMarkWrong(){
 // 走 sd(ad)：本地落桶 + syncPush 上云；孩子端被 sd() 的角色守卫拦截（此处再守卫一次，绝不写桶）。
 // 返回 true=已写入账本；false=未写入（不可判分/孩子端/未登录/账本未就绪）。
 var QZ_REWARD=5;
-function qzAward(){
+function qzAward(bankName){
   if(sessionRole!=='parent')return false; // 仅家长端开放：孩子端只读，绝不写账本
   if(!currentUser||!ad)return false;      // 账本未就绪（init syncPull 未返回时 ad 为 null）
   if(!qzHasQuestion())return false;       // 无题目可判时绝不写账本（空列表/越界索引兜底）
   var rec={id:'r_'+Date.now(),date:today(),timestamp:Date.now(),type:'up',
     itemId:'quiz_reward',name:'答题获取',category:'学习',score:QZ_REWARD,
-    note:(qzBank?qzBank.name:'逻辑推理题')+'答对'};
+    note:(bankName||(qzBank?qzBank.name:'逻辑推理题'))+'答对'};
   ad.records.push(rec);
   ad.totalPoints+=QZ_REWARD;
   sd(ad);
@@ -3431,6 +3529,7 @@ function qzAward(){
 
 // 标记完成 → 隐藏此题并自动跳到下一题（错题集数量随判分实时刷新）
 function qzMarkDone(){
+  if(qzCat===QZ_WRONG)return; // 全局错题视图的完成标记走 qzBankMutate（出处题库），此函数仅服务普通视图
   if(!qzHasQuestion())return; // 空列表/越界时不得 add(undefined)，否则 qzDone 会被 null 永久污染
   var qi=qzList[qzPos];
   var wasLast=qzPos>=qzList.length-1;
@@ -3452,6 +3551,7 @@ function qzSetCat(i){
   qzRenderChips();
   qzRebuild();
   qzRender();
+  if(i===QZ_WRONG)qzWrongAsyncRefresh(); // 全局错题视图：后台补齐未加载题库后重渲染
 }
 
 function qzRandomPick(){
@@ -3466,9 +3566,20 @@ function qzRandomPick(){
 function qzExcludeCurrent(){
   if(sessionRole!=='parent')return; // 家长端守卫（按钮已按角色渲染，此处双保险）
   if(!qzHasQuestion())return;
+  var wrong=(qzCat===QZ_WRONG);
   var qi=qzList[qzPos];
-  var d=qzData[qi]||{t:''};
+  var d=wrong?((qzGQ[qi]||{}).d||{t:''}):(qzData[qi]||{t:''});
   sc2('剔除题目','剔除后「'+(d.t||'该题')+'」将不再出现在刷题、错题集与统计中，可在题库选择中恢复。确定要剔除吗？',function(){
+    if(wrong){ // 全局错题视图：剔除「出处题库」中的该题（数据仍按题库分键）
+      var e=qzGQ[qi];
+      if(!e)return;
+      qzBankMutate(e.b,'excluded',e.i,true);
+      if(e.b===qzBankId())qzBuildDerived(); // 目标为当前题库：重算统计分母/题号位次
+      qzRebuild();
+      qzRender();
+      toast('已剔除，可在题库选择中恢复','ok');
+      return;
+    }
     qzExcludeAt(qi);
   });
 }
@@ -3742,6 +3853,7 @@ function qzShow(){
   qzRenderChips();
   qzRebuild();
   qzRender();
+  if(qzCat===QZ_WRONG)qzWrongAsyncRefresh(); // 停留在全局错题视图：补齐未加载题库后重渲染
 }
 
 // Date picker functions
