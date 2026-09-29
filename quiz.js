@@ -831,7 +831,6 @@ function qzAward(bankName){
   ad.records.push(rec);
   ad.totalPoints+=QZ_REWARD;
   sd(ad);
-  if(typeof checkBadges==='function')checkBadges(); // 答对次数类徽章（toast 由调用方统一拼装，此处不提示）
   render();
   return true;
 }
@@ -898,7 +897,6 @@ function qzCheckin(){
   ad.quizStreak=s;
   sd(ad);
   qzRenderCheckin();
-  if(typeof checkBadges==='function')checkBadges();
   return msg;
 }
 // 补签昨日：仅「昨天恰好断签」（last=前天）且有补签卡时可补
@@ -914,7 +912,6 @@ function qzMakeupYesterday(){
     sd(ad);
     toast('已补签昨日'+extra,'ok');
     qzRenderCheckin();
-    if(typeof checkBadges==='function')checkBadges();
     render();
   });
 }

@@ -467,7 +467,12 @@ body.kid-mode{padding-bottom:72px}
 
 /* ===== 报告页：纯 CSS 图表（柱状趋势 + 分类占比条），无外部图表库 ===== */
 .rp-chart{display:flex;align-items:flex-end;gap:2px;height:110px;background:var(--card);border:var(--bd);border-radius:var(--r-m);padding:12px 12px 6px}
-.rp-col{flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end}
+.rp-col{flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer}
+.rp-col:active .rp-bar{opacity:.75}
+.rp-row{cursor:pointer}
+.rp-row:active{opacity:.75}
+.rp-tap{cursor:pointer}
+.rp-tap:active{transform:scale(.97)}
 .rp-bar{display:block;width:100%;border-radius:3px 3px 0 0}
 .rp-bar.u{background:var(--green)}
 .rp-bar.d{background:var(--red)}
@@ -493,38 +498,7 @@ body.kid-mode{padding-bottom:72px}
 .qz-ckbtn:active{transform:scale(.95);background:var(--fill)}
 .qz-ckbtn:disabled{opacity:.45;cursor:default;transform:none}
 
-/* ===== 成就徽章条（首页）：已获得的徽章横向滚动，点「全部」看完整清单 ===== */
-.bdg-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
-.bdg-strip::-webkit-scrollbar{display:none}
-.bdg{flex-shrink:0;display:flex;align-items:center;gap:6px;background:var(--card);border:var(--bd);border-radius:var(--r-full);padding:6px 12px;font:var(--f-cap);font-weight:600;color:var(--ink2)}
-.bdg.on{color:var(--ink)}
 
-/* ===== 储蓄目标进度条（复用 .qz-bar 轨道，独立高度控制）===== */
-.goal-bar{height:8px;flex:none;background:var(--fill);border-radius:var(--r-full);overflow:hidden}
-.goal-bar i{display:block;height:100%;background:var(--yellow);border-radius:var(--r-full);transition:width .3s}
-.goal-bar.done i{background:var(--green)}
-
-/* ===== 外观（主题）分段按钮：选中蓝域（与记录筛选 tabs 同语言）===== */
-#themeSeg .seg-b.on{background:var(--blue-l);color:var(--blue-deep);font-weight:600}
-
-/* ===== 深色模式：仅覆写 token（全部组件走变量，自动适配）===== */
-[data-theme="dark"]{
-  --bg:#171512;
-  --card:#221F1B;
-  --ink:#ECE5D8;
-  --ink2:#A89D8C;
-  --ink3:#6E6557;
-  --line:#332E27;
-  --fill:#2A2620;
-  --overlay:rgba(0,0,0,.58);
-  /* 四积木色：暗底下降饱和度/提亮可读性；*-l 变为低透明色域；*-deep 提亮为浅底可读色 */
-  --red:#E0705F;   --red-deep:#F29181;  --red-l:rgba(224,112,95,.16);
-  --yellow:#E8B23C;--yel-deep:#F0C36A;  --yellow-l:rgba(232,178,60,.15);
-  --blue:#6FA6D8;  --blue-deep:#9CC4E8; --blue-l:rgba(111,166,216,.16);
-  --green:#63BD87; --grn-deep:#8AD4A5;  --green-l:rgba(99,189,135,.15);
-  --sh-card:0 1px 2px rgba(0,0,0,.35),0 4px 14px rgba(0,0,0,.28);
-  --sh-cta:0 4px 14px rgba(224,112,95,.22);
-}
 </style>
 </head>
 <body>
@@ -555,14 +529,6 @@ body.kid-mode{padding-bottom:72px}
     <div class="sc"><div class="sv" id="ts">0</div><div class="sl">连续天数</div></div>
   </div>
   <div class="sec"><div class="sec-h"><div class="st-t">近一周概览</div></div><div class="wb" id="wb"></div></div>
-  <div class="sec" id="goalSec">
-    <div class="sec-h"><div class="st-t">储蓄目标</div><div class="ftb sm" onclick="openGoalNew()">＋ 新目标</div></div>
-    <div class="rl" id="goalList"></div>
-  </div>
-  <div class="sec" id="badgeSec">
-    <div class="sec-h"><div class="st-t">成就徽章 <span class="cnt" id="badgeCnt"></span></div><div class="ftb sm" onclick="openBadgeModal()">全部 ›</div></div>
-    <div class="bdg-strip" id="badgeStrip"></div>
-  </div>
   <div class="sec" id="ctaSec">
     <div class="cta-row">
       <button class="cta" onclick="openScore()">记录分数</button>
@@ -593,10 +559,6 @@ body.kid-mode{padding-bottom:72px}
     <div class="pts" id="kShopPts">0</div>
   </div>
   <div style="padding:12px 16px 0"><button class="cta2" style="width:100%" onclick="openReqModal()">申请兑换</button></div>
-  <div class="sec" id="kGoalSec">
-    <div class="sec-h"><div class="st-t">储蓄目标</div></div>
-    <div class="rl" id="kGoalList" style="margin-top:8px"></div>
-  </div>
   <div class="sec">
     <div class="sec-h"><div class="st-t">奖励清单</div></div>
     <div class="rl" id="kShopList" style="margin-top:8px"></div>
@@ -683,36 +645,12 @@ body.kid-mode{padding-bottom:72px}
     </div>
     <div class="sec">
       <div class="sg">
-        <div class="sgh" style="cursor:default"><div class="sgt"><span class="gh-dot" style="background:var(--green)" aria-hidden="true"></span>孩子姓名</div></div>
-        <div style="padding:12px 16px 16px">
-          <div class="sync-hint">账本和积分的主人。顶栏、孩子端登录提示「找到账本」均显示此名字，填错可随时修改。</div>
-          <div class="sync-line"><span class="sync-line-t">当前：<span id="kidNameCur"></span></span></div>
-          <div class="fg" style="margin:10px 0 0"><label class="fl">孩子姓名</label><input type="text" class="fi" id="kidNameInput" maxlength="20" placeholder="孩子的名字或昵称"></div>
-          <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="saveKidName()">保存</button>
-        </div>
-      </div>
-    </div>
-    <div class="sec">
-      <div class="sg">
         <div class="sgh" style="cursor:default"><div class="sgt"><span class="gh-dot" style="background:var(--blue)" aria-hidden="true"></span>云端同步</div></div>
         <div style="padding:12px 16px 16px">
           <div class="sync-hint">填入仅授权 star-points-data 仓库的 GitHub token，多设备填同一 token 即可同步；新仓库首次使用时云端为空属正常，记分后自动创建</div>
           <div class="fg" style="margin:10px 0 0"><label class="fl">GitHub Token</label><input type="password" class="fi" id="syncTokenInput" placeholder="github_pat_ 开头" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
           <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="saveSyncToken()">保存</button>
           <div class="sync-line" id="syncStateLine"></div>
-        </div>
-      </div>
-    </div>
-    <div class="sec">
-      <div class="sg">
-        <div class="sgh" style="cursor:default"><div class="sgt"><span class="gh-dot" style="background:var(--blue)" aria-hidden="true"></span>外观</div></div>
-        <div style="padding:12px 16px 16px">
-          <div class="sync-hint">浅色 / 深色可手动切换；「跟随系统」按设备外观自动变化。仅影响本机显示。</div>
-          <div class="seg" id="themeSeg" style="margin-top:12px">
-            <button type="button" class="seg-b" id="thAuto" onclick="setThemeMode('auto')">跟随系统</button>
-            <button type="button" class="seg-b" id="thLight" onclick="setThemeMode('light')">浅色</button>
-            <button type="button" class="seg-b" id="thDark" onclick="setThemeMode('dark')">深色</button>
-          </div>
         </div>
       </div>
     </div>
@@ -949,55 +887,6 @@ body.kid-mode{padding-bottom:72px}
   </div>
 </div>
 
-<!-- 成就徽章清单弹窗（家长端首页入口） -->
-<div class="mo" id="mBadge">
-  <div class="ml">
-    <span class="ml-handle" aria-hidden="true"></span>
-    <div class="ml-header">
-      <div class="ml-title">成就徽章</div>
-      <button class="ml-close" onclick="cm('mBadge')">✕</button>
-    </div>
-    <div class="ml-body" id="badgeList"></div>
-  </div>
-</div>
-
-<!-- 新建储蓄目标弹窗（家长端） -->
-<div class="mo" id="mGoal">
-  <div class="ml">
-    <span class="ml-handle" aria-hidden="true"></span>
-    <div class="ml-header">
-      <div class="ml-title">新建储蓄目标</div>
-      <button class="ml-close" onclick="cm('mGoal')">✕</button>
-    </div>
-    <div class="ml-body">
-      <div class="fg"><label class="fl">目标名称</label><input type="text" class="fi" id="glName" placeholder="如：新自行车" maxlength="20"></div>
-      <div class="fg"><label class="fl">目标积分</label><input type="number" class="fi" id="glTarget" value="200" min="1"></div>
-      <div class="sync-hint" style="margin-bottom:12px">创建后从总积分中分期「存入」，存满即达成。孩子端商城页可见进度。</div>
-      <button class="bn bn-p" onclick="saveGoalNew()">创建目标</button>
-    </div>
-  </div>
-</div>
-
-<!-- 存入积分弹窗（家长端，储蓄目标） -->
-<div class="mo" id="mGoalDep">
-  <div class="ml">
-    <span class="ml-handle" aria-hidden="true"></span>
-    <div class="ml-header">
-      <div class="ml-title">存入积分</div>
-      <button class="ml-close" onclick="cm('mGoalDep')">✕</button>
-    </div>
-    <div class="ml-body">
-      <div class="fg">
-        <label class="fl">目标</label>
-        <div class="ex-now" id="glDepName"></div>
-        <div class="sync-hint" id="glDepAvail" style="margin-top:4px"></div>
-      </div>
-      <div class="fg"><label class="fl">存入积分</label><input type="number" class="fi" id="glDepAmt" value="10" min="1"></div>
-      <button class="bn bn-p" onclick="depositGoal()">确认存入</button>
-    </div>
-  </div>
-</div>
-
 <!-- 自定义题库编辑器（家长端，题库弹窗入口；z-index 高于 mBank） -->
 <div class="mo" id="mBankEdit">
   <div class="ml">
@@ -1019,6 +908,18 @@ body.kid-mode{padding-bottom:72px}
       <input type="file" id="cbFile" accept=".json,application/json" style="display:none" onchange="qzImportBankFile(this)">
       <div class="sync-hint" style="margin-top:10px">字段：cat（分类下标，可省略）/ title / question / answer。自定义题库保存在本机，可通过「导出备份」迁移到其他设备。</div>
     </div>
+  </div>
+</div>
+
+<!-- 报告明细弹窗：点击报告页任一柱/分类/统计卡查看对应明细 -->
+<div class="mo" id="mRd">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title" id="mRdTitle">明细</div>
+      <button class="ml-close" onclick="cm('mRd')">✕</button>
+    </div>
+    <div class="ml-body" id="mRdBody"></div>
   </div>
 </div>
 
@@ -1206,7 +1107,7 @@ function retryPendingSync(){
 // 网络恢复即补推
 window.addEventListener('online',function(){retryPendingSync()});
 // ===== 记录级合并（#1）：替代「后写整体覆盖」=====
-// records/exchanges/goals 按 id 并集（同 id 本地为准）；刷题三表按 bankId 并集；
+// records/exchanges 按 id 并集（同 id 本地为准）；刷题三表按 bankId 并集；
 // 错题复习进度同题取大者；打卡取 count/best/补签卡较大者（last 取较新、里程碑并集）；
 // 徽章并集（获得时间取早）；totalPoints 按合并后流水重算；PIN/姓名等账号字段本地优先。
 function mergeArrMaps(a,b){
@@ -1255,16 +1156,6 @@ function mergeStreak(a,b){
   a.ms=ms;
   return a;
 }
-function mergeBadges(a,b){
-  if(!b||typeof b!=='object'||Object.prototype.toString.call(b)==='[object Array]')return (a&&typeof a==='object'&&Object.prototype.toString.call(a)!=='[object Array]')?a:{};
-  if(!a||typeof a!=='object'||Object.prototype.toString.call(a)==='[object Array]')a={};
-  for(var k in b){
-    var bv=typeof b[k]==='number'?b[k]:Date.now();
-    if(a[k]===undefined||a[k]===null)a[k]=bv;
-    else if(typeof a[k]==='number'&&typeof bv==='number')a[k]=Math.min(a[k],bv);
-  }
-  return a;
-}
 function mergeAccountData(loc,rem){
   var isArr=function(v){return Object.prototype.toString.call(v)==='[object Array]'};
   var m;
@@ -1283,12 +1174,6 @@ function mergeAccountData(loc,rem){
   for(i=0;i<m.exchanges.length;i++)ids[m.exchanges[i]&&m.exchanges[i].id]=1;
   var re0=isArr(rem.exchanges)?rem.exchanges:[];
   for(i=0;i<re0.length;i++){var e0=re0[i];if(e0&&e0.id&&!ids[e0.id]){m.exchanges.push(e0);ids[e0.id]=1;changed=true}}
-  // —— goals 并集 ——
-  m.goals=isArr(m.goals)?m.goals:[];
-  ids={};
-  for(i=0;i<m.goals.length;i++)ids[m.goals[i]&&m.goals[i].id]=1;
-  var rg0=isArr(rem.goals)?rem.goals:[];
-  for(i=0;i<rg0.length;i++){var g0=rg0[i];if(g0&&g0.id&&!ids[g0.id]){m.goals.push(g0);ids[g0.id]=1;changed=true}}
   // —— 流水排序 + 总分重算（totalPoints 恒 = Σrecords.score − Σexchanges.cost）——
   var byTime=function(a,b){if(a.date!==b.date)return a.date<b.date?-1:1;return (a.timestamp||0)-(b.timestamp||0)};
   m.records.sort(byTime);m.exchanges.sort(byTime);
@@ -1297,14 +1182,13 @@ function mergeAccountData(loc,rem){
   for(i=0;i<m.exchanges.length;i++)tp-=(m.exchanges[i]&&m.exchanges[i].cost)||0;
   if(tp!==m.totalPoints){m.totalPoints=tp;changed=true}
   // —— 刷题与成就数据并集（前后 JSON 比对判定变化）——
-  var before=JSON.stringify([m.quizDone||null,m.quizWrong||null,m.quizExcluded||null,m.quizWrongMeta||null,m.quizStreak||null,m.badges||null]);
+  var before=JSON.stringify([m.quizDone||null,m.quizWrong||null,m.quizExcluded||null,m.quizWrongMeta||null,m.quizStreak||null]);
   m.quizDone=mergeArrMaps(m.quizDone,rem.quizDone);
   m.quizWrong=mergeArrMaps(m.quizWrong,rem.quizWrong);
   m.quizExcluded=mergeArrMaps(m.quizExcluded,rem.quizExcluded);
   m.quizWrongMeta=mergeNumMaps(m.quizWrongMeta,rem.quizWrongMeta);
   m.quizStreak=mergeStreak(m.quizStreak,rem.quizStreak);
-  m.badges=mergeBadges(m.badges,rem.badges);
-  var after=JSON.stringify([m.quizDone||null,m.quizWrong||null,m.quizExcluded||null,m.quizWrongMeta||null,m.quizStreak||null,m.badges||null]);
+  var after=JSON.stringify([m.quizDone||null,m.quizWrong||null,m.quizExcluded||null,m.quizWrongMeta||null,m.quizStreak||null]);
   if(before!==after)changed=true;
   // —— 账号字段：本地优先，缺失补云端 ——
   var fill=function(k){if((m[k]===undefined||m[k]===null||m[k]==='')&&rem[k]!==undefined&&rem[k]!==null&&rem[k]!==''){m[k]=rem[k];changed=true}};
@@ -1611,7 +1495,7 @@ var dsh=[
 {id:'shop_24',name:'参加付费体验课',cost:200,icon:'🔬',desc:'陶艺/烘焙/科学实验'}
 ];
 
-function gd(){return{totalPoints:0,records:[],exchanges:[],goals:[],badges:{},upItems:JSON.parse(JSON.stringify(du)),downItems:JSON.parse(JSON.stringify(dwn)),shopItems:JSON.parse(JSON.stringify(dsh))}}
+function gd(){return{totalPoints:0,records:[],exchanges:[],upItems:JSON.parse(JSON.stringify(du)),downItems:JSON.parse(JSON.stringify(dwn)),shopItems:JSON.parse(JSON.stringify(dsh))}}
 function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function fd(ds){var d=new Date(ds);var m=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];var w=['周日','周一','周二','周三','周四','周五','周六'];return d.getFullYear()+'年'+m[d.getMonth()]+d.getDate()+'日 '+w[d.getDay()]}
 function fdt(ts){var d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
@@ -2099,34 +1983,6 @@ function saveChangedPin(){
   toast('PIN 已修改','ok');
   renderSettings();
 }
-// 设置页「孩子姓名」修改入口：账本/积分的主人=孩子（账号=家长手机号+PIN），
-// 历史注册可能误填家长名，由本入口自行修正（不改历史数据）。
-// 保存：写 star_users（顶栏/头像/切换列表）+ 桶 ownerName（孩子端「找到账本」匹配名）
-// → sd() 本地落盘并上云 → 顶栏即时刷新。仅家长端可达（孩子端无设置页）。
-function saveKidName(){
-  if(sessionRole!=='parent')return;
-  var v=document.getElementById('kidNameInput').value.trim();
-  if(!v){toast('请输入孩子姓名','err');return}
-  if(v.length>20){toast('孩子姓名不能超过 20 个字','err');return}
-  var changed=false;
-  // 账号表：存在则更新，缺失则补建
-  var users=getUsers();
-  var u=users.find(function(x){return x.phone===currentUser});
-  if(u){
-    if(u.name!==v){u.name=v;saveUsers(users);changed=true}
-  }else{
-    upsertUser(currentUser,v);
-    changed=true;
-  }
-  // 桶 ownerName：孩子端「找到账本：xxx」取此字段
-  if(ad.ownerName!==v){ad.ownerName=v;changed=true}
-  if(!changed){toast('名字未变化');return}
-  sd(ad); // 本地桶 + 上云（syncPush 已按 role 守卫，家长端可达）
-  document.getElementById('usAvatar').textContent=v.charAt(0);
-  document.getElementById('usName').textContent=v;
-  renderSettings(); // 回填「当前：xxx」展示
-  toast('孩子姓名已更新','ok');
-}
 function showSwitchModal(){
   var users=getUsers();
   var html='';
@@ -2353,9 +2209,6 @@ function renderHome(){
     trl.innerHTML=html2;
   }
 
-  // 储蓄目标 + 成就徽章（家长端首页区块；孩子端首页不可见，函数内部有守卫）
-  renderGoals();
-  renderBadgeStrip();
 }
 
 // 当日记录区块标题：视图日为今天 →「今日记录」；其他日子 →「当日记录 · X月X日 周X」
@@ -2389,13 +2242,10 @@ function renderRecord(r,currentDay){
 function renderExchange(e,currentDay){
   var timeStr=(e.date===currentDay)?fdt(e.timestamp):fd(e.date)+' '+fdt(e.timestamp);
   var noteStr=e.note?(' · '+escHtml(e.note)):'';
-  // 来源标注：source==='kid_request' 显示蓝域「孩子申请」；source==='goal' 显示「储蓄」；
-  // 家长直接兑换及无 source 的旧数据显示「兑换」
+  // 来源标注：source==='kid_request' 显示蓝域「孩子申请」；家长直接兑换及无 source 的旧数据显示「兑换」
   var src=e.source==='kid_request'
     ?'<span class="ex-chip kid">孩子申请</span>'
-    :(e.source==='goal'
-      ?'<span class="ex-chip">储蓄</span>'
-      :'<span class="ex-chip">兑换</span>');
+    :'<span class="ex-chip">兑换</span>';
   // 孩子端只读：不渲染删除按钮
   var del=sessionRole==='kid'?'':'<button class="dl" onclick="deleteExchange(\''+e.id+'\')">✕</button>';
   return '<div class="ri"><span class="cat-dot" style="background:var(--yellow)"></span><div class="inf"><div class="nm">'+escHtml(e.name)+'</div><div class="tm">'+timeStr+noteStr+'</div></div>'+src+'<div class="sc2 e">-'+e.cost+'</div>'+del+'</div>';
@@ -2414,21 +2264,10 @@ function deleteExchange(id){
   for(var i=0;i<ad.exchanges.length;i++){if(ad.exchanges[i].id===id){ex=ad.exchanges[i];break}}
   if(!ex)return;
   var hasReq=ex.source==='kid_request'&&!!ex.requestId;
-  var msg='将删除该兑换记录并退还 '+ex.cost+' 分'+(hasReq?'；该兑换来自孩子申请，对应申请单将一并移除。':(ex.source==='goal'?'；该笔为储蓄存入，对应目标进度将同步扣减。':'。'));
+  var msg='将删除该兑换记录并退还 '+ex.cost+' 分'+(hasReq?'；该兑换来自孩子申请，对应申请单将一并移除。':'。');
   sc2('删除兑换记录',msg,function(){
     var doLocal=function(){
       ad.totalPoints+=ex.cost; // 退分
-      // 储蓄存入被删除：同步扣减目标进度（低于目标时撤回「已达成」标记）
-      if(ex.source==='goal'&&ex.goalId){
-        var gs=(ad.goals&&Object.prototype.toString.call(ad.goals)==='[object Array]')?ad.goals:[];
-        for(var gi=0;gi<gs.length;gi++){
-          if(gs[gi]&&gs[gi].id===ex.goalId){
-            gs[gi].saved=Math.max(0,(gs[gi].saved||0)-ex.cost);
-            if(gs[gi].doneAt&&gs[gi].saved<gs[gi].target)gs[gi].doneAt=null;
-            break;
-          }
-        }
-      }
       ad.exchanges=ad.exchanges.filter(function(x){return x.id!==id});
       sd(ad);
       toast('已删除，退还 '+ex.cost+' 分','ok');
@@ -2506,18 +2345,6 @@ function renderSettings(){
     var pb=loadBucket(currentUser);
     var hasPin=!!(pb&&pb.pinHash);
     ps.innerHTML='<span class="sync-dot '+(hasPin?'ok':'off')+'"></span><span class="sync-line-t">'+(hasPin?'已设置 PIN，家长端受保护':'未设置，下次进入家长端时将要求设置')+'</span>';
-  }
-
-  // 孩子姓名展示与回填（输入框聚焦时不回填，避免打断输入）
-  var knCur=document.getElementById('kidNameCur');
-  var knInp=document.getElementById('kidNameInput');
-  if(knCur&&knInp){
-    var curName='';
-    var ku=getUsers().find(function(x){return x.phone===currentUser});
-    if(ku&&ku.name)curName=ku.name;
-    else{var kb=loadBucket(currentUser);if(kb&&kb.ownerName)curName=kb.ownerName}
-    knCur.textContent=curName||'未设置';
-    if(document.activeElement!==knInp)knInp.value=curName;
   }
 
   document.getElementById('sui').innerHTML=renderGroupedItems(ad.upItems,'up','up_main');
@@ -2683,7 +2510,6 @@ function ss(){
   sd(ad);
   document.getElementById('ms').classList.remove('show');
   toast(scoreType==='up'?('+'+sv+' 分'):('-'+sv+' 分'),scoreType==='up'?'ok':'err');
-  checkBadges();
   render();
 }
 
@@ -2736,7 +2562,6 @@ function confirmExchange(){
     sd(ad);
     toast('兑换成功，剩余 '+ad.totalPoints+' 分','ok');
     document.getElementById('ms2').classList.remove('show');
-    checkBadges();
     render();
   });
 }
@@ -2840,7 +2665,6 @@ function sai(){
   sd(ad);
   document.getElementById('ma').classList.remove('show');
   toast('保存成功','ok');
-  checkBadges();
   render();
 }
 
@@ -2864,7 +2688,6 @@ function sasi(){
   sd(ad);
   document.getElementById('ms3').classList.remove('show');
   toast('保存成功','ok');
-  checkBadges();
   render();
 }
 
@@ -2949,7 +2772,6 @@ function renderShopKid(){
   if(!box)return;
   if(!ad.shopItems.length){
     box.innerHTML='<div class="es" style="padding:16px 0">'+esBricks()+'<div class="et">暂无奖励项</div><div class="eg">请让家长在兑换项管理中添加</div></div>';
-    renderGoalsKid(); // 无奖励项也要渲染储蓄目标区
     return;
   }
   var html='';
@@ -2965,33 +2787,6 @@ function renderShopKid(){
       +'<button class="ap-btn ok" onclick="openReqModal(\''+it.id+'\')">申请兑换</button></div>';
   }
   box.innerHTML=html;
-  renderGoalsKid(); // 储蓄目标（只读进度）：孩子也能看到攒分目标
-}
-
-// 孩子端商城页：储蓄目标只读列表（进度条 + 已存/目标）
-function renderGoalsKid(){
-  var box=document.getElementById('kGoalList');
-  if(!box)return;
-  var goals=(ad&&Object.prototype.toString.call(ad.goals)==='[object Array]')?ad.goals:[];
-  if(!goals.length){
-    box.innerHTML='<div class="es" style="padding:16px 0">'+esBricks()+'<div class="et">还没有储蓄目标</div><div class="eg">和家长定一个目标，把积分存进去吧</div></div>';
-    return;
-  }
-  var h='';
-  for(var i=0;i<goals.length;i++){
-    var g=goals[i];
-    if(!g||!g.id)continue;
-    var saved=g.saved||0,target=g.target||1;
-    var pct=Math.min(100,Math.round(saved/target*100));
-    var done=!!g.doneAt;
-    h+='<div class="ri" style="flex-direction:column;align-items:stretch;gap:8px">'
-      +'<div style="display:flex;align-items:center;gap:8px"><span class="gh-dot" style="background:'+(done?'var(--green)':'var(--yellow)')+'" aria-hidden="true"></span>'
-      +'<div class="inf" style="flex:1;min-width:0"><div class="nm">'+escHtml(g.name||'目标')+'</div>'
-      +'<div class="tm">'+saved+' / '+target+' 分'+(done?' · 已达成':'')+'</div></div></div>'
-      +'<div class="goal-bar'+(done?' done':'')+'"><i style="width:'+pct+'%"></i></div>'
-      +'</div>';
-  }
-  box.innerHTML=h;
 }
 
 // —— 孩子端：提交申请（写 requests.json，由家长端审批展示） ——
@@ -3138,7 +2933,6 @@ function approveRequest(id){
       ad.exchanges.push({id:'ex_'+Date.now(),date:today(),timestamp:Date.now(),shopItemId:hit.shopItemId||'',name:hit.itemName,icon:hit.icon||'',cost:hit.cost,note:hit.note||'',source:'kid_request',requestId:hit.id});
       sd(ad);
       toast('已通过申请，扣除 '+hit.cost+' 分','ok');
-      checkBadges();
       render();
       loadApproval();
     });
@@ -3166,235 +2960,11 @@ function rejectRequest(id){
   });
 }
 
-// ===== 主题（#9 深色模式）：auto/light/dark，本机 localStorage，跟随系统走 prefers-color-scheme =====
-var THEME_KEY='sp_theme';
-function getThemeMode(){try{return localStorage.getItem(THEME_KEY)||'auto'}catch(e){return 'auto'}}
-function setThemeMode(m){
-  if(m!=='auto'&&m!=='light'&&m!=='dark')m='auto';
-  try{localStorage.setItem(THEME_KEY,m)}catch(e){}
-  applyTheme();
-  renderThemeSeg();
-  toast(m==='auto'?'已跟随系统外观':(m==='dark'?'已切换深色模式':'已切换浅色模式'),'ok');
-}
-function applyTheme(){
-  var m=getThemeMode();
-  var dark=(m==='dark')||(m==='auto'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
-  var meta=document.querySelector('meta[name="theme-color"]');
-  if(meta)meta.setAttribute('content',dark?'#171512':'#FBF7EF');
-}
-function renderThemeSeg(){
-  var m=getThemeMode();
-  var map={auto:'thAuto',light:'thLight',dark:'thDark'};
-  for(var k in map){
-    var el=document.getElementById(map[k]);
-    if(el)el.classList.toggle('on',k===m);
-  }
-}
-// 系统外观变化时联动（仅 auto 模式生效）
-try{
-  var _spMM=window.matchMedia('(prefers-color-scheme: dark)');
-  var _spMML=function(){if(getThemeMode()==='auto')applyTheme()};
-  if(_spMM.addEventListener)_spMM.addEventListener('change',_spMML);
-  else if(_spMM.addListener)_spMM.addListener(_spMML);
-}catch(e){}
-applyTheme(); // 尽早应用，避免首帧闪白/闪黑
 
-// ===== 成就徽章（#11）：条件达成即解锁，存桶 badges 字段随 sd() 上云；解锁后不回收 =====
-// check(d) 接收当前账号数据桶；涉及刷题的检查走 qzWrongVisibleCount（quiz.js）
-function badgeEarnedSum(d){var s=0;for(var i=0;i<d.records.length;i++)if(d.records[i].score>0)s+=d.records[i].score;return s}
-function badgeAnsweredCount(d){var n=0;for(var i=0;i<d.records.length;i++)if(d.records[i].itemId==='quiz_reward')n++;return n}
-var BADGES=[
-  {id:'first_score',name:'初次记分',desc:'完成第一笔积分记录',check:function(d){return d.records.length>0}},
-  {id:'first_exchange',name:'初次兑换',desc:'完成第一次积分兑换',check:function(d){return d.exchanges.length>0}},
-  {id:'first_goal',name:'小小储蓄家',desc:'创建第一个储蓄目标',check:function(d){return Object.prototype.toString.call(d.goals)==='[object Array]'&&d.goals.length>0}},
-  {id:'custom_item',name:'巧手管家',desc:'创建自定义积分项目',check:function(d){return d.upItems.length>du.length||d.downItems.length>dwn.length||d.shopItems.length>dsh.length}},
-  {id:'earned_100',name:'百分达人',desc:'累计获得 100 分',check:function(d){return badgeEarnedSum(d)>=100}},
-  {id:'earned_500',name:'星光闪耀',desc:'累计获得 500 分',check:function(d){return badgeEarnedSum(d)>=500}},
-  {id:'earned_1000',name:'千分传奇',desc:'累计获得 1000 分',check:function(d){return badgeEarnedSum(d)>=1000}},
-  {id:'exchange_5',name:'兑换小能手',desc:'累计兑换 5 次',check:function(d){return d.exchanges.length>=5}},
-  {id:'quiz_10',name:'初露锋芒',desc:'累计答对 10 次',check:function(d){return badgeAnsweredCount(d)>=10}},
-  {id:'quiz_50',name:'刷题健将',desc:'累计答对 50 次',check:function(d){return badgeAnsweredCount(d)>=50}},
-  {id:'quiz_200',name:'题海无涯',desc:'累计答对 200 次',check:function(d){return badgeAnsweredCount(d)>=200}},
-  {id:'streak_7',name:'七日之约',desc:'连续刷题 7 天',check:function(d){return !!(d.quizStreak&&d.quizStreak.best>=7)}},
-  {id:'streak_30',name:'月度坚持',desc:'连续刷题 30 天',check:function(d){return !!(d.quizStreak&&d.quizStreak.best>=30)}},
-  {id:'wrong_clear',name:'知错就改',desc:'答对过题目且错题集已清空',check:function(d){return badgeAnsweredCount(d)>0&&(typeof qzWrongVisibleCount!=='function'||qzWrongVisibleCount()===0)}}
-];
-// 徽章检查：在记分/兑换/答对/打卡/建目标等动作后调用；有新解锁才落盘上云 + toast
-function checkBadges(){
-  if(sessionRole!=='parent'||!ad)return;
-  if(!ad.badges||typeof ad.badges!=='object'||Object.prototype.toString.call(ad.badges)==='[object Array]')ad.badges={};
-  var newly=[];
-  for(var i=0;i<BADGES.length;i++){
-    var b=BADGES[i];
-    if(ad.badges[b.id])continue;
-    var ok=false;
-    try{ok=b.check(ad)}catch(e){}
-    if(ok){ad.badges[b.id]=Date.now();newly.push(b.name)}
-  }
-  if(newly.length){
-    sd(ad);
-    toast('获得徽章：'+newly.join('、'),'ok');
-    renderBadgeStrip();
-  }
-}
-// 首页徽章条：仅展示已获得（未获得的在「全部」弹窗中灰显）
-function renderBadgeStrip(){
-  var el=document.getElementById('badgeStrip');
-  if(!el)return;
-  if(sessionRole!=='parent'){el.innerHTML='';return}
-  var badges=(ad&&ad.badges&&typeof ad.badges==='object')?ad.badges:{};
-  var earned=0,h='';
-  for(var i=0;i<BADGES.length;i++){
-    var b=BADGES[i];
-    if(!badges[b.id])continue;
-    earned++;
-    h+='<div class="bdg on"><span class="gh-dot" style="background:'+AVCOLORS[i%4]+'" aria-hidden="true"></span>'+escHtml(b.name)+'</div>';
-  }
-  if(!earned)h='<div class="bdg"><span class="gh-dot" style="background:var(--ink3)" aria-hidden="true"></span>暂无徽章，快去解锁吧</div>';
-  el.innerHTML=h;
-  var cnt=document.getElementById('badgeCnt');
-  if(cnt)cnt.textContent=earned+'/'+BADGES.length;
-}
-// 徽章清单弹窗
-function openBadgeModal(){
-  if(sessionRole!=='parent')return;
-  var box=document.getElementById('badgeList');
-  if(!box)return;
-  var badges=(ad&&ad.badges&&typeof ad.badges==='object')?ad.badges:{};
-  var h='';
-  for(var i=0;i<BADGES.length;i++){
-    var b=BADGES[i],ts=badges[b.id];
-    h+='<div class="ri'+(ts?'':' req-done')+'"><span class="gh-dot" style="background:'+(ts?AVCOLORS[i%4]:'var(--ink3)')+'" aria-hidden="true"></span>'
-      +'<div class="inf"><div class="nm">'+escHtml(b.name)+'</div>'
-      +'<div class="tm">'+escHtml(b.desc)+(ts?(' · '+fmtTs(ts)+' 获得'):'')+'</div></div>'
-      +(ts?'<span class="rq-chip a">已获得</span>':'<span class="rq-chip">未达成</span>')+'</div>';
-  }
-  box.innerHTML=h;
-  document.getElementById('mBadge').classList.add('show');
-}
-
-// ===== 储蓄目标（#12）：目标存桶 goals 字段；存入=兑换流水(source:goal)+目标进度+1，
-// 达成打 doneAt；取出=全额退还（记一笔加分流水）并删除目标；总分与流水恒一致（可被 merge 重算） =====
-var curGoalId=null; // 存入弹窗当前目标 id
-function goalListSafe(){return (ad&&Object.prototype.toString.call(ad.goals)==='[object Array]')?ad.goals:[]}
-function openGoalNew(){
-  if(sessionRole!=='parent')return;
-  document.getElementById('glName').value='';
-  document.getElementById('glTarget').value='200';
-  document.getElementById('mGoal').classList.add('show');
-}
-function saveGoalNew(){
-  if(sessionRole!=='parent')return;
-  var n=document.getElementById('glName').value.trim();
-  var t=parseInt(document.getElementById('glTarget').value,10)||0;
-  if(!n){toast('请输入目标名称','err');return}
-  if(t<=0){toast('目标积分必须大于0','err');return}
-  if(!Object.prototype.toString.call(ad.goals).includes('Array'))ad.goals=[];
-  ad.goals.push({id:'gl_'+Date.now(),name:n,target:t,saved:0,createdTime:Date.now(),doneAt:null});
-  sd(ad);
-  document.getElementById('mGoal').classList.remove('show');
-  toast('目标已创建','ok');
-  checkBadges();
-  render();
-}
-// 首页储蓄目标列表（家长端：存入/取出按钮；已达成只可清除）
-function renderGoals(){
-  var box=document.getElementById('goalList');
-  if(!box)return;
-  if(sessionRole!=='parent'){box.innerHTML='';return}
-  var goals=goalListSafe();
-  if(!goals.length){
-    box.innerHTML='<div class="es" style="padding:20px 0">'+esBricks()+'<div class="et">还没有储蓄目标</div><div class="eg">和孩子定一个目标，把积分存进去吧</div></div>';
-    return;
-  }
-  var h='';
-  for(var i=0;i<goals.length;i++){
-    var g=goals[i];
-    if(!g||!g.id)continue;
-    var saved=g.saved||0,target=g.target||1;
-    var pct=Math.min(100,Math.round(saved/target*100));
-    var done=!!g.doneAt;
-    var btns='';
-    if(done){
-      btns='<button class="ap-btn no" onclick="clearGoal(\''+g.id+'\')">清除</button>';
-    }else{
-      btns='<button class="ap-btn ok" onclick="openGoalDep(\''+g.id+'\')">存入</button>'
-          +'<button class="ap-btn no" onclick="withdrawGoal(\''+g.id+'\')">取出</button>';
-    }
-    h+='<div class="ri" style="flex-direction:column;align-items:stretch;gap:8px">'
-      +'<div style="display:flex;align-items:center;gap:8px"><span class="gh-dot" style="background:'+(done?'var(--green)':'var(--yellow)')+'" aria-hidden="true"></span>'
-      +'<div class="inf" style="flex:1;min-width:0"><div class="nm">'+escHtml(g.name||'目标')+(done?' <span class="rq-chip a">已达成</span>':'')+'</div>'
-      +'<div class="tm">'+saved+' / '+target+' 分</div></div>'+btns+'</div>'
-      +'<div class="goal-bar'+(done?' done':'')+'"><i style="width:'+pct+'%"></i></div>'
-      +'</div>';
-  }
-  box.innerHTML=h;
-}
-function openGoalDep(id){
-  if(sessionRole!=='parent')return;
-  var g=null,gs=goalListSafe();
-  for(var i=0;i<gs.length;i++)if(gs[i].id===id){g=gs[i];break}
-  if(!g||g.doneAt)return;
-  curGoalId=id;
-  document.getElementById('glDepName').textContent=g.name||'目标';
-  document.getElementById('glDepAvail').textContent='当前可用 '+ad.totalPoints+' 分 · 已存 '+(g.saved||0)+' / '+g.target+' 分';
-  document.getElementById('glDepAmt').value='10';
-  document.getElementById('mGoalDep').classList.add('show');
-}
-function depositGoal(){
-  if(sessionRole!=='parent'||!curGoalId)return;
-  var amt=parseInt(document.getElementById('glDepAmt').value,10)||0;
-  if(amt<=0){toast('存入积分必须大于0','err');return}
-  var g=null,gs=goalListSafe();
-  for(var i=0;i<gs.length;i++)if(gs[i].id===curGoalId){g=gs[i];break}
-  if(!g){toast('目标不存在','err');return}
-  if(g.doneAt){toast('该目标已达成','err');return}
-  if(ad.totalPoints<amt){toast('积分不足','err');return}
-  ad.totalPoints-=amt;
-  g.saved=(g.saved||0)+amt;
-  // 存入走兑换流水（source:goal），保证总分与流水一致、删除记录可退
-  ad.exchanges.push({id:'ex_'+Date.now(),date:today(),timestamp:Date.now(),shopItemId:'',name:'储蓄 · '+g.name,icon:'',cost:amt,source:'goal',goalId:g.id});
-  var justDone=false;
-  if(!g.doneAt&&g.saved>=g.target){g.doneAt=Date.now();justDone=true}
-  sd(ad);
-  document.getElementById('mGoalDep').classList.remove('show');
-  toast(justDone?('已存入 '+amt+' 分，目标达成！'):('已存入 '+amt+' 分'),justDone?'ok':undefined);
-  checkBadges();
-  render();
-}
-// 取出：全额退还（记加分流水）并删除目标
-function withdrawGoal(id){
-  if(sessionRole!=='parent')return;
-  var g=null,gs=goalListSafe();
-  for(var i=0;i<gs.length;i++)if(gs[i].id===id){g=gs[i];break}
-  if(!g)return;
-  var refund=g.saved||0;
-  sc2('取出储蓄','将取出「'+g.name+'」已存入的 '+refund+' 分并删除该目标。确定继续吗？',function(){
-    ad.totalPoints+=refund;
-    if(refund>0){
-      ad.records.push({id:'r_'+Date.now(),date:today(),timestamp:Date.now(),type:'up',
-        itemId:'goal_refund',name:'取出储蓄 · '+g.name,category:'学习',score:refund,note:''});
-    }
-    ad.goals=goalListSafe().filter(function(x){return x.id!==id});
-    sd(ad);
-    toast('已取出 '+refund+' 分','ok');
-    render();
-  });
-}
-// 已达成目标的「清除」：仅移除条目（积分已在存入时消耗），无退款
-function clearGoal(id){
-  if(sessionRole!=='parent')return;
-  sc2('清除目标','已达成的目标将从列表移除（存入的积分已消耗，不退还）。确定继续吗？',function(){
-    ad.goals=goalListSafe().filter(function(x){return x.id!==id});
-    sd(ad);
-    toast('已清除目标');
-    render();
-  });
-}
 
 // ===== 学习报告（#8）：周/月积分趋势（纯 CSS 柱状）+ 加分构成 + 刷题打卡与兑换统计 =====
 var reportRange='week'; // 'week' | 'month'（内存态，刷新重置）
+var rdStart=''; // 当前报告范围起点（YYYY-MM-DD），明细弹窗按此过滤
 function setReportRange(r){reportRange=(r==='month')?'month':'week';renderReport()}
 function renderReportTabs(){
   var el=document.getElementById('reportRangeTabs');
@@ -3417,6 +2987,7 @@ function renderReport(){
   else startD.setDate(1);
   var f=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
   var startStr=f(startD),endStr=today();
+  rdStart=startStr; // 记录当前报告范围起点，供明细弹窗按范围过滤
   // 逐日净分 + 分类加分
   var dl2=[],guard=0;
   (function(){var d=new Date(startD);
@@ -3445,7 +3016,7 @@ function renderReport(){
     var hh=Math.max(3,Math.round(Math.abs(v)/maxAbs*100));
     var cls=v>0?' u':(v<0?' d':'');
     var bg=v===0?';background:var(--line)':'';
-    chart+='<div class="rp-col" title="'+dl2[i]+' · '+(v>0?'+':'')+v+' 分"><i class="rp-bar'+cls+'" style="height:'+hh+'%'+bg+'"></i></div>';
+    chart+='<div class="rp-col" title="'+dl2[i]+' · '+(v>0?'+':'')+v+' 分" onclick="openRdDay(\''+dl2[i]+'\')"><i class="rp-bar'+cls+'" style="height:'+hh+'%'+bg+'"></i></div>';
   }
   chart+='</div><div class="rp-x">';
   var step=reportRange==='week'?1:Math.max(1,Math.ceil(dl2.length/8));
@@ -3461,7 +3032,7 @@ function renderReport(){
   var maxCat=catsArr.length?catsArr[0][1]:1;
   var catHtml='';
   for(i=0;i<catsArr.length;i++){
-    catHtml+='<div class="rp-row"><span class="rp-cat">'+escHtml(catsArr[i][0])+'</span>'
+    catHtml+='<div class="rp-row" onclick="openRdCat(\''+catsArr[i][0]+'\')"><span class="rp-cat">'+escHtml(catsArr[i][0])+'</span>'
       +'<span class="rp-track"><i style="width:'+Math.round(catsArr[i][1]/maxCat*100)+'%;background:'+catColor(catsArr[i][0])+'"></i></span>'
       +'<span class="rp-val num">+'+catsArr[i][1]+'</span></div>';
   }
@@ -3482,16 +3053,108 @@ function renderReport(){
     +chart
     +'<div class="rp-lg"><span class="rp-li"><i class="rp-bar u" style="width:10px;height:10px"></i>净加分</span><span class="rp-li"><i class="rp-bar d" style="width:10px;height:10px"></i>净扣分</span></div></div>'
     +'<div class="sec"><div class="sec-h"><div class="st-t">加分构成</div></div><div class="rp-cats">'+catHtml+'</div></div>'
-    +'<div class="sec"><div class="sec-h"><div class="st-t">刷题与打卡（累计）</div></div><div class="qs rp-grid">'
-      +'<div class="sc"><div class="sv num">'+ans+'</div><div class="sl">累计答对</div></div>'
-      +'<div class="sc"><div class="sv num">'+ansPts+'</div><div class="sl">答题积分</div></div>'
-      +'<div class="sc"><div class="sv num">'+wrongN+'</div><div class="sl">待复习错题</div></div>'
-      +'<div class="sc"><div class="sv num">'+stk+'</div><div class="sl">连续'+(best?' / 最佳'+best:'')+'</div></div>'
+    +'<div class="sec"><div class="sec-h"><div class="st-t">刷题与打卡（累计，点击查看明细）</div></div><div class="qs rp-grid">'
+      +'<div class="sc rp-tap" onclick="openRdQuiz()"><div class="sv num">'+ans+'</div><div class="sl">累计答对</div></div>'
+      +'<div class="sc rp-tap" onclick="openRdQuiz()"><div class="sv num">'+ansPts+'</div><div class="sl">答题积分</div></div>'
+      +'<div class="sc rp-tap" onclick="openRdWrong()"><div class="sv num">'+wrongN+'</div><div class="sl">待复习错题</div></div>'
+      +'<div class="sc rp-tap" onclick="openRdStreak()"><div class="sv num">'+stk+'</div><div class="sl">连续'+(best?' / 最佳'+best:'')+'</div></div>'
     +'</div></div>'
-    +'<div class="sec"><div class="sec-h"><div class="st-t">兑换（所选范围）</div></div><div class="qs" style="padding:0">'
-      +'<div class="sc"><div class="sv num">'+exs.length+'</div><div class="sl">兑换次数</div></div>'
-      +'<div class="sc"><div class="sv num">'+exCost+'</div><div class="sl">消耗积分</div></div>'
+    +'<div class="sec"><div class="sec-h"><div class="st-t">兑换（所选范围，点击查看明细）</div></div><div class="qs" style="padding:0">'
+      +'<div class="sc rp-tap" onclick="openRdEx()"><div class="sv num">'+exs.length+'</div><div class="sl">兑换次数</div></div>'
+      +'<div class="sc rp-tap" onclick="openRdEx()"><div class="sv num">'+exCost+'</div><div class="sl">消耗积分</div></div>'
     +'</div></div>';
+}
+
+// ===== 报告明细（#8 增强）：点击报告任一柱/分类/统计卡 → 弹窗查看对应明细 =====
+function rdShow(title,html){
+  document.getElementById('mRdTitle').textContent=title;
+  document.getElementById('mRdBody').innerHTML=html;
+  document.getElementById('mRd').classList.add('show');
+}
+// 某日明细：当日全部积分记录 + 兑换流水（时间倒序）
+function openRdDay(ds){
+  if(sessionRole!=='parent'||!ad)return;
+  var items=[],i;
+  for(i=0;i<ad.records.length;i++)if(ad.records[i].date===ds)items.push({t:'r',d:ad.records[i]});
+  for(i=0;i<ad.exchanges.length;i++)if(ad.exchanges[i].date===ds)items.push({t:'e',d:ad.exchanges[i]});
+  items.sort(function(a,b){return (b.d.timestamp||0)-(a.d.timestamp||0)});
+  var h='';
+  if(!items.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该日暂无记录</div></div>';
+  for(i=0;i<items.length;i++)h+=items[i].t==='r'?renderRecord(items[i].d,ds):renderExchange(items[i].d,ds);
+  rdShow(fd(ds)+' · 当日明细',h);
+}
+// 某分类加分明细：报告范围内该分类的全部加分记录
+function openRdCat(cat){
+  if(sessionRole!=='parent'||!ad)return;
+  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&(r.category||'其他')===cat});
+  recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  var h='';
+  if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内「'+escHtml(cat)+'」暂无加分</div></div>';
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date);
+  rdShow(cat+' · 加分明细',h);
+}
+// 答题积分明细：全部 quiz_reward 流水（累计口径）
+function openRdQuiz(){
+  if(sessionRole!=='parent'||!ad)return;
+  var recs=ad.records.filter(function(r){return r.itemId==='quiz_reward'});
+  recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  var h='';
+  if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">还没有答题积分记录</div></div>';
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date);
+  rdShow('答题积分明细（累计 '+recs.length+' 次）',h);
+}
+// 待复习错题清单：跨题库（题名 + 出处题库 + 复习进度）
+function openRdWrong(){
+  if(sessionRole!=='parent')return;
+  if(typeof qzAccStore!=='function'){toast('刷题模块未加载','err');return}
+  var store=qzAccStore();
+  var ids=['builtin'];
+  for(var j=0;j<QZ_BANKS.length;j++)if(QZ_BANKS[j].id!=='builtin')ids.push(QZ_BANKS[j].id);
+  var total=0,h='';
+  for(var k=0;k<ids.length;k++){
+    var bank=(ids[k]==='builtin')?QZ_BUILTIN_BANK:QZ_BANK_CACHE[ids[k]];
+    if(!bank||!bank.questions)continue;
+    var w=store.wrong&&store.wrong[ids[k]];
+    if(Object.prototype.toString.call(w)!=='[object Array]')continue;
+    var ex=store.excluded&&store.excluded[ids[k]];
+    var exs=(Object.prototype.toString.call(ex)==='[object Array]')?new Set(ex):null;
+    var ws=w.slice().sort(function(a,b){return a-b});
+    for(var m=0;m<ws.length;m++){
+      var idx=ws[m];
+      if(typeof idx!=='number'||idx<0||idx>=bank.questions.length)continue;
+      if(exs&&exs.has(idx))continue;
+      total++;
+      var d=bank.questions[idx];
+      var stk=(typeof qzWrongStreakOf==='function')?qzWrongStreakOf(ids[k],idx):0;
+      h+='<div class="ri"><span class="cat-dot" style="background:var(--red)" aria-hidden="true"></span>'
+        +'<div class="inf"><div class="nm">'+escHtml(d.t||'未命名题目')+'</div>'
+        +'<div class="tm">出自：'+escHtml(bank.name||'')+(stk>0?' · 复习 '+stk+'/2':'')+'</div></div></div>';
+    }
+  }
+  if(!total)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">错题集已清空，太棒了！</div></div>';
+  rdShow('待复习错题（'+total+' 题）',h);
+}
+// 打卡积分明细：里程碑奖励 + 补签卡购买流水
+function openRdStreak(){
+  if(sessionRole!=='parent'||!ad)return;
+  var recs=ad.records.filter(function(r){return r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'});
+  recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  var s=(ad.quizStreak&&ad.quizStreak.count)||0;
+  var best=(ad.quizStreak&&ad.quizStreak.best)||0;
+  var h='';
+  if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">暂无打卡相关积分流水</div></div>';
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date);
+  rdShow('打卡积分明细 · 连续 '+s+' 天 / 最佳 '+best+' 天',h);
+}
+// 兑换明细：报告范围内全部兑换/储蓄流水
+function openRdEx(){
+  if(sessionRole!=='parent'||!ad)return;
+  var exs=ad.exchanges.filter(function(e){return e.date>=rdStart&&e.date<=today()});
+  exs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  var h='';
+  if(!exs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内暂无兑换</div></div>';
+  for(var i=0;i<exs.length;i++)h+=renderExchange(exs[i],exs[i].date);
+  rdShow('兑换明细（'+rdStart.replace(/-/g,'/')+' 起）',h);
 }
 
 // ===== 本地备份（#2）：导出当前账号账本+刷题进度+自定义题库为 JSON；导入覆盖本机并上云 =====
