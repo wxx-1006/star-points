@@ -1,0 +1,641 @@
+{
+  "id": "eng-46",
+  "name": "英语单词·四至六年级",
+  "subtitle": "PEP 词汇 · 双向卡",
+  "cats": [
+    {
+      "name": "学校与学习",
+      "note": "校园、课程与学习用品（PEP 三上至五上相关单元）"
+    },
+    {
+      "name": "家庭与朋友",
+      "note": "家人称呼与人物性格（PEP 三下、四上、五上相关单元）"
+    },
+    {
+      "name": "食物餐饮",
+      "note": "一日三餐、食物口味与点餐句型（PEP 四上、四下、五上相关单元）"
+    },
+    {
+      "name": "动物自然",
+      "note": "常见动物与自然公园（PEP 三上、三下、四下、五上相关单元）"
+    },
+    {
+      "name": "数字颜色方位",
+      "note": "数字、颜色与方位词（PEP 三上、三下、六上相关单元）"
+    },
+    {
+      "name": "身体健康与运动",
+      "note": "身体部位、健康与球类运动（PEP 三上、五上、六上相关单元）"
+    },
+    {
+      "name": "天气季节与衣着",
+      "note": "天气、四季与服装（PEP 四下、五下相关单元）"
+    },
+    {
+      "name": "场所交通与活动",
+      "note": "城市场所、出行方式与课余活动（PEP 五上、六上相关单元）"
+    }
+  ],
+  "questions": [
+    {
+      "cat": 0,
+      "title": "单词·classroom",
+      "question": "“教室”用英语怎么说？（提示：c 开头）",
+      "answer": "classroom。（PEP 四年级上册 Unit 1）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·schoolbag",
+      "question": "“书包”用英语怎么说？（提示：s 开头）并试着拼写",
+      "answer": "schoolbag。拼写：schoolbag 是复合词，school（学校）+ bag（包），两个部分都别漏。（PEP 四年级上册 Unit 2）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·Chinese",
+      "question": "“语文（课）”用英语怎么说？（提示：C 开头）并试着拼写",
+      "answer": "Chinese。拼写：表示“语文；中国的”时首字母 C 必须大写。（PEP 核心词汇）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·English",
+      "question": "“英语（课）”用英语怎么说？（提示：E 开头）并试着拼写",
+      "answer": "English。拼写：表示“英语”这门语言时首字母 E 必须大写。（PEP 四年级下册 Unit 2）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·science",
+      "question": "“科学（课）”用英语怎么说？（提示：s 开头）",
+      "answer": "science。（PEP 核心词汇）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·homework",
+      "question": "“作业”用英语怎么说？（提示：h 开头）",
+      "answer": "homework。（PEP 五年级上册 Unit 2；短语 do homework 是“做作业”）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·difficult",
+      "question": "“困难的”用英语怎么说？（提示：d 开头）",
+      "answer": "difficult。（PEP 核心词汇；反义词 easy 是“容易的”）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·study",
+      "question": "“书房”用英语怎么说？（提示：s 开头；它也可以表示“学习”）",
+      "answer": "study。（PEP 四年级上册 Unit 4）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·teacher",
+      "question": "“teacher”是什么意思？",
+      "answer": "教师；老师。（PEP 核心词汇）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·eraser",
+      "question": "“eraser”是什么意思？",
+      "answer": "橡皮。（PEP 三年级上册 Unit 1）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·storybook",
+      "question": "“storybook”是什么意思？",
+      "answer": "故事书。（PEP 四年级上册 Unit 2；story 是“故事”，book 是“书”）"
+    },
+    {
+      "cat": 0,
+      "title": "单词·crayon",
+      "question": "“crayon”是什么意思？",
+      "answer": "蜡笔；彩色蜡笔。（PEP 三年级上册 Unit 1）"
+    },
+    {
+      "cat": 0,
+      "title": "短语·read books",
+      "question": "“读书”用英语说？（提示：r 开头，两个词）",
+      "answer": "read books。（PEP 五年级上册 Unit 2）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·family",
+      "question": "“家庭”用英语怎么说？（提示：f 开头）",
+      "answer": "family。（PEP 三年级下册 Unit 2）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·uncle",
+      "question": "“叔叔；舅舅”用英语怎么说？（提示：u 开头）",
+      "answer": "uncle。（PEP 四年级上册 Unit 6）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·cousin",
+      "question": "“堂（表）兄弟；堂（表）姐妹”用英语怎么说？（提示：c 开头）并试着拼写",
+      "answer": "cousin。拼写：c-o-u-s-i-n，中间是 cou，别写成 cousen。（PEP 四年级上册 Unit 6）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·aunt",
+      "question": "“姑母；姨母；婶母”用英语怎么说？（提示：a 开头）并试着拼写",
+      "answer": "aunt。拼写：a-u-n-t，u 在 n 前面，别写成 anut；也别和 uncle（叔叔）弄混。（PEP 四年级上册 Unit 6）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·tall",
+      "question": "“高的”用英语怎么说？（提示：t 开头）",
+      "answer": "tall。（PEP 三年级下册 Unit 3；六年级下册 Unit 1 学比较级 taller）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·friendly",
+      "question": "“友好的”用英语怎么说？（提示：f 开头）",
+      "answer": "friendly。（PEP 四年级上册 Unit 3；friend 是“朋友”，加 ly 变形容词）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·young",
+      "question": "“年轻的”用英语怎么说？（提示：y 开头）",
+      "answer": "young。（PEP 五年级上册 Unit 1；反义词 old 是“年老的”）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·grandparents",
+      "question": "“grandparents”是什么意思？",
+      "answer": "祖父母；外祖父母（爷爷、奶奶、外公、外婆的统称）。（PEP 核心词汇）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·brother",
+      "question": "“brother”是什么意思？",
+      "answer": "兄；弟。（PEP 三年级下册 Unit 2）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·strong",
+      "question": "“strong”是什么意思？",
+      "answer": "强壮的。（PEP 四年级上册 Unit 3）"
+    },
+    {
+      "cat": 1,
+      "title": "单词·polite",
+      "question": "“polite”是什么意思？",
+      "answer": "有礼貌的；客气的。（PEP 五年级上册 Unit 1）"
+    },
+    {
+      "cat": 1,
+      "title": "短语·pen pal",
+      "question": "“笔友”用英语说？（提示：p 开头，两个词）",
+      "answer": "pen pal。（PEP 六年级上册 Unit 4 I have a pen pal）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·breakfast",
+      "question": "“早餐”用英语怎么说？（提示：b 开头）并试着拼写",
+      "answer": "breakfast。拼写：break + fast 两个词合成，别写成 brekfast。（PEP 四年级下册 Unit 2）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·vegetable",
+      "question": "“蔬菜”用英语怎么说？（提示：v 开头）并试着拼写",
+      "answer": "vegetable。拼写：v-e-g-e-t-a-b-l-e，中间的 e-t-a 别漏，常用复数 vegetables。（PEP 四年级下册 Unit 4）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·dinner",
+      "question": "“晚餐”用英语怎么说？（提示：d 开头）",
+      "answer": "dinner。（PEP 四年级上册 Unit 5 Dinner's ready；拼写注意双 n）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·delicious",
+      "question": "“美味的”用英语怎么说？（提示：d 开头）",
+      "answer": "delicious。（PEP 五年级上册 Unit 3）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·thirsty",
+      "question": "“口渴的”用英语怎么说？（提示：t 开头）",
+      "answer": "thirsty。（PEP 五年级上册 Unit 3；hungry 是“饿的”）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·chicken",
+      "question": "“鸡肉”用英语怎么说？（提示：c 开头；它也表示“小鸡”）",
+      "answer": "chicken。（PEP 四年级上册 Unit 5）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·hungry",
+      "question": "“饿的”用英语怎么说？（提示：h 开头）",
+      "answer": "hungry。（PEP 核心词汇）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·menu",
+      "question": "“菜单”用英语怎么说？（提示：m 开头）",
+      "answer": "menu。（PEP 核心词汇）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·hamburger",
+      "question": "“hamburger”是什么意思？",
+      "answer": "汉堡包。（PEP 五年级上册 Unit 3）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·beef",
+      "question": "“beef”是什么意思？",
+      "answer": "牛肉。（PEP 四年级上册 Unit 5）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·sweet",
+      "question": "“sweet”是什么意思？",
+      "answer": "甜的；糖果。（PEP 五年级上册 Unit 3）"
+    },
+    {
+      "cat": 2,
+      "title": "单词·fresh",
+      "question": "“fresh”是什么意思？",
+      "answer": "新鲜的。（PEP 五年级上册 Unit 3）"
+    },
+    {
+      "cat": 2,
+      "title": "短语·would like",
+      "question": "想客气地说“我想要一个汉堡”，这里的“想要”用英语说？（提示：w 开头，两个词）",
+      "answer": "would like。（PEP 五年级上册 Unit 3 句型 What would you like to eat?）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·elephant",
+      "question": "“大象”用英语怎么说？（提示：e 开头）",
+      "answer": "elephant。（PEP 三年级上册 Unit 4）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·panda",
+      "question": "“熊猫”用英语怎么说？（提示：p 开头）",
+      "answer": "panda。（PEP 三年级上册 Unit 4）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·monkey",
+      "question": "“猴子”用英语怎么说？（提示：m 开头）并试着拼写",
+      "answer": "monkey。拼写：结尾是 key，别丢掉 e 或写成 monke。（PEP 三年级上册 Unit 4）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·rabbit",
+      "question": "“兔子”用英语怎么说？（提示：r 开头）并试着拼写",
+      "answer": "rabbit。拼写：双 b，rab-bit，别只写一个 b。（PEP 核心词汇）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·bird",
+      "question": "“鸟”用英语怎么说？（提示：b 开头）",
+      "answer": "bird。（PEP 三年级上册 Unit 4）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·forest",
+      "question": "“森林”用英语怎么说？（提示：f 开头）",
+      "answer": "forest。（PEP 五年级上册 Unit 6）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·beautiful",
+      "question": "“美丽的”用英语怎么说？（提示：b 开头）并试着拼写",
+      "answer": "beautiful。拼写：中间是 eau 三个字母连用，别写成 beutiful。（PEP 核心词汇）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·giraffe",
+      "question": "“giraffe”是什么意思？",
+      "answer": "长颈鹿。（PEP 三年级下册 Unit 3）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·sheep",
+      "question": "“sheep”是什么意思？",
+      "answer": "绵羊。（PEP 四年级下册 Unit 4；单复数同形，很多只也是 sheep）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·river",
+      "question": "“river”是什么意思？",
+      "answer": "河流。（PEP 五年级上册 Unit 6）"
+    },
+    {
+      "cat": 3,
+      "title": "单词·horse",
+      "question": "“horse”是什么意思？",
+      "answer": "马。（PEP 四年级下册 Unit 4）"
+    },
+    {
+      "cat": 3,
+      "title": "短语·go to the zoo",
+      "question": "“去动物园”用英语说？（提示：g 开头）",
+      "answer": "go to the zoo。（PEP 三年级上册 Unit 4 语境）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·eleven",
+      "question": "“十一”用英语怎么说？（提示：e 开头）",
+      "answer": "eleven。（PEP 三年级下册 Unit 6）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·fifteen",
+      "question": "“十五”用英语怎么说？（提示：f 开头）并试着拼写",
+      "answer": "fifteen。拼写：five 变 fifteen 时 ve 变 f，是 fif 不是 fiv，别写成 fiveteen。（PEP 三年级下册 Unit 6）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·forty",
+      "question": "“四十”用英语怎么说？（提示：f 开头）并试着拼写",
+      "answer": "forty。拼写：four 变 forty 时去掉 u，别写成 fourty。（PEP 核心词汇）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·twenty",
+      "question": "“二十”用英语怎么说？（提示：t 开头）",
+      "answer": "twenty。（PEP 三年级下册 Unit 6）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·yellow",
+      "question": "“黄色”用英语怎么说？（提示：y 开头）并试着拼写",
+      "answer": "yellow。拼写：双 l，yell + ow，别只写一个 l。（PEP 三年级上册 Unit 2）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·orange",
+      "question": "“橙色”用英语怎么说？（提示：o 开头；它也表示“橙子”）",
+      "answer": "orange。（PEP 三年级上册 Unit 2）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·under",
+      "question": "“在……下面”用英语怎么说？（提示：u 开头）",
+      "answer": "under。（PEP 三年级下册 Unit 4 Where is my car?）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·between",
+      "question": "“在（两者）中间”用英语怎么说？（提示：b 开头）",
+      "answer": "between。（PEP 核心词汇）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·purple",
+      "question": "“purple”是什么意思？",
+      "answer": "紫色；紫色的。（PEP 核心词汇）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·twelve",
+      "question": "“twelve”是什么意思？",
+      "answer": "十二。（PEP 三年级下册 Unit 6）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·east",
+      "question": "“east”是什么意思？",
+      "answer": "东方；东。（PEP 核心词汇；反义词 west 是“西”）"
+    },
+    {
+      "cat": 4,
+      "title": "单词·north",
+      "question": "“north”是什么意思？",
+      "answer": "北方；北。（PEP 核心词汇）"
+    },
+    {
+      "cat": 4,
+      "title": "短语·turn left",
+      "question": "“向左转”用英语说？（提示：t 开头）",
+      "answer": "turn left。（PEP 六年级上册 Unit 1；right 是“右边”）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·head",
+      "question": "“头”用英语怎么说？（提示：h 开头）",
+      "answer": "head。（PEP 三年级上册 Unit 3）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·basketball",
+      "question": "“篮球”用英语怎么说？（提示：b 开头）并试着拼写",
+      "answer": "basketball。拼写：basket（篮子）+ ball（球）合成，ball 是双 l 结尾，别写成 basketbal。（PEP 核心词汇）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·football",
+      "question": "“足球”用英语怎么说？（提示：f 开头）",
+      "answer": "football。（PEP 五年级上册 Unit 2；短语 play football 是“踢足球”）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·ill",
+      "question": "“生病的”用英语怎么说？（提示：i 开头）",
+      "answer": "ill。（PEP 六年级上册 Unit 6）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·healthy",
+      "question": "“健康的”用英语怎么说？（提示：h 开头）并试着拼写",
+      "answer": "healthy。拼写：health（健康）+ y，th 组合，别写成 healty（漏 h）。（PEP 五年级上册 Unit 3）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·hurt",
+      "question": "“受伤”用英语怎么说？（提示：h 开头）",
+      "answer": "hurt。（PEP 六年级下册 Unit 3；短语 hurt my foot 是“伤到脚”）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·cold",
+      "question": "“感冒”用英语怎么说？（提示：c 开头；它也表示“寒冷的”）",
+      "answer": "cold。（PEP 三年级下册 Unit 3；六年级下册 Unit 2 短语 have a cold 是“感冒”）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·tooth",
+      "question": "“tooth”是什么意思？",
+      "answer": "牙齿。（PEP 核心词汇；复数是 teeth）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·arm",
+      "question": "“arm”是什么意思？",
+      "answer": "手臂；胳膊。（PEP 三年级上册 Unit 3）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·ping-pong",
+      "question": "“ping-pong”是什么意思？",
+      "answer": "乒乓球。（PEP 五年级上册 Unit 4）"
+    },
+    {
+      "cat": 5,
+      "title": "单词·swim",
+      "question": "“swim”是什么意思？",
+      "answer": "游泳。（PEP 五年级上册 Unit 4）"
+    },
+    {
+      "cat": 5,
+      "title": "短语·see a doctor",
+      "question": "“看病；看医生”用英语说？（提示：s 开头）",
+      "answer": "see a doctor。（PEP 六年级上册 Unit 6）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·weather",
+      "question": "“天气”用英语怎么说？（提示：w 开头）并试着拼写",
+      "answer": "weather。拼写：中间是 th 组合，别写成 weater。（PEP 四年级下册 Unit 3）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·spring",
+      "question": "“春天”用英语怎么说？（提示：s 开头）",
+      "answer": "spring。（PEP 五年级下册 Unit 2）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·summer",
+      "question": "“夏天”用英语怎么说？（提示：s 开头）并试着拼写",
+      "answer": "summer。拼写：双 m，sum-mer，别只写一个 m。（PEP 五年级下册 Unit 2）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·cloudy",
+      "question": "“多云的”用英语怎么说？（提示：c 开头）",
+      "answer": "cloudy。（PEP 四年级下册 Unit 3；cloud 是“云”）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·snowy",
+      "question": "“下雪的”用英语怎么说？（提示：s 开头）",
+      "answer": "snowy。（PEP 四年级下册 Unit 3；snow 是“雪”）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·sweater",
+      "question": "“毛衣”用英语怎么说？（提示：s 开头）并试着拼写",
+      "answer": "sweater。拼写：sweat + er，中间有 a，别写成 sweter。（PEP 四年级下册 Unit 5）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·coat",
+      "question": "“外套；大衣”用英语怎么说？（提示：c 开头）",
+      "answer": "coat。（PEP 四年级下册 Unit 5；拼写注意 oa 组合）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·clothes",
+      "question": "“衣服”用英语怎么说？（提示：c 开头）并试着拼写",
+      "answer": "clothes。拼写：th 组合，别写成 cloths（那是“布”的意思）。（PEP 四年级下册 Unit 5）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·winter",
+      "question": "“winter”是什么意思？",
+      "answer": "冬天。（PEP 五年级下册 Unit 2）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·rainy",
+      "question": "“rainy”是什么意思？",
+      "answer": "下雨的；多雨的。（PEP 四年级下册 Unit 3；rain 是“雨”）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·scarf",
+      "question": "“scarf”是什么意思？",
+      "answer": "围巾。（PEP 核心词汇；复数是 scarves）"
+    },
+    {
+      "cat": 6,
+      "title": "单词·trousers",
+      "question": "“trousers”是什么意思？",
+      "answer": "裤子。（PEP 核心词汇；通常用复数形式）"
+    },
+    {
+      "cat": 6,
+      "title": "短语·fly kites",
+      "question": "“放风筝”用英语说？（提示：f 开头）",
+      "answer": "fly kites；放一只风筝可以说 fly a kite。（PEP 核心词汇）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·library",
+      "question": "“图书馆”用英语怎么说？（提示：l 开头）并试着拼写",
+      "answer": "library。拼写：l-i-b-r-a-r-y，中间是 br，别拼成 libary（漏了 r）。（PEP 四年级下册 Unit 1）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·hospital",
+      "question": "“医院”用英语怎么说？（提示：h 开头）并试着拼写",
+      "answer": "hospital。拼写：结尾是 tal，别写成 hospitol。（PEP 六年级上册 Unit 1）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·bookstore",
+      "question": "“书店”用英语怎么说？（提示：b 开头）",
+      "answer": "bookstore。（PEP 六年级上册 Unit 1；book + store 复合词）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·cinema",
+      "question": "“电影院”用英语怎么说？（提示：c 开头）",
+      "answer": "cinema。（PEP 六年级上册 Unit 1）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·subway",
+      "question": "“地铁”用英语怎么说？（提示：s 开头）",
+      "answer": "subway。（PEP 六年级上册 Unit 2；短语 by subway 是“乘地铁”）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·train",
+      "question": "“火车”用英语怎么说？（提示：t 开头）",
+      "answer": "train。（PEP 六年级上册 Unit 2；短语 by train 是“乘火车”）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·park",
+      "question": "“公园”用英语怎么说？（提示：p 开头）",
+      "answer": "park。（PEP 五年级上册 Unit 6；nature park 是“自然公园”）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·museum",
+      "question": "“museum”是什么意思？",
+      "answer": "博物馆。（PEP 六年级上册 Unit 1；science museum 是“科学博物馆”）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·plane",
+      "question": "“plane”是什么意思？",
+      "answer": "飞机。（PEP 六年级上册 Unit 2）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·crossing",
+      "question": "“crossing”是什么意思？",
+      "answer": "十字路口。（PEP 六年级上册 Unit 1；cross 是“穿过”）"
+    },
+    {
+      "cat": 7,
+      "title": "单词·picnic",
+      "question": "“picnic”是什么意思？",
+      "answer": "野餐。（PEP 核心词汇；短语 go on a picnic 是“去野餐”）"
+    },
+    {
+      "cat": 7,
+      "title": "短语·go straight",
+      "question": "“直走”用英语说？（提示：g 开头，两个词）",
+      "answer": "go straight。（PEP 六年级上册 Unit 1 问路常用语）"
+    }
+  ]
+}
