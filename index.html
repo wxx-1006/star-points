@@ -684,6 +684,7 @@ body.kid-mode{padding-bottom:72px}
 <div class="tb" id="kidTb" style="display:none">
   <div class="ti on" id="kt-records" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
   <div class="ti" id="kt-shop" onclick="st('shop')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">商城</span></div>
+  <div class="ti" id="kt-report" onclick="st('report')"><span class="t-ico"><span class="tico-chart" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">报告</span></div>
 </div>
 
 <!-- 记录分数弹窗 -->
@@ -2073,9 +2074,9 @@ var dpSelectedEnd=null;
 
 function st(tab){
   if(sessionRole==='kid'){
-    // 孩子端仅两页：记录 / 商城（刷题仅家长端开放，孩子端无入口，此处双保险拦截）
+    // 孩子端三个页签：记录 / 商城 / 报告（刷题仍仅家长端开放，孩子端无入口，此处双保险拦截）
     if(tab==='quiz')return;
-    if(tab!=='records'&&tab!=='shop')return;
+    if(tab!=='records'&&tab!=='shop'&&tab!=='report')return;
     var pages=document.querySelectorAll('.pg');
     for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
     document.getElementById('p-'+tab).classList.add('on');
@@ -2083,12 +2084,14 @@ function st(tab){
     for(var j=0;j<ktabs.length;j++) ktabs[j].classList.remove('on');
     document.getElementById('kt-'+tab).classList.add('on');
     curTab=tab;
+    if(tab==='report')renderReport(); // 先按当前数据渲染，拉取后刷新
     if(!currentUser){render();return}
-    // 进入记录页/商城页均重新拉取：家长桶（总积分/奖励项）
+    // 进入记录页/商城/报告均重新拉取：家长桶（总积分/奖励项/刷题只读字段）
     syncPull(currentUser).then(function(data){
       ad=data;
       render();
       if(tab==='shop')renderShopKid();
+      if(tab==='report')renderReport(); // 孩子端报告：只读视图（明细行同样无编辑入口）
     });
     return;
   }
@@ -2228,26 +2231,26 @@ function cmpTimeDesc(a,b){
   return (b.data.timestamp||0)-(a.data.timestamp||0);
 }
 
-function renderRecord(r,currentDay){
+function renderRecord(r,currentDay,ro){
   var u=r.score>0;
   var cls=u?'u':'d';
   var sign=u?'+':'';
   var noteStr=r.note?(' · '+escHtml(r.note)):'';
   var timeStr=(r.date===currentDay)?fdt(r.timestamp):fd(r.date)+' '+fdt(r.timestamp);
-  // 孩子端只读 + 系统流水（答题奖励/打卡里程碑/补签卡）不可删除 → 均不渲染删除按钮
-  var del=(sessionRole==='kid'||r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy')?'':'<button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button>';
+  // 只读模式（报告明细）/孩子端只读 + 系统流水（答题奖励/打卡里程碑/补签卡）不可删除 → 均不渲染删除按钮
+  var del=(ro||sessionRole==='kid'||r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy')?'':'<button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button>';
   return '<div class="ri"><span class="cat-dot" style="background:'+catColor(r.category)+'"></span><div class="inf"><div class="nm">'+escHtml(r.name)+'</div><div class="tm">'+timeStr+noteStr+'</div></div><div class="sc2 '+cls+'">'+sign+r.score+'</div>'+del+'</div>';
 }
 
-function renderExchange(e,currentDay){
+function renderExchange(e,currentDay,ro){
   var timeStr=(e.date===currentDay)?fdt(e.timestamp):fd(e.date)+' '+fdt(e.timestamp);
   var noteStr=e.note?(' · '+escHtml(e.note)):'';
   // 来源标注：source==='kid_request' 显示蓝域「孩子申请」；家长直接兑换及无 source 的旧数据显示「兑换」
   var src=e.source==='kid_request'
     ?'<span class="ex-chip kid">孩子申请</span>'
     :'<span class="ex-chip">兑换</span>';
-  // 孩子端只读：不渲染删除按钮
-  var del=sessionRole==='kid'?'':'<button class="dl" onclick="deleteExchange(\''+e.id+'\')">✕</button>';
+  // 只读模式（报告明细）/孩子端只读：不渲染删除按钮
+  var del=(ro||sessionRole==='kid')?'':'<button class="dl" onclick="deleteExchange(\''+e.id+'\')">✕</button>';
   return '<div class="ri"><span class="cat-dot" style="background:var(--yellow)"></span><div class="inf"><div class="nm">'+escHtml(e.name)+'</div><div class="tm">'+timeStr+noteStr+'</div></div>'+src+'<div class="sc2 e">-'+e.cost+'</div>'+del+'</div>';
 }
 
@@ -2980,7 +2983,7 @@ function renderReport(){
   var body=document.getElementById('reportBody');
   if(!body)return;
   renderReportTabs();
-  if(sessionRole==='kid'||!ad){body.innerHTML='';return}
+  if(!ad){body.innerHTML='';return} // 孩子端开放只读查看：数据来自家长桶（syncPull 已拉取）
   // 计算日期范围
   var startD=new Date();
   if(reportRange==='week')startD.setDate(startD.getDate()-6);
@@ -3042,7 +3045,7 @@ function renderReport(){
   for(i=0;i<ad.records.length;i++){
     if(ad.records[i].itemId==='quiz_reward'){ans++;ansPts+=ad.records[i].score}
   }
-  var wrongN=(typeof qzWrongVisibleCount==='function')?qzWrongVisibleCount():0;
+  var wrongN=rdWrongVisibleCount(); // 孩子端读桶、家长端读本机键；遍历已有 bankIds 计数，不依赖题库加载
   var stk=(ad.quizStreak&&ad.quizStreak.count)||0;
   var best=(ad.quizStreak&&ad.quizStreak.best)||0;
   // —— 兑换（所选范围）——
@@ -3068,92 +3071,152 @@ function renderReport(){
 // ===== 报告明细（#8 增强）：点击报告任一柱/分类/统计卡 → 弹窗查看对应明细 =====
 function rdShow(title,html){
   document.getElementById('mRdTitle').textContent=title;
-  document.getElementById('mRdBody').innerHTML=html;
+  var box=document.getElementById('mRdBody');
+  box.innerHTML=html;
+  // 报告明细只读（问题①）：移除行内删除/编辑入口，家长端在此也仅可查看
+  var btns=box.querySelectorAll('.dl,.ed,.x');
+  for(var i=0;i<btns.length;i++)btns[i].parentNode.removeChild(btns[i]);
   document.getElementById('mRd').classList.add('show');
 }
 // 某日明细：当日全部积分记录 + 兑换流水（时间倒序）
 function openRdDay(ds){
-  if(sessionRole!=='parent'||!ad)return;
+  if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
   var items=[],i;
   for(i=0;i<ad.records.length;i++)if(ad.records[i].date===ds)items.push({t:'r',d:ad.records[i]});
   for(i=0;i<ad.exchanges.length;i++)if(ad.exchanges[i].date===ds)items.push({t:'e',d:ad.exchanges[i]});
   items.sort(function(a,b){return (b.d.timestamp||0)-(a.d.timestamp||0)});
   var h='';
   if(!items.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该日暂无记录</div></div>';
-  for(i=0;i<items.length;i++)h+=items[i].t==='r'?renderRecord(items[i].d,ds):renderExchange(items[i].d,ds);
+  for(i=0;i<items.length;i++)h+=items[i].t==='r'?renderRecord(items[i].d,ds,true):renderExchange(items[i].d,ds,true);
   rdShow(fd(ds)+' · 当日明细',h);
 }
 // 某分类加分明细：报告范围内该分类的全部加分记录
 function openRdCat(cat){
-  if(sessionRole!=='parent'||!ad)return;
+  if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
   var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&(r.category||'其他')===cat});
   recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内「'+escHtml(cat)+'」暂无加分</div></div>';
-  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date);
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date,true);
   rdShow(cat+' · 加分明细',h);
 }
 // 答题积分明细：全部 quiz_reward 流水（累计口径）
 function openRdQuiz(){
-  if(sessionRole!=='parent'||!ad)return;
+  if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
   var recs=ad.records.filter(function(r){return r.itemId==='quiz_reward'});
   recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">还没有答题积分记录</div></div>';
-  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date);
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date,true);
   rdShow('答题积分明细（累计 '+recs.length+' 次）',h);
 }
-// 待复习错题清单：跨题库（题名 + 出处题库 + 复习进度）
-function openRdWrong(){
-  if(sessionRole!=='parent')return;
-  if(typeof qzAccStore!=='function'){toast('刷题模块未加载','err');return}
-  var store=qzAccStore();
-  var ids=['builtin'];
-  for(var j=0;j<QZ_BANKS.length;j++)if(QZ_BANKS[j].id!=='builtin')ids.push(QZ_BANKS[j].id);
-  var total=0,h='';
-  for(var k=0;k<ids.length;k++){
-    var bank=(ids[k]==='builtin')?QZ_BUILTIN_BANK:QZ_BANK_CACHE[ids[k]];
-    if(!bank||!bank.questions)continue;
-    var w=store.wrong&&store.wrong[ids[k]];
-    if(Object.prototype.toString.call(w)!=='[object Array]')continue;
-    var ex=store.excluded&&store.excluded[ids[k]];
+// —— 报告侧错题数据源：家长端=本机账号键（qzAccStore，随刷题实时落盘）；孩子端=账号桶只读字段
+//（孩子端 syncPull 已拉到桶 quizWrong/quizExcluded/quizWrongMeta，但本机无 sp_quiz__ 键，直接读桶）
+function rdWrongSource(){
+  if(sessionRole==='kid'&&ad){
+    var isObj=function(v){return !!v&&typeof v==='object'&&Object.prototype.toString.call(v)!=='[object Array]'};
+    return {
+      wrong:isObj(ad.quizWrong)?ad.quizWrong:{},
+      excluded:isObj(ad.quizExcluded)?ad.quizExcluded:{},
+      meta:isObj(ad.quizWrongMeta)?ad.quizWrongMeta:{}
+    };
+  }
+  if(typeof qzAccStore!=='function')return {wrong:{},excluded:{},meta:{}};
+  var st=qzAccStore();
+  return {wrong:st.wrong,excluded:st.excluded,meta:st.wrongMeta};
+}
+// 报告侧「待复习错题」计数：遍历数据源已有 bankIds（不依赖 QZ_BANKS/题库缓存是否加载，
+// 修复「未进刷题页直接看报告时计数/明细恒为 0」的问题）
+function rdWrongVisibleCount(){
+  var src=rdWrongSource(),n=0;
+  for(var bid in src.wrong){
+    var arr=src.wrong[bid];
+    if(Object.prototype.toString.call(arr)!=='[object Array]')continue;
+    var ex=src.excluded&&src.excluded[bid];
     var exs=(Object.prototype.toString.call(ex)==='[object Array]')?new Set(ex):null;
-    var ws=w.slice().sort(function(a,b){return a-b});
-    for(var m=0;m<ws.length;m++){
-      var idx=ws[m];
-      if(typeof idx!=='number'||idx<0||idx>=bank.questions.length)continue;
-      if(exs&&exs.has(idx))continue;
-      total++;
-      var d=bank.questions[idx];
-      var stk=(typeof qzWrongStreakOf==='function')?qzWrongStreakOf(ids[k],idx):0;
-      h+='<div class="ri"><span class="cat-dot" style="background:var(--red)" aria-hidden="true"></span>'
-        +'<div class="inf"><div class="nm">'+escHtml(d.t||'未命名题目')+'</div>'
-        +'<div class="tm">出自：'+escHtml(bank.name||'')+(stk>0?' · 复习 '+stk+'/2':'')+'</div></div></div>';
+    for(var k=0;k<arr.length;k++){
+      var i=arr[k];
+      if(typeof i!=='number'||i<0||!isFinite(i))continue;
+      if(exs&&exs.has(i))continue;
+      n++;
     }
   }
-  if(!total)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">错题集已清空，太棒了！</div></div>';
-  rdShow('待复习错题（'+total+' 题）',h);
+  return n;
+}
+// 确保题库清单与未缓存题库加载完成（qzLoadIndex/qzLoadBank 均为纯拉取+缓存，无刷题状态副作用，家长/孩子端通用）
+function rdEnsureBanks(){
+  var pre=(typeof QZ_BANKS!=='undefined'&&QZ_BANKS.length)?Promise.resolve():(typeof qzLoadIndex==='function'?qzLoadIndex():Promise.resolve());
+  return pre.then(function(){
+    if(typeof QZ_BANKS==='undefined'||typeof qzLoadBank!=='function')return;
+    var pend=[];
+    for(var j=0;j<QZ_BANKS.length;j++){
+      var mm=QZ_BANKS[j];
+      if(!QZ_BANK_CACHE[mm.id]&&!mm._unavailable)pend.push(qzLoadBank(mm.id));
+    }
+    return Promise.all(pend);
+  });
+}
+// 待复习错题清单：跨题库（题名 + 出处题库 + 复习进度）；家长/孩子端均可只读查看。
+// 修复（问题③）：旧实现同步遍历 builtin+QZ_BANKS 且跳过未加载题库 —— 未进刷题页直接点开时
+// 题库缓存为空，全部被 continue 跳过 → 恒显示 0 题；现改为先异步补齐题库再按数据源渲染。
+function openRdWrong(){
+  if(sessionRole!=='parent'&&sessionRole!=='kid')return;
+  var src=rdWrongSource();
+  var total=rdWrongVisibleCount();
+  rdShow('待复习错题（'+total+' 题）','<div class="es" style="padding:24px 0"><div class="et">正在加载错题…</div></div>');
+  rdEnsureBanks().then(function(){
+    var mo=document.getElementById('mRd');
+    if(!mo||!mo.classList.contains('show'))return; // 用户已关闭弹窗：放弃本次填充
+    var h='',shown=0;
+    for(var bid in src.wrong){
+      var arr=src.wrong[bid];
+      if(Object.prototype.toString.call(arr)!=='[object Array]')continue;
+      var bank=(bid==='builtin')?QZ_BUILTIN_BANK:QZ_BANK_CACHE[bid];
+      if(!bank||!bank.questions)continue; // 题库加载失败：该部分暂不展示（计数仍以数据为准）
+      var ex=src.excluded&&src.excluded[bid];
+      var exs=(Object.prototype.toString.call(ex)==='[object Array]')?new Set(ex):null;
+      var ws=arr.slice().sort(function(a,b){return a-b});
+      for(var m=0;m<ws.length;m++){
+        var idx=ws[m];
+        if(typeof idx!=='number'||idx<0||idx>=bank.questions.length)continue;
+        if(exs&&exs.has(idx))continue;
+        shown++;
+        var d=bank.questions[idx];
+        var meta=src.meta&&src.meta[bid];
+        var stk=(meta&&typeof meta[idx]==='number')?meta[idx]:0;
+        h+='<div class="ri"><span class="cat-dot" style="background:var(--red)" aria-hidden="true"></span>'
+          +'<div class="inf"><div class="nm">'+escHtml(d.t||'未命名题目')+'</div>'
+          +'<div class="tm">出自：'+escHtml(bank.name||'')+(stk>0?' · 复习 '+stk+'/2':'')+'</div></div></div>';
+      }
+    }
+    if(!total)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">错题集已清空，太棒了！</div></div>';
+    else if(!shown)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">部分题库加载失败，请稍后重试</div></div>';
+    rdShow('待复习错题（'+total+' 题）',h);
+  }).catch(function(){
+    var mo=document.getElementById('mRd');
+    if(mo&&mo.classList.contains('show'))rdShow('待复习错题（'+total+' 题）','<div class="es" style="padding:24px 0"><div class="et">加载失败，请稍后重试</div></div>');
+  });
 }
 // 打卡积分明细：里程碑奖励 + 补签卡购买流水
 function openRdStreak(){
-  if(sessionRole!=='parent'||!ad)return;
+  if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
   var recs=ad.records.filter(function(r){return r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'});
   recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
   var s=(ad.quizStreak&&ad.quizStreak.count)||0;
   var best=(ad.quizStreak&&ad.quizStreak.best)||0;
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">暂无打卡相关积分流水</div></div>';
-  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date);
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date,true);
   rdShow('打卡积分明细 · 连续 '+s+' 天 / 最佳 '+best+' 天',h);
 }
 // 兑换明细：报告范围内全部兑换/储蓄流水
 function openRdEx(){
-  if(sessionRole!=='parent'||!ad)return;
+  if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
   var exs=ad.exchanges.filter(function(e){return e.date>=rdStart&&e.date<=today()});
   exs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
   var h='';
   if(!exs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内暂无兑换</div></div>';
-  for(var i=0;i<exs.length;i++)h+=renderExchange(exs[i],exs[i].date);
+  for(var i=0;i<exs.length;i++)h+=renderExchange(exs[i],exs[i].date,true);
   rdShow('兑换明细（'+rdStart.replace(/-/g,'/')+' 起）',h);
 }
 
