@@ -374,7 +374,7 @@ body.kid-mode{padding-bottom:72px}
 .qz-top{padding:12px 16px 0}
 .qz-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .qz-tt{font:var(--f-title)}
-.qz-sub{font:var(--f-cap);color:var(--ink2);margin-top:2px}
+.qz-sub{font:var(--f-cap);color:var(--ink2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qz-top-btns{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .qz-reset{border:var(--bd);background:var(--card);color:var(--ink2);border-radius:var(--r-full);padding:6px 10px;font:var(--f-cap);font-weight:600;cursor:pointer;flex-shrink:0;transition:transform .15s;white-space:nowrap}
 .qz-reset:active{transform:scale(.95);background:var(--fill)}
@@ -397,8 +397,10 @@ body.kid-mode{padding-bottom:72px}
 .qz-stage{padding:12px 16px 4px}
 .qz-card{background:var(--card);border:var(--bd);border-radius:var(--r-l);box-shadow:var(--sh-card);padding:20px 16px;display:flex;flex-direction:column}
 .qz-meta{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.qz-num{background:var(--blue-l);color:var(--blue-deep);font-weight:700;font-size:14px;padding:4px 12px;border-radius:var(--r-full)}
-.qz-cat{font:var(--f-cap);color:var(--ink2)}
+.qz-num{background:var(--blue-l);color:var(--blue-deep);font-weight:700;font-size:14px;padding:4px 12px;border-radius:var(--r-full);white-space:nowrap;flex-shrink:0}
+.qz-cat{font:var(--f-cap);color:var(--ink2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 错题集视图题目卡「出自：题库名」小标签：蓝系 pill 克制标注，超长省略不折行 */
+.qz-src{flex:0 1 auto;min-width:0;background:var(--blue-l);color:var(--blue-deep);font:var(--f-cap);font-weight:600;padding:3px 8px;border-radius:var(--r-full);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qz-title{font:var(--f-h2);margin-bottom:8px}
 .qz-body{font:var(--f-body);line-height:1.85;color:var(--ink)}
 .qz-ans{display:none;margin-top:14px;background:var(--green-l);border-left:4px solid var(--green);padding:12px 14px;border-radius:0 var(--r-s) var(--r-s) 0;font:var(--f-item);line-height:1.8;color:var(--grn-deep)}
@@ -534,7 +536,7 @@ body.kid-mode{padding-bottom:72px}
           <span class="qz-tt" id="qzTt">逻辑推理题</span>
           <span class="qz-chev" aria-hidden="true"></span>
         </button>
-        <div class="qz-sub" id="qzSub">四年级+ · 共 100 题</div>
+        <div class="qz-sub" id="qzSub">四年级+</div>
         <div class="qz-hint" id="qzHint" style="display:none" onclick="qzHintRetry()"></div>
       </div>
       <div class="qz-top-btns">
@@ -3267,15 +3269,18 @@ function qzCatScope(cat){
 function qzUpdateStats(){
   if(qzCat===QZ_WRONG){
     var n=qzWrongVisibleCount();
-    document.getElementById('qzStats').textContent='错题 '+n+' 题';
+    // 错题集视图：统计行标注当前题库名（一眼看出错题出自哪套题库；切题库后随 qzBank 刷新）
+    document.getElementById('qzStats').textContent=(qzBank&&qzBank.name?qzBank.name+' · ':'')+'错题 '+n+' 题';
     document.getElementById('qzBar').style.width=(QZ_ALL_TOTAL?n/QZ_ALL_TOTAL*100:0)+'%';
     return;
   }
   var s=qzCatScope();
   document.getElementById('qzStats').textContent=s.done+'/'+s.total;
   document.getElementById('qzBar').style.width=(s.total?s.done/s.total*100:0)+'%';
+  // 副标题只保留题库副标题（如「四年级+」）：题量统计唯一口径收敛到右侧统计文本分母，
+  // 不再重复展示「共 N 题」——360 宽下长副标题+题量会折成两行（改前实测复现）
   var sub=document.getElementById('qzSub');
-  if(sub)sub.textContent=(qzBank&&qzBank.subtitle?qzBank.subtitle+' · ':'')+'共 '+s.total+' 题';
+  if(sub)sub.textContent=(qzBank&&qzBank.subtitle?qzBank.subtitle:'');
 }
 
 // 分类 chips：只渲染「全部 + 各分类」（错题集入口已移至头部行，见 qzRefreshWrongBtn）
@@ -3294,6 +3299,7 @@ function qzRefreshWrongBtn(){
   if(!b)return;
   var wn=qzWrongVisibleCount(); // 剔除题不计入错题集按钮计数（数据保留，恢复后回来）
   b.textContent='错题集 ('+wn+')';
+  b.title=(qzBank&&qzBank.name)?'错题出自：'+qzBank.name:''; // 桌面端 hover 提示题库归属
   b.disabled=(wn===0);
   b.className='qz-wrongbtn'+(qzCat===QZ_WRONG?' on':'')+(wn===0?' qz-wrongbtn-off':'');
 }
@@ -3351,9 +3357,14 @@ function qzRender(){
   var cn=(qzCats[d.c]&&(qzCats[d.c].note||qzCats[d.c].name))||'';
   // 剔除入口：徽章行右侧角标位，仅家长端渲染（刷题页本身仅家长可达，此处双保险）
   var exBtn=(sessionRole==='parent')?'<button type="button" class="qz-exbtn" onclick="qzExcludeCurrent()">剔除</button>':'';
+  // 错题集视图：meta 行以「出自：题库名」小标签替代分类说明（题库归属是错题集的关键信息，
+  // 且 360 宽下徽章+标签+说明+剔除四者同排放不下；分类信息可由题目内容与 chips 判断）
+  var metaMid=(qzCat===QZ_WRONG&&qzBank&&qzBank.name)
+    ?'<span class="qz-src">出自：'+escHtml(qzBank.name)+'</span>'
+    :'<span class="qz-cat">'+escHtml(cn)+'</span>';
   card.innerHTML='<div class="qz-meta">'
     +'<span class="qz-num num">'+badge+'</span>'
-    +'<span class="qz-cat">'+escHtml(cn)+'</span>'+exBtn+'</div>'
+    +metaMid+exBtn+'</div>'
     +'<div class="qz-title">'+escHtml(d.t)+'</div>'
     +'<div class="qz-body">'+escHtml(d.q)+'</div>'
     +'<div class="qz-ans" id="qzAns"><span class="qz-ans-lb">答案：</span>'+escHtml(d.a)+'</div>'
