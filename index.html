@@ -928,33 +928,13 @@ body.kid-mode{padding-bottom:72px}
   </div>
 </div>
 
-<!-- 宠物弹窗 ×4（内容均由 pet.js 动态填充）：猫商店 / 喂食 / 玩耍 / 背单词 -->
+<!-- 宠物弹窗 ×2（内容均由 pet.js 动态填充）：猫商店 / 背单词（喂食玩耍无弹窗，点库存与玩具直接使用） -->
 <div class="mo" id="ptMoShop">
   <div class="ml">
     <span class="ml-handle" aria-hidden="true"></span>
     <div class="ml-header">
       <div class="ml-title">猫咪商店</div>
       <button class="ml-close" onclick="ptCloseModal('ptMoShop')">✕</button>
-    </div>
-    <div class="ml-body"></div>
-  </div>
-</div>
-<div class="mo" id="ptMoFeed">
-  <div class="ml">
-    <span class="ml-handle" aria-hidden="true"></span>
-    <div class="ml-header">
-      <div class="ml-title">喂食</div>
-      <button class="ml-close" onclick="ptCloseModal('ptMoFeed')">✕</button>
-    </div>
-    <div class="ml-body"></div>
-  </div>
-</div>
-<div class="mo" id="ptMoPlay">
-  <div class="ml">
-    <span class="ml-handle" aria-hidden="true"></span>
-    <div class="ml-header">
-      <div class="ml-title">玩耍</div>
-      <button class="ml-close" onclick="ptCloseModal('ptMoPlay')">✕</button>
     </div>
     <div class="ml-body"></div>
   </div>
@@ -3446,6 +3426,6 @@ window.addEventListener('resize',function(){typeof qzSetStickyTop==='function'&&
   });
 })();
 </script>
-<script src="pet.js?v=20260930"></script>
+<script src="pet.js?v=20260930c"></script>
 </body>
 </html>

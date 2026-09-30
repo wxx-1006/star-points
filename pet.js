@@ -58,10 +58,22 @@ var PT_TALK = {
   greetSad: ['主人你终于来了，我以为你把我忘了，嘤嘤嘤……','呜……一个人待了一整天，好想你','肚子咕咕叫了两天了……喵呜','喵呜……碗里什么都没有了'],
   hungry: ['猫粮碗空空哒，我要饿扁了……','主人，快去背单词给我赚猫粮吧！','喵呜——救救小猫，没有存粮啦','闻不到饭饭的味道了……'],
   pet: ['呼噜呼噜～好舒服','再摸摸头，就一下下','喵～你是全世界最好的主人','唔，下巴也可以挠挠','呼噜……我要睡着了啦','嘿嘿，被摸得好开心','喵呜～今天的抚摸额度还有效','蹭蹭你的手手'],
-  feedFood: ['真开心，又可以吃美食了！','咔嚓咔嚓～猫粮真香','谢谢主人，我吃饱饱','咀嚼中……幸福中……','喵！今天的饭饭好香'],
-  feedCan: ['主人你真好！','哇！是猫罐头！我最爱你了！','罐头是世界上最好吃的东西！','咕噜咕噜——大口吃罐头','这也太好吃了吧！喵！'],
-  feedStrip: ['猫条！我的最爱！','舔舔舔——根本停不下来','喵～一口一个幸福','唰——猫条被我吃光啦','再来一根好不好嘛～'],
+  feedFood: ['真开心，又可以吃美食了！','谢谢主人，我吃饱饱','喵！今天的饭饭好香','咀嚼中……幸福中……'],
+  eatWords: ['好香～','我要吃得饱饱的~','咔嚓咔嚓','真好吃！','再来一口'],
+  feedCan: ['主人你真好！','哇！是猫罐头！我最爱你了！','罐头是世界上最好吃的东西！'],
+  canWords: ['罐头最棒了！','咕噜咕噜','太好吃了吧！','主人你真好！','一口一个满足'],
+  feedStrip: ['猫条！我的最爱！','舔舔舔——根本停不下来','喵～一口一个幸福'],
+  stripWords: ['猫条！','舔舔舔～','幸福到冒泡~','根本停不下来'],
+  full: ['吃饱饱！谢谢主人','摸摸我的圆肚子~','呼噜——满足~','喵呜，吃饱啦'],
+  canFull: ['罐头吃完了，主人你真好！','打着饱嗝~好满足','今天是大日子！'],
+  stripFull: ['猫条吃完啦，还想吃~','嘴巴甜甜的，嘿嘿','幸福来得太突然'],
   play: ['抓到啦！它是我哒','跳高高！我是跳跃小能手','再来再来，陪我还想玩','喵呜——看我的冲刺！','嘿嘿，这个玩具超好玩','扑！抓住你啦'],
+  toyWords: {
+    yarn: ['喵呜——毛线球！','等我抓！','抓到啦，嘿嘿'],
+    ball: ['弹弹弹！','跳高高！','再来再来！'],
+    wand: ['目标锁定！','喵！跳！','抓到啦！'],
+    mouse: ['老鼠！别跑！','冲刺——','叼到啦！']
+  },
   climb: ['站得高高的，我就是猫大王','爬爬架最棒了，蹭蹭','喵～俯瞰我的领地','这里是本喵的宝座！'],
   idle: ['喵～','今天心情不错','尾巴摇摇，好运来到','打个哈欠……好困呀','窗外的鸟在看我看我','晒太阳真舒服','喵呜～呼噜呼噜','（盯着你的零食袋看）'],
   quizRight: ['又答对啦，罐头在向我招手！','喵！主人好聪明','太棒啦，猫币滚滚来','答对了！今晚加餐！'],
@@ -118,6 +130,10 @@ function ptInjectStyle() {
 .pet-bowl{position:absolute;left:5%;bottom:14%;width:58px;height:26px}
 .pet-bowl .b-food{position:absolute;top:1px;left:7px;right:7px;height:12px;border-radius:8px;background:#C98A4B;display:none}
 .pet-bowl .b-food::after{content:'';position:absolute;top:3px;left:5px;width:5px;height:5px;border-radius:999px;background:#A96B32;box-shadow:10px 1px 0 #A96B32,20px -1px 0 #A96B32,30px 1px 0 #A96B32}
+.pet-bowl .b-can{position:absolute;top:0;left:5px;right:5px;height:13px;border-radius:8px;background:#E8A08F;display:none}
+.pet-bowl .b-can::after{content:'';position:absolute;top:3px;left:6px;width:6px;height:6px;border-radius:999px;background:#D17B66;box-shadow:11px 2px 0 #D17B66,20px -1px 0 #C96E58}
+.pet-bowl.food .b-food{display:block}
+.pet-bowl.can .b-can{display:block}
 .pet-bowl .b-body{position:absolute;bottom:0;left:0;right:0;height:17px;background:#fff;border-radius:6px 6px 16px 16px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.06)}
 .pet-bowl.empty .b-body{background:#F3EADA}
 .pet-tree{position:absolute;right:3%;bottom:12%;width:86px;height:172px;display:none}
@@ -128,10 +144,10 @@ function ptInjectStyle() {
 .pet-tree .pl2{bottom:64px;left:-5px;width:72px;height:11px}
 .pet-tree .pl3{top:26px;left:12px;width:62px;height:11px}
 .pet-tree .ball{position:absolute;top:6px;left:22px;width:22px;height:22px;border-radius:999px;background:#F2708A;box-shadow:inset -3px -3px 0 rgba(0,0,0,.12)}
-.pet-actor{position:absolute;bottom:11.5%;left:40px;width:132px;transition:left 2.6s ease-in-out;will-change:left}
-.pet-actor .pt-svg{display:block;width:132px;height:104px;filter:drop-shadow(0 5px 4px rgba(120,80,40,.16));cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pet-actor{position:absolute;bottom:11.5%;left:40px;width:140px;transition:left 2.6s ease-in-out;will-change:left}
+.pet-actor .pt-svg{display:block;width:140px;height:116px;transition:width .9s ease,height .9s ease;filter:drop-shadow(0 5px 4px rgba(120,80,40,.16));cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pt-svg.flip{transform:scaleX(-1)}
-.pet-bubble{position:absolute;bottom:112px;left:50%;transform:translateX(-50%);max-width:210px;width:max-content;background:#fff;border:2px solid #F0C9A0;border-radius:14px;padding:8px 11px;font:600 12px/1.5 var(--ff);color:#6B4F35;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;box-shadow:0 4px 10px rgba(120,80,40,.12);z-index:3}
+.pet-bubble{position:absolute;bottom:122px;left:50%;transform:translateX(-50%);max-width:210px;width:max-content;background:#fff;border:2px solid #F0C9A0;border-radius:14px;padding:8px 11px;font:600 12px/1.5 var(--ff);color:#6B4F35;text-align:center;opacity:0;transition:opacity .25s,bottom .9s ease;pointer-events:none;box-shadow:0 4px 10px rgba(120,80,40,.12);z-index:3}
 .pet-bubble::after{content:'';position:absolute;bottom:-7px;left:50%;margin-left:-6px;width:11px;height:11px;background:#fff;border-right:2px solid #F0C9A0;border-bottom:2px solid #F0C9A0;transform:rotate(45deg)}
 .pet-bubble.show{opacity:1}
 .pt-heart{position:absolute;font-size:17px;color:#F2708A;font-style:normal;pointer-events:none;z-index:4;animation:ptHeartUp 1.15s ease-out forwards;text-shadow:0 1px 0 #fff}
@@ -152,6 +168,17 @@ function ptInjectStyle() {
 .pt-svg.hjoy .pt-happy-eyes{display:block}
 .pt-svg.hjoy .pt-all{animation:ptWiggle .55s ease-in-out 2}
 @keyframes ptWiggle{0%,100%{transform:rotate(0)}30%{transform:rotate(-3deg)}70%{transform:rotate(3deg)}}
+/* 表情切换：开心张嘴 / 难过撇嘴+垂泪 */
+.pt-open,.pt-mouth-sad,.pt-tear{display:none}
+.pt-svg.hjoy .pt-mouth{display:none}
+.pt-svg.hjoy .pt-open{display:block}
+.pt-svg.sad .pt-mouth{display:none}
+.pt-svg.sad .pt-mouth-sad{display:block}
+.pt-svg.sad .pt-tear{display:block;animation:ptTear 1.6s ease-in infinite}
+@keyframes ptTear{0%{opacity:0;transform:translateY(0)}30%{opacity:.9}100%{opacity:0;transform:translateY(11px)}}
+/* 长大：体型过渡 + 成长脉冲（作用于内层组，不干扰根节点 flip） */
+.pt-svg.grow .pt-all{animation:ptGrowPulse .95s ease}
+@keyframes ptGrowPulse{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
 /* 跳跃/爬架动画作用在 .pt-all 内层组：不干扰根节点的 flip 翻转变换 */
 .pt-svg.jump .pt-all{animation:ptJump .72s cubic-bezier(.32,.62,.42,1)}
 @keyframes ptJump{0%{transform:translateY(0)}36%{transform:translateY(-50px)}72%{transform:translateY(-4px)}86%{transform:translateY(0) scaleY(.94)}100%{transform:translateY(0)}}
@@ -165,14 +192,16 @@ function ptInjectStyle() {
 .pt-svg.sad .pt-body{animation:none}
 .pt-svg.sad .pt-all{transform:translateY(2px)}
 /* hjoy（撸猫开心）规则置于 walk/jump 之后：同时触发时优先开心动画 */
-/* 操作按钮 / 仓库 / 玩具 */
-.pet-acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 16px 0}
+/* 操作按钮 / 仓库 / 玩具：喂食与玩耍无弹窗，点下方库存/玩具直接使用 */
+.pet-acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 16px 0}
 .pet-act{border:var(--bd);background:var(--card);border-radius:var(--r-m);padding:10px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:4px;font:600 12px/1.2 var(--ff);color:var(--ink);cursor:pointer;box-shadow:var(--sh-card);transition:transform .15s}
 .pet-act:active{transform:scale(.94)}
 .pet-act svg{width:26px;height:26px}
 .pet-act.hot{background:var(--red);color:#fff;border-color:transparent;box-shadow:var(--sh-cta)}
 .pet-inv{display:flex;gap:8px;margin:10px 16px 0;flex-wrap:wrap}
-.pet-chip{display:flex;align-items:center;gap:6px;background:var(--card);border:var(--bd);border-radius:var(--r-full);padding:6px 12px;font:600 12px/1 var(--ff);color:var(--ink2);box-shadow:var(--sh-card)}
+.pet-chip{display:flex;align-items:center;gap:6px;background:var(--card);border:var(--bd);border-radius:var(--r-full);padding:6px 12px;font:600 12px/1 var(--ff);font-family:var(--ff);color:var(--ink2);box-shadow:var(--sh-card);cursor:pointer;transition:transform .15s}
+.pet-chip:active{transform:scale(.93)}
+.pet-chip.zero{opacity:.55}
 .pet-chip svg{width:16px;height:16px}
 .pet-chip b{color:var(--ink)}
 .pet-toys{display:flex;gap:8px;margin:10px 16px 0;flex-wrap:wrap}
@@ -198,11 +227,7 @@ function ptInjectStyle() {
 .pet-shop-hd .bal svg{width:16px;height:16px}
 .pet-empty{padding:26px 0;text-align:center;font:var(--f-item);color:var(--ink2)}
 /* 背单词 */
-.pet-modes{display:grid;gap:10px;padding-top:4px}
-.pet-qmode{border:var(--bd);background:var(--fill);border-radius:var(--r-m);padding:14px;text-align:left;cursor:pointer;font-family:var(--ff);transition:transform .15s}
-.pet-qmode:active{transform:scale(.98)}
-.pet-qmode b{display:block;font:700 15px/1.3 var(--ff);color:var(--ink)}
-.pet-qmode span{font:var(--f-cap);color:var(--ink2)}
+/* 背单词弹窗题目样式（题型随机混出，不再有模式选择页） */
 .pet-q-top{display:flex;justify-content:space-between;align-items:center;font:600 12px/1 var(--ff);color:var(--ink2);margin-bottom:10px}
 .pet-q-prog{background:var(--fill);height:6px;border-radius:var(--r-full);overflow:hidden;margin-bottom:14px}
 .pet-q-prog i{display:block;height:100%;background:var(--yellow);border-radius:var(--r-full);transition:width .3s}
@@ -230,42 +255,70 @@ function ptInjectStyle() {
 .bn-pet{width:100%;height:46px;border:none;border-radius:var(--r-m);font:700 15px/1 var(--ff);cursor:pointer;transition:transform .15s}
 .bn-pet:active{transform:scale(.97)}
 .bn-pet.p{background:var(--red);color:#fff;box-shadow:var(--sh-cta)}
-.bn-pet.q{background:var(--fill);color:var(--ink)}`;
+.bn-pet.q{background:var(--fill);color:var(--ink)}
+/* 吃饭时飘出的心情字 */
+.pt-word{position:absolute;font:700 13px/1.3 var(--ff);color:#8F6210;text-shadow:0 1px 0 #fff,0 0 6px #fff;pointer-events:none;white-space:nowrap;z-index:4;animation:ptWordUp 1.75s ease-out forwards}
+@keyframes ptWordUp{0%{opacity:0;transform:translateY(8px) scale(.7)}22%{opacity:1;transform:translateY(-4px) scale(1)}100%{opacity:0;transform:translateY(-48px)}}
+/* 猫条（手喂）：躺在碗边，被舔着变短 */
+.pt-strip{position:absolute;width:36px;height:12px;border-radius:6px;background:#F4B942;box-shadow:inset 0 -3px 0 #D89A28;transform-origin:left center;animation:ptStripEat 2.5s ease-in forwards;z-index:2}
+@keyframes ptStripEat{0%{transform:scaleX(1)}80%{transform:scaleX(.14)}100%{transform:scaleX(.05);opacity:0}}
+/* 玩具特效实物：滚动的毛线球/弹跳的皮球/摆动的逗猫棒/逃跑的老鼠 */
+.pt-toyfx{position:absolute;bottom:13%;width:46px;height:46px;z-index:2;pointer-events:none}
+.pt-toyfx svg{width:100%;height:100%}
+.pt-toyfx.roll{animation:ptFxRoll 2.7s ease-in-out forwards}
+@keyframes ptFxRoll{0%{transform:translateX(0) rotate(0);opacity:1}55%{transform:translateX(118px) rotate(500deg)}78%{transform:translateX(132px) rotate(560deg)}90%{transform:translateX(116px) rotate(520deg);opacity:1}100%{transform:translateX(124px) rotate(540deg);opacity:0}}
+.pt-toyfx.bounce{animation:ptFxBounce 2.6s ease-in-out forwards}
+@keyframes ptFxBounce{0%{transform:translateY(0);opacity:1}12%{transform:translateY(-64px)}24%{transform:translateY(0)}36%{transform:translateY(-44px)}48%{transform:translateY(0)}60%{transform:translateY(-26px)}72%{transform:translateY(0)}90%{opacity:1}100%{transform:translateY(0);opacity:0}}
+.pt-toyfx.wiggle{bottom:46%;animation:ptFxWiggle 2.4s ease-in-out forwards}
+@keyframes ptFxWiggle{0%{transform:rotate(-14deg);opacity:1}25%{transform:rotate(16deg)}50%{transform:rotate(-16deg)}75%{transform:rotate(14deg)}92%{opacity:1}100%{transform:rotate(-10deg);opacity:0}}
+.pt-toyfx.run{animation:ptFxRun 2.6s ease-in-out forwards}
+@keyframes ptFxRun{0%{transform:translate(0,0);opacity:1}15%{transform:translate(24px,-10px)}30%{transform:translate(48px,0)}45%{transform:translate(74px,-10px)}60%{transform:translate(100px,0)}75%{transform:translate(126px,-8px)}88%{transform:translate(146px,0);opacity:1}100%{transform:translate(150px,0);opacity:0}}
+/* 背单词 COMBO 连对鼓励 */
+#ptMoQuiz .ml-body{position:relative}
+.pt-q-combo{position:absolute;top:30px;right:14px;z-index:6;pointer-events:none;text-align:center;animation:ptComboPop 1.4s ease forwards}
+.pt-q-combo b{display:block;font:800 21px/1.1 var(--ff);color:var(--red-deep);text-shadow:0 1px 0 #fff}
+.pt-q-combo span{font:700 11px/1.4 var(--ff);color:var(--yel-deep)}
+@keyframes ptComboPop{0%{opacity:0;transform:scale(.4)}18%{opacity:1;transform:scale(1.18)}32%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}`;
   var stl = document.createElement('style');
   stl.id = 'petStyle';
   stl.textContent = css;
   document.head.appendChild(stl);
 }
 
-// ---------- 小猫 SVG（默认面向左） ----------
+// ---------- 小猫 SVG（卡哇伊大头版：默认面向左；大眼睛+爱心鼻；含开心张嘴/难过垂泪表情） ----------
 function ptCatSvg() {
-  return `<svg class="pt-svg" viewBox="0 0 150 118" aria-hidden="true">
-<ellipse cx="82" cy="112" rx="46" ry="6" fill="rgba(150,100,60,.14)"/>
+  return `<svg class="pt-svg" viewBox="0 0 160 132" aria-hidden="true">
+<ellipse cx="86" cy="124" rx="48" ry="6.5" fill="rgba(150,100,60,.14)"/>
 <g class="pt-all">
-  <g class="pt-tail"><path d="M116 94 C136 90 144 70 134 52" stroke="#F5A75B" stroke-width="13" fill="none" stroke-linecap="round"/><circle cx="134" cy="52" r="6.8" fill="#E8903F"/></g>
-  <ellipse cx="106" cy="110" rx="14" ry="9" fill="#F5A75B"/>
-  <ellipse class="pt-body" cx="82" cy="90" rx="38" ry="28" fill="#FFC98F"/>
-  <path d="M70 66q4 9-1 14 M82 64q4 9-1 15 M94 66q3 8-2 13" stroke="#F09A4B" stroke-width="4.5" fill="none" stroke-linecap="round"/>
-  <ellipse cx="74" cy="99" rx="16" ry="11" fill="#FFE9C9" opacity=".85"/>
-  <ellipse cx="58" cy="111" rx="9" ry="9.5" fill="#FFCE96"/>
-  <ellipse cx="76" cy="112" rx="9" ry="9" fill="#FFC98F"/>
-  <path d="M52 74 Q68 85 84 76" stroke="#EE6F5F" stroke-width="6" fill="none" stroke-linecap="round"/>
-  <circle cx="70" cy="82.5" r="4.4" fill="#FFD34D" stroke="#D9A82F" stroke-width="1"/>
+  <g class="pt-tail"><path d="M118 106 C142 104 150 82 138 62" stroke="#FFC98F" stroke-width="15" fill="none" stroke-linecap="round"/><path d="M137 92q7 0 10-6 M141 74q6-2 7-9" stroke="#F5A75B" stroke-width="4.5" fill="none" stroke-linecap="round"/><circle cx="138" cy="63" r="5.5" fill="#F5A75B"/></g>
+  <ellipse cx="110" cy="118" rx="13" ry="9" fill="#F7BC72"/>
+  <ellipse class="pt-body" cx="86" cy="102" rx="33" ry="24" fill="#FFD9A8"/>
+  <path d="M76 84q4 8-1 13 M88 82q4 8-1 13 M99 86q3 7-2 11" stroke="#F5A75B" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <ellipse cx="80" cy="111" rx="15" ry="10.5" fill="#FFF3E0" opacity=".9"/>
+  <rect x="64" y="110" width="14" height="13" rx="6.5" fill="#FFE3BD"/>
+  <rect x="83" y="112" width="13" height="12" rx="6" fill="#FFD9A8"/>
+  <path d="M69 118v4 M74 118v4 M88 119v4 M92 119v4" stroke="#E8B57E" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M56 86 Q74 96 92 87" stroke="#EE6F5F" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+  <circle cx="75" cy="94" r="5" fill="#FFD34D" stroke="#E3A93B" stroke-width="1.2"/>
+  <circle cx="75" cy="96.4" r="1.1" fill="#B8860B"/>
   <g class="pt-head">
-    <g class="pt-earL"><polygon points="26,36 18,4 48,20" fill="#FFC98F"/><polygon points="27,31 22,10 43,20" fill="#FFB9C8"/></g>
-    <g class="pt-earR"><polygon points="94,36 102,4 72,20" fill="#FFC98F"/><polygon points="93,31 98,10 77,20" fill="#FFB9C8"/></g>
-    <circle cx="60" cy="52" r="31" fill="#FFC98F"/>
-    <rect x="50" y="21.5" width="4.5" height="11" rx="2.2" fill="#F09A4B"/>
-    <rect x="58" y="20" width="4.5" height="11" rx="2.2" fill="#F09A4B"/>
-    <rect x="66" y="21.5" width="4.5" height="11" rx="2.2" fill="#F09A4B"/>
-    <g class="pt-eye"><circle cx="48" cy="52" r="4.8" fill="#453526"/><circle cx="46.6" cy="50.2" r="1.7" fill="#fff"/></g>
-    <g class="pt-eye"><circle cx="72" cy="52" r="4.8" fill="#453526"/><circle cx="70.6" cy="50.2" r="1.7" fill="#fff"/></g>
-    <path class="pt-happy-eyes" d="M41 52 Q48 44 55 52 M65 52 Q72 44 79 52" stroke="#453526" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <ellipse cx="40" cy="61" rx="4.6" ry="3" fill="#FFAEBE" opacity=".75"/>
-    <ellipse cx="80" cy="61" rx="4.6" ry="3" fill="#FFAEBE" opacity=".75"/>
-    <polygon points="57,58 63,58 60,61.6" fill="#E88098"/>
-    <path d="M54 64 Q57 67.5 60 61.8 Q63 67.5 66 64" stroke="#C58B60" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M28 52 L12 49 M28 58 L13 60 M92 52 L108 49 M92 58 L107 60" stroke="rgba(150,110,70,.5)" stroke-width="1.6" stroke-linecap="round"/>
+    <g class="pt-earL"><polygon points="30,36 20,2 54,16" fill="#FFD9A8"/><polygon points="32,30 26,8 48,17" fill="#FFC2D1"/></g>
+    <g class="pt-earR"><polygon points="94,36 104,2 70,16" fill="#FFD9A8"/><polygon points="92,30 98,8 76,17" fill="#FFC2D1"/></g>
+    <circle cx="62" cy="54" r="37" fill="#FFD9A8"/>
+    <rect x="50" y="20" width="5" height="12" rx="2.5" fill="#F5A75B"/>
+    <rect x="59" y="18" width="5" height="12" rx="2.5" fill="#F5A75B"/>
+    <rect x="68" y="20" width="5" height="12" rx="2.5" fill="#F5A75B"/>
+    <g class="pt-eye"><circle cx="46" cy="54" r="7.5" fill="#453125"/><circle cx="43.5" cy="51" r="2.7" fill="#fff"/><circle cx="48.6" cy="56.6" r="1.4" fill="#fff" opacity=".85"/></g>
+    <g class="pt-eye"><circle cx="78" cy="54" r="7.5" fill="#453125"/><circle cx="75.5" cy="51" r="2.7" fill="#fff"/><circle cx="80.6" cy="56.6" r="1.4" fill="#fff" opacity=".85"/></g>
+    <path class="pt-happy-eyes" d="M38 54 Q46 45 54 54 M70 54 Q78 45 86 54" stroke="#453125" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="38" cy="66" rx="6" ry="3.6" fill="#FFAEBE" opacity=".8"/>
+    <ellipse cx="86" cy="66" rx="6" ry="3.6" fill="#FFAEBE" opacity=".8"/>
+    <path d="M62 61c-1.8-2.4-5-1-5 1.2 0 1.8 2.6 3 5 4.6 2.4-1.6 5-2.8 5-4.6 0-2.2-3.2-3.6-5-1.2z" fill="#F08CA4"/>
+    <path class="pt-mouth" d="M54 68 Q58 72 62 67.5 Q66 72 70 68" stroke="#C58B60" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <g class="pt-open"><path d="M54 67 Q62 79 70 67 Z" fill="#E2718A"/><ellipse cx="62" cy="72.6" rx="4" ry="2.3" fill="#FF9DB0"/></g>
+    <path class="pt-mouth-sad" d="M54 71 Q62 66 70 71" stroke="#C58B60" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path class="pt-tear" d="M90 62q4 6 0 9q-4-3 0-9z" fill="#9CD1F2" opacity=".9"/>
+    <path d="M30 52 Q20 50 10 47 M30 58 Q20 59 11 62 M94 52 Q104 50 114 47 M94 58 Q104 59 113 62" stroke="rgba(180,130,90,.55)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
   </g>
 </g>
 </svg>`;
@@ -280,7 +333,7 @@ var ptLoadedKey = '';
 
 function ptAccKey() { return PET_KEY_PREFIX + (currentUser || 'anon'); }
 function ptDefault() {
-  return { v: 1, coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0 };
+  return { v: 1, coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0 };
 }
 function ptLoad() {
   var key = ptAccKey();
@@ -313,7 +366,7 @@ function ptStage() {
   return s;
 }
 function ptR2(n) { return Math.round(n * 100) / 100; }
-// 离线结算：每过一天吃掉「当日胃口」，存粮不足记挨饿天数（进页面触发低落语）
+// 离线结算：每过一天吃掉「当日胃口」，存粮不足记挨饿天数（进页面触发低落语）；跨天重置当日已喂餐数
 function ptRoll() {
   var t = today();
   if (ptS.lastVisit === t) return;
@@ -326,6 +379,7 @@ function ptRoll() {
     if (eat <= 0) ptS.hungryDays++;
   }
   ptS.lastVisit = t;
+  ptS.fedToday = 0;
 }
 
 // ---------- 页面骨架（构建一次，随后只刷新数据） ----------
@@ -348,7 +402,7 @@ function ptBuild() {
   <div class="pet-room" id="ptRoom">
     <div class="pet-window" aria-hidden="true"></div>
     <div class="pet-rug" aria-hidden="true"></div>
-    <div class="pet-bowl empty" id="ptBowl" aria-hidden="true"><div class="b-food"></div><div class="b-body"></div></div>
+    <div class="pet-bowl empty" id="ptBowl" aria-hidden="true"><div class="b-food"></div><div class="b-can"></div><div class="b-body"></div></div>
     <div class="pet-tree" aria-hidden="true"><div class="ball"></div><div class="pl pl3"></div><div class="post"></div><div class="pl pl2"></div><div class="pl pl1"></div></div>
     <div class="pet-actor" id="ptActor">
       <div class="pet-bubble" id="ptBubble"></div>
@@ -358,8 +412,6 @@ function ptBuild() {
   </div>
   <div class="pet-acts">
     <button class="pet-act hot" onclick="ptOpenQuiz()">${PT_ICO.book}背单词</button>
-    <button class="pet-act" onclick="ptOpenFeed()">${PT_ICO.bowlIco}喂食</button>
-    <button class="pet-act" onclick="ptOpenPlay()">${PT_ICO.yarn}玩耍</button>
     <button class="pet-act" onclick="ptOpenShop()">${PT_ICO.bag}猫商店</button>
   </div>
   <div class="pet-inv" id="ptInv"></div>
@@ -370,6 +422,7 @@ function ptBuild() {
 }
 
 // ---------- 渲染 ----------
+var ptBowlFx = ''; // 进食特效的临时碗状态（'can'），结束即清空回落到库存反映
 function ptRender() {
   var stg = ptStage(), idx = PT_STAGES.indexOf(stg), next = PT_STAGES[idx + 1];
   document.getElementById('ptCoins').textContent = ptS.coins;
@@ -377,16 +430,18 @@ function ptRender() {
   var pct = next ? Math.min(100, Math.round((ptS.eaten - stg.need) / (next.need - stg.need) * 100)) : 100;
   document.getElementById('ptGrowBar').style.width = pct + '%';
   var days = ptDaysBetween(ptS.created, today()) + 1;
-  document.getElementById('ptGrowT').textContent = next
-    ? '陪伴第 ' + days + ' 天 · 每天吃 ' + stg.app + ' 袋 · 再吃 ' + ptR2(next.need - ptS.eaten) + ' 袋长大'
-    : '陪伴第 ' + days + ' 天 · 每天吃 ' + stg.app + ' 袋 · 已经完全长大啦';
-  document.getElementById('ptBowl').className = 'pet-bowl' + (ptS.food > 0 ? '' : ' empty');
+  var cap = Math.max(1, Math.round(stg.app / PT_FOOD_MEAL)); // 每日喂食上限（餐）= 胃口折算
+  var fed = Math.min(ptS.fedToday || 0, cap);
+  document.getElementById('ptGrowT').textContent = '陪伴第 ' + days + ' 天 · 每天吃 ' + stg.app + ' 袋 · 今日已喂 ' + fed + '/' + cap + ' 餐'
+    + (next ? ' · 再吃 ' + ptR2(next.need - ptS.eaten) + ' 袋长大' : ' · 已经完全长大啦');
+  document.getElementById('ptBowl').className = 'pet-bowl ' + (ptBowlFx || (ptS.food > 0 ? 'food' : 'empty'));
   var room = document.getElementById('ptRoom');
   if (room) room.classList.toggle('withtree', !!ptS.tree);
+  // 库存即入口：点猫粮/罐头/猫条直接喂（无弹窗）
   var inv = document.getElementById('ptInv');
-  inv.innerHTML = '<span class="pet-chip">' + PT_ICO.food + '猫粮 <b>' + ptR2(ptS.food) + '</b> 袋</span>'
-    + '<span class="pet-chip">' + PT_ICO.can + '罐头 <b>' + ptS.cans + '</b></span>'
-    + '<span class="pet-chip">' + PT_ICO.strip + '猫条 <b>' + ptS.strips + '</b></span>'
+  inv.innerHTML = '<button class="pet-chip' + (ptS.food <= 0 ? ' zero' : '') + '" onclick="ptFeed(\'food\')">' + PT_ICO.food + '猫粮 <b>' + ptR2(ptS.food) + '</b> 袋</button>'
+    + '<button class="pet-chip' + (ptS.cans < 1 ? ' zero' : '') + '" onclick="ptFeed(\'can\')">' + PT_ICO.can + '罐头 <b>' + ptS.cans + '</b></button>'
+    + '<button class="pet-chip' + (ptS.strips < 1 ? ' zero' : '') + '" onclick="ptFeed(\'strip\')">' + PT_ICO.strip + '猫条 <b>' + ptS.strips + '</b></button>'
     + (ptS.tree ? '<span class="pet-chip">' + PT_ICO.tree + '猫爬架</span>' : '');
   var toys = document.getElementById('ptToys');
   var h = '';
@@ -396,9 +451,22 @@ function ptRender() {
   }
   if (ptS.tree) h += '<button class="pet-toy" onclick="ptClimb()">' + PT_ICO.tree + '爬爬架</button>';
   toys.innerHTML = h;
-  // 心情外观：挨饿/隔天未喂 → 耷拉耳朵
+  // 心情外观：挨饿/隔天未喂 → 耷拉耳朵+撇嘴+垂泪
   var svg = document.querySelector('#p-pet .pt-svg');
   if (svg) svg.classList.toggle('sad', ptIsSad() && !ptBusy);
+  ptApplySize();
+}
+// 成长可视化：按阶段设置体型大小（css 过渡平滑变大），并同步气泡高度
+function ptApplySize() {
+  var svg = document.querySelector('#p-pet .pt-svg');
+  if (!svg || !ptS) return;
+  var w = Math.round(140 * ptStage().size), hh = Math.round(w * 132 / 160);
+  svg.style.width = w + 'px';
+  svg.style.height = hh + 'px';
+  var a = ptActorEl();
+  if (a) a.style.width = w + 'px';
+  var b = document.getElementById('ptBubble');
+  if (b) b.style.bottom = (hh + 8) + 'px';
 }
 function ptIsSad() {
   var base = ptS.lastFeed || ptS.created;
@@ -440,10 +508,30 @@ function ptHeartsBurst(n) {
     var h = document.createElement('i');
     h.className = 'pt-heart';
     h.textContent = '♥';
-    h.style.left = (26 + Math.random() * 66) + 'px';
+    h.style.left = (15 + Math.random() * 55) + '%';
     h.style.top = (6 + Math.random() * 30) + 'px';
     layer.appendChild(h);
     setTimeout(function (el) { return function () { if (el.parentNode) el.parentNode.removeChild(el); }; }(h), 1200);
+  }
+}
+// 吃饭/玩耍时从猫咪头顶飘出的心情字（错落升起）
+function ptWordSeq(list, n) {
+  var room = document.getElementById('ptRoom');
+  var a = ptActorEl();
+  if (!room || !a) return;
+  var x = parseFloat(a.style.left) || 0;
+  for (var i = 0; i < (n || 3); i++) {
+    setTimeout(function (k) {
+      return function () {
+        var w = document.createElement('i');
+        w.className = 'pt-word';
+        w.textContent = list[k % list.length];
+        w.style.left = (x + 10 + Math.random() * 62) + 'px';
+        w.style.bottom = (128 + Math.random() * 26) + 'px';
+        room.appendChild(w);
+        setTimeout(function () { if (w.parentNode) w.parentNode.removeChild(w); }, 1800);
+      };
+    }(i), i * 850);
   }
 }
 
@@ -504,15 +592,20 @@ function ptTick() {
 setTimeout(ptTick, 800);
 
 // ---------- 交互：撸猫 / 喂食 / 玩耍 / 爬架 ----------
+// 撸猫：点小猫本体 → 开心眯眼张嘴 + 爱心 + 随机撒娇语
 function ptTap() {
   if (curTab !== 'pet' || sessionRole !== 'kid' || !ptS) return;
   ptPlayFx('hjoy', 1200);
   ptHeartsBurst(3);
   ptSay(ptTalk(PT_TALK.pet));
 }
+// 喂食无弹窗：点库存 chip 直接喂；每日上限 = 阶段胃口折算餐数（0.25袋/餐），
+// 超出提示「今天已经喂够了」；进食过程可视化：碗里盛粮/罐头/猫条 + 低头吃 + 心情字飘出。
 function ptFeed(kind) {
-  ptCloseModal('ptMoFeed');
   if (!ptS) return;
+  if (ptBusy) { toast('团子还在忙，等它一下下~'); return; }
+  var cap = Math.max(1, Math.round(ptStage().app / PT_FOOD_MEAL));
+  if ((ptS.fedToday || 0) >= cap) { toast('今天已经喂够了，明天再来吧~'); return; }
   if (kind === 'food') {
     if (ptS.food < PT_FOOD_MEAL) { toast('猫粮不够啦，去猫商店买一袋吧'); return; }
     ptS.food = ptR2(ptS.food - PT_FOOD_MEAL);
@@ -523,39 +616,83 @@ function ptFeed(kind) {
   } else if (kind === 'strip') {
     if (ptS.strips < 1) { toast('猫条吃完了，去猫商店补货吧'); return; }
     ptS.strips--;
-  }
+  } else return;
   var before = PT_STAGES.indexOf(ptStage());
+  ptS.fedToday = (ptS.fedToday || 0) + 1;
   ptS.lastFeed = today();
   ptSave();
+  if (kind === 'can') ptBowlFx = 'can'; // 罐头进碗（吃完回落）
   ptRender();
-  ptHeartsBurst(2);
-  ptGo(ptBowlX(), function () {
-    ptPlayFx('eat', 1600, function () {
+  ptSay('开饭啦～');
+  ptGo(ptBowlX() + 12, function () {
+    if (kind === 'strip') ptStripFx();
+    ptPlayFx('eat', 2700);
+    ptWordSeq(kind === 'food' ? PT_TALK.eatWords : (kind === 'can' ? PT_TALK.canWords : PT_TALK.stripWords), 3);
+    setTimeout(function () {
+      ptBowlFx = '';
       var after = PT_STAGES.indexOf(ptStage());
-      if (after > before) { ptSay(ptTalk(PT_TALK.levelup), true); toast('团子长大啦：' + ptStage().name); ptHeartsBurst(5); }
-      else ptSay(ptTalk(kind === 'food' ? PT_TALK.feedFood : (kind === 'can' ? PT_TALK.feedCan : PT_TALK.feedStrip)));
+      if (after > before) { // 长大：体型脉冲 + 气泡庆祝
+        var svg = document.querySelector('#p-pet .pt-svg');
+        if (svg) { svg.classList.add('grow'); setTimeout(function () { svg.classList.remove('grow'); }, 1000); }
+        ptSay(ptTalk(PT_TALK.levelup), true);
+        toast('团子长大啦：' + ptStage().name);
+        ptHeartsBurst(5);
+      } else {
+        ptSay(ptTalk(kind === 'food' ? PT_TALK.full : (kind === 'can' ? PT_TALK.canFull : PT_TALK.stripFull)));
+      }
       ptRender();
-    });
+    }, 2750);
   });
-  if (kind === 'food') ptSay('开饭啦！咔嚓咔嚓～');
 }
+// 猫条手喂：碗边出现一根猫条，被慢慢舔短直至消失
+function ptStripFx() {
+  var room = document.getElementById('ptRoom');
+  if (!room) return;
+  var s = document.createElement('div');
+  s.className = 'pt-strip';
+  s.style.left = (ptBowlX() + 46) + 'px';
+  s.style.bottom = '13%';
+  room.appendChild(s);
+  setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 2600);
+}
+// 玩具无弹窗：点玩具按钮即玩——实物出现在房间里，小猫追逐/扑跳
+var PT_TOYFX = {
+  yarn: { cls: 'roll', chase: true },
+  ball: { cls: 'bounce', chase: false },
+  wand: { cls: 'wiggle', chase: false },
+  mouse: { cls: 'run', chase: true }
+};
 function ptPlayToy(id) {
-  ptCloseModal('ptMoPlay');
   if (!ptS) return;
-  var it = PT_SHOP.filter(function (x) { return x.id === id; })[0];
-  if (!it) return;
-  ptHeartsBurst(3);
-  ptSay(ptTalk(PT_TALK.play));
-  ptPlayFx('jump', 760, function () {
-    // 玩耍后短距离冲刺一下
-    var w = ptRoomW();
-    var cur = parseFloat(ptActorEl().style.left) || 0;
-    var target = cur < w / 2 ? Math.min(w - 150, cur + 90) : Math.max(16, cur - 90);
-    ptGo(target);
-  });
+  var cfg = PT_TOYFX[id];
+  var room = document.getElementById('ptRoom');
+  if (!cfg || !room) return;
+  var a = ptActorEl();
+  var x = parseFloat(a && a.style.left) || 40;
+  var fx = document.createElement('div');
+  fx.className = 'pt-toyfx ' + id + ' ' + cfg.cls;
+  fx.innerHTML = PT_ICO[id];
+  fx.style.left = Math.min(Math.max(x + (cfg.cls === 'wiggle' ? 58 : 34), 16), Math.max(16, ptRoomW() - 66)) + 'px';
+  room.appendChild(fx);
+  setTimeout(function () { if (fx.parentNode) fx.parentNode.removeChild(fx); }, 2800);
+  ptWordSeq(PT_TALK.toyWords[id] || PT_TALK.play, 3);
+  if (cfg.chase) {
+    var target = Math.min((parseFloat(fx.style.left) || 0) + 104, Math.max(16, ptRoomW() - 160));
+    ptGo(target, function () {
+      ptPlayFx('jump', 780);
+      ptHeartsBurst(3);
+      ptSay(ptTalk(PT_TALK.play));
+    });
+  } else {
+    ptPlayFx('jump', 780);
+    setTimeout(function () {
+      ptPlayFx('jump', 780);
+      ptHeartsBurst(3);
+      ptSay(ptTalk(PT_TALK.play));
+    }, 900);
+  }
 }
 function ptClimb() {
-  ptCloseModal('ptMoPlay');
   if (!ptS || !ptS.tree) return;
   ptGo(ptTreeX(), function () {
     ptSay(ptTalk(PT_TALK.climb));
@@ -605,53 +742,7 @@ function ptBuy(id) {
   ptOpenShop(); // 刷新商店余额/按钮态
 }
 
-// ---------- 喂食 / 玩耍 弹窗 ----------
-function ptOpenFeed() {
-  if (!ptS) return;
-  var m = document.getElementById('ptMoFeed');
-  var rows = '';
-  var foods = [
-    { id: 'food', n: '猫粮（喂 1/4 袋）', c: ptS.food, need: PT_FOOD_MEAL, unit: '袋' },
-    { id: 'can', n: '猫罐头（喂 1 个）', c: ptS.cans, need: 1, unit: '个' },
-    { id: 'strip', n: '猫条（喂 1 根）', c: ptS.strips, need: 1, unit: '根' }
-  ];
-  for (var i = 0; i < foods.length; i++) {
-    var f = foods[i];
-    var ok = f.c >= f.need - 1e-9;
-    rows += '<div class="pet-item"><div class="pet-ico">' + PT_ICO[f.id] + '</div>'
-      + '<div class="pet-inf"><div class="pet-nm">' + f.n + '</div>'
-      + '<div class="pet-desc">库存 ' + ptR2(f.c) + ' ' + f.unit + '</div></div>'
-      + '<button class="pet-buy" ' + (ok ? '' : 'disabled') + ' onclick="ptFeed(\'' + f.id + '\')">喂</button></div>';
-  }
-  if (ptS.food <= 0 && ptS.cans <= 0 && ptS.strips <= 0) rows += '<div class="pet-empty">库存空空啦～去背单词赚猫币，再进猫商店补货吧</div>';
-  m.querySelector('.ml-body').innerHTML = rows;
-  m.classList.add('show');
-}
-function ptOpenPlay() {
-  if (!ptS) return;
-  var m = document.getElementById('ptMoPlay');
-  var rows = '';
-  var has = false;
-  for (var i = 0; i < PT_SHOP.length; i++) {
-    var it = PT_SHOP[i];
-    var owned = it.type === 'toy' && ptS.toys.indexOf(it.id) >= 0;
-    if (!owned) continue;
-    has = true;
-    rows += '<div class="pet-item"><div class="pet-ico">' + PT_ICO[it.id] + '</div>'
-      + '<div class="pet-inf"><div class="pet-nm">' + escHtml(it.name) + '</div>'
-      + '<div class="pet-desc">' + escHtml(it.desc) + '</div></div>'
-      + '<button class="pet-buy" onclick="ptPlayToy(\'' + it.id + '\')">玩</button></div>';
-  }
-  if (ptS.tree) {
-    has = true;
-    rows += '<div class="pet-item"><div class="pet-ico">' + PT_ICO.tree + '</div>'
-      + '<div class="pet-inf"><div class="pet-nm">猫爬架</div><div class="pet-desc">跳上去站高高</div></div>'
-      + '<button class="pet-buy" onclick="ptClimb()">爬</button></div>';
-  }
-  if (!has) rows = '<div class="pet-empty">还没有玩具～猫商店里有毛线球、逗猫棒在等你</div>';
-  m.querySelector('.ml-body').innerHTML = rows;
-  m.classList.add('show');
-}
+// ---------- 喂食/玩耍无弹窗：入口=库存 chip 与玩具按钮（ptFeed/ptPlayToy），此处不再提供弹窗 ----------
 function ptCloseModal(id) {
   var m = document.getElementById(id);
   if (m) m.classList.remove('show');
@@ -689,20 +780,17 @@ function ptDistractors(w, field) {
   if (same.length < 3) for (i = 0; i < all.length; i++) if (same.indexOf(all[i][field]) < 0 && ptNorm(all[i][field]) !== ansKey) same.push(all[i][field]);
   return ptShuffle(same).slice(0, 3);
 }
+// 点「背单词」直接开考：三种题型随机混出，不再显示题型选择；连对有 COMBO 鼓励
 function ptOpenQuiz() {
   if (!ptS) return;
-  var m = document.getElementById('ptMoQuiz');
-  m.querySelector('.ml-body').innerHTML =
-    '<div class="pet-modes">'
-    + '<button class="pet-qmode" onclick="ptQStart(\'spell\')"><b>拼写挑战</b><span>看中文，拼出英文单词（最难，赚币最快）</span></button>'
-    + '<button class="pet-qmode" onclick="ptQStart(\'ce\')"><b>中文选英文</b><span>选出正确的英文单词</span></button>'
-    + '<button class="pet-qmode" onclick="ptQStart(\'ec\')"><b>英文选中文</b><span>选出英文单词的中文意思</span></button>'
-    + '</div>'
-    + '<div class="pet-q-fb" style="margin-top:14px"><small>词库：人教版新课标 四年级上册 + 下册 · 答对 +3 猫币 / 答错 -2 猫币</small></div>';
-  m.classList.add('show');
+  document.getElementById('ptMoQuiz').classList.add('show');
+  ptQStart();
 }
-function ptQStart(mode) {
-  ptQ = { mode: mode, idx: 0, right: 0, wrong: 0, cur: null, answered: false, list: ptShuffle(ptFlat()).slice(0, PT_ROUND) };
+var PT_QMODES = ['spell', 'ce', 'ec'];
+var PT_COMBO_WORDS = { 2: '厉害！', 3: '超棒！', 4: '太强啦！', 5: '势不可挡！' };
+function ptComboWord(n) { return PT_COMBO_WORDS[Math.min(n, 5)] || '厉害！'; }
+function ptQStart() {
+  ptQ = { qmode: 'ce', idx: 0, right: 0, wrong: 0, combo: 0, maxCombo: 0, cur: null, answered: false, list: ptShuffle(ptFlat()).slice(0, PT_ROUND) };
   ptQRender();
 }
 function ptQRender() {
@@ -710,30 +798,33 @@ function ptQRender() {
   if (!ptQ || ptQ.idx >= ptQ.list.length) { ptQResult(); return; }
   var w = ptQ.list[ptQ.idx];
   ptQ.cur = w; ptQ.answered = false;
+  ptQ.qmode = PT_QMODES[Math.floor(Math.random() * PT_QMODES.length)]; // 每题随机题型
   var unit = w.sem + ' · ' + w.u;
-  var body = '<div class="pet-q-top"><span>第 ' + (ptQ.idx + 1) + '/' + ptQ.list.length + ' 题</span>'
+  var modeName = ptQ.qmode === 'spell' ? '拼出来' : (ptQ.qmode === 'ce' ? '选出英文' : '选出中文意思');
+  var body = '<div class="pt-q-wrap"><div class="pet-q-top"><span>第 ' + (ptQ.idx + 1) + '/' + ptQ.list.length + ' 题 · 随机题型</span>'
     + '<span class="bal" style="display:flex;align-items:center;gap:4px">' + PT_ICO.coin + ptS.coins + ' 猫币</span></div>'
     + '<div class="pet-q-prog"><i style="width:' + (ptQ.idx / ptQ.list.length * 100) + '%"></i></div>';
-  if (ptQ.mode === 'spell') {
+  if (ptQ.qmode === 'spell') {
     var e = w.e, hint = '';
     for (var i = 0; i < e.length; i++) hint += (e[i] === ' ' ? '  ' : (i === 0 ? e[i] : '_')) + ' ';
-    body += '<div class="pet-q-word">' + escHtml(w.c) + '<small>' + escHtml(unit) + ' · 拼出来：' + escHtml(hint.trim()) + '</small></div>'
+    body += '<div class="pet-q-word">' + escHtml(w.c) + '<small>' + escHtml(unit) + ' · ' + modeName + '：' + escHtml(hint.trim()) + '</small></div>'
       + '<div class="pet-q-input"><input id="ptQInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="输入英文单词" onkeydown="if(event.key===\'Enter\')ptSpellTry()">'
       + '<button class="pet-go" onclick="ptSpellTry()">提交</button></div>'
       + '<div class="pet-q-fb" id="ptQFb"></div>';
-  } else if (ptQ.mode === 'ce') {
+  } else if (ptQ.qmode === 'ce') {
     var opts = ptShuffle([w.e].concat(ptDistractors(w, 'e')));
-    body += '<div class="pet-q-word">' + escHtml(w.c) + '<small>' + escHtml(unit) + ' · 选出英文</small></div><div class="pet-q-opts">';
+    body += '<div class="pet-q-word">' + escHtml(w.c) + '<small>' + escHtml(unit) + ' · ' + modeName + '</small></div><div class="pet-q-opts">';
     for (var j = 0; j < opts.length; j++) body += '<button class="pet-opt" onclick="ptQPick(this,' + j + ')">' + escHtml(opts[j]) + '</button>';
     ptQ.opts = opts;
     body += '</div><div class="pet-q-fb" id="ptQFb"></div>';
   } else {
     var opts2 = ptShuffle([w.c].concat(ptDistractors(w, 'c')));
-    body += '<div class="pet-q-word">' + escHtml(w.e) + '<small>' + escHtml(unit) + ' · 选出中文意思</small></div><div class="pet-q-opts">';
+    body += '<div class="pet-q-word">' + escHtml(w.e) + '<small>' + escHtml(unit) + ' · ' + modeName + '</small></div><div class="pet-q-opts">';
     for (var k = 0; k < opts2.length; k++) body += '<button class="pet-opt" onclick="ptQPick(this,' + k + ')">' + escHtml(opts2[k]) + '</button>';
     ptQ.opts = opts2;
     body += '</div><div class="pet-q-fb" id="ptQFb"></div>';
   }
+  body += '</div>';
   m.querySelector('.ml-body').innerHTML = body;
   var inp = document.getElementById('ptQInput');
   if (inp) setTimeout(function () { inp.focus(); }, 60);
@@ -750,10 +841,11 @@ function ptSpellTry() {
 function ptQPick(btn, j) {
   if (!ptQ || ptQ.answered) return;
   ptQ.answered = true;
-  var ok = ptNorm(ptQ.opts[j]) === ptNorm(ptQ.cur[ptQ.mode === 'ce' ? 'e' : 'c']);
+  var ansKey = ptNorm(ptQ.cur[ptQ.qmode === 'ce' ? 'e' : 'c']);
+  var ok = ptNorm(ptQ.opts[j]) === ansKey;
   var btns = btn.parentNode.querySelectorAll('.pet-opt');
   for (var i = 0; i < btns.length; i++) {
-    if (ptNorm(ptQ.opts[i]) === ptNorm(ptQ.cur[ptQ.mode === 'ce' ? 'e' : 'c'])) btns[i].classList.add('right');
+    if (ptNorm(ptQ.opts[i]) === ansKey) btns[i].classList.add('right');
   }
   if (!ok) btn.classList.add('wrong');
   ptQJudge(ok);
@@ -763,10 +855,23 @@ function ptQJudge(ok) {
   var remark = ptTalk(ok ? PT_TALK.quizRight : PT_TALK.quizWrong);
   if (ok) {
     ptQ.right++;
+    ptQ.combo++;
+    ptQ.maxCombo = Math.max(ptQ.maxCombo, ptQ.combo);
     ptSetCoins(PT_RIGHT);
-    if (fb) fb.className = 'pet-q-fb ok', fb.innerHTML = '答对啦！猫币 +3<small>团子：' + escHtml(remark) + '</small>';
+    var ctext = '';
+    if (ptQ.combo >= 2) { // 连对 COMBO 鼓励（角标弹出后自动消失）
+      ctext = ' · 连对 ×' + ptQ.combo;
+      var wrap = document.querySelector('#ptMoQuiz .pt-q-wrap');
+      if (wrap) {
+        wrap.insertAdjacentHTML('beforeend', '<div class="pet-q-combo"><b>COMBO ×' + ptQ.combo + '</b><span>' + ptComboWord(ptQ.combo) + '</span></div>');
+        var cb = wrap.querySelector('.pet-q-combo');
+        setTimeout(function () { if (cb && cb.parentNode) cb.parentNode.removeChild(cb); }, 1450);
+      }
+    }
+    if (fb) fb.className = 'pet-q-fb ok', fb.innerHTML = '答对啦！猫币 +3' + ctext + '<small>团子：' + escHtml(remark) + '</small>';
   } else {
     ptQ.wrong++;
+    ptQ.combo = 0;
     ptSetCoins(-PT_WRONG);
     var ans = ptQ.cur.e + '（' + ptQ.cur.c + '）';
     if (fb) fb.className = 'pet-q-fb no', fb.innerHTML = '答错了，猫币 -2 · 正确答案：' + escHtml(ans) + '<small>团子：' + escHtml(remark) + '</small>';
@@ -779,13 +884,15 @@ function ptQResult() {
   var net = ptQ.right * PT_RIGHT - ptQ.wrong * PT_WRONG;
   m.querySelector('.ml-body').innerHTML =
     '<div class="pet-result"><div class="big">本轮完成！</div>'
-    + '<div class="sub">答对 <b class="up">' + ptQ.right + ' 题</b> · 答错 <b class="down">' + ptQ.wrong + ' 题</b><br>'
+    + '<div class="sub">答对 <b class="up">' + ptQ.right + ' 题</b> · 答错 <b class="down">' + ptQ.wrong + ' 题</b>'
+    + (ptQ.maxCombo >= 2 ? ' · 最高连对 <b class="up">×' + ptQ.maxCombo + '</b>' : '') + '<br>'
     + '猫币变化：<b class="' + (net >= 0 ? 'up' : 'down') + '">' + (net >= 0 ? '+' + net : net) + '</b> · 现有 ' + ptS.coins + ' 猫币</div>'
     + '<div class="pet-result-btns">'
-    + '<button class="bn-pet p" onclick="ptQStart(\'' + ptQ.mode + '\')">再来一轮</button>'
-    + '<button class="bn-pet q" onclick="ptOpenQuiz()">换个模式</button>'
+    + '<button class="bn-pet p" onclick="ptQStart()">再来一轮</button>'
     + '<button class="bn-pet q" onclick="ptCloseModal(\'ptMoQuiz\')">回去撸猫</button>'
-    + '</div></div>';
+    + '</div>'
+    + '<div class="sub" style="margin-top:12px;font-size:11px">词库：人教版新课标四上+四下 · 三种题型随机 · 答对 +3 / 答错 -2 猫币</div>'
+    + '</div>';
   ptQ = null;
 }
 
