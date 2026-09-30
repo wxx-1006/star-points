@@ -4,7 +4,8 @@
 //   拼写/中文选英文/英文选中文 三种题型随机混出；答对 +3 猫币、答错 -2 猫币，
 //   猫币不为负；连对 COMBO 鼓励），猫币在猫咪商店购物：
 //   猫粮 20/袋 · 猫罐头 20 · 猫条 15 · 玩具 20~80 · 猫爬架 100（一次性）。
-//   喂食/玩耍编排期间锁交互（进食中提示「猫猫正在进食哦…」）；喂食会从语言库随机飘出心情弹幕；
+//   喂食开一餐 30 分钟：碗内才出现食物并随时间减少，小猫守碗持续进食、餐中禁喂禁玩，吃完回空；
+//   喂食/玩耍会从语言库随机飘出心情弹幕；
 //   小猫随累计食量长大（4 个阶段，体型随阶段变大），每天胃口随阶段变大（0.25 → 1 袋/天）；
 //   每日喂食上限=阶段胃口折算餐数；隔天未开粮/未喂，进页面触发低落欢迎语。
 // 数据：按账号存本机 localStorage 'sp_pet__<phone>'（孩子端与刷题数据同级，不上云）。
@@ -14,6 +15,7 @@
 var PET_KEY_PREFIX = 'sp_pet__';
 var PT_RIGHT = 3, PT_WRONG = 2, PT_ROUND = 10;   // 答对+3 / 答错-2 / 每轮10题
 var PT_FOOD_MEAL = 0.25;                          // 每次喂猫粮吃 1/4 袋
+var PT_MEAL_MS = 30 * 60 * 1000;                  // 一餐进食时长：30 分钟（碗内食物随时间减少，吃完回空）
 // 成长阶段：need=进入该阶段累计吃袋数；app=每天胃口（袋）；size=显示缩放
 var PT_STAGES = [
   { name: '小奶猫', need: 0,   app: 0.25, size: 0.8  },
@@ -136,12 +138,13 @@ function ptInjectStyle() {
 .pet-window::after{content:'';position:absolute;bottom:12px;left:10px;width:34px;height:9px;border-radius:999px;background:#fff;opacity:.9;box-shadow:14px -8px 0 -2px #fff}
 .pet-rug{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:180px;height:38px;border-radius:50%;background:#F2B8A0;opacity:.7}
 .pet-bowl{position:absolute;left:5%;bottom:14%;width:58px;height:26px}
-.pet-bowl .b-food{position:absolute;top:1px;left:7px;right:7px;height:12px;border-radius:8px;background:#C98A4B;display:none}
-.pet-bowl .b-food::after{content:'';position:absolute;top:3px;left:5px;width:5px;height:5px;border-radius:999px;background:#A96B32;box-shadow:10px 1px 0 #A96B32,20px -1px 0 #A96B32,30px 1px 0 #A96B32}
-.pet-bowl .b-can{position:absolute;top:0;left:5px;right:5px;height:13px;border-radius:8px;background:#E8A08F;display:none}
-.pet-bowl .b-can::after{content:'';position:absolute;top:3px;left:6px;width:6px;height:6px;border-radius:999px;background:#D17B66;box-shadow:11px 2px 0 #D17B66,20px -1px 0 #C96E58}
-.pet-bowl.food .b-food{display:block}
-.pet-bowl.can .b-can{display:block}
+/* 碗内食物：仅进食会话中出现，颜色随餐种（猫粮棕/罐头粉/猫条黄），scaleX 随剩余时间变少 */
+.pet-bowl .b-fill{position:absolute;top:1px;left:6px;right:6px;height:13px;border-radius:8px;display:none;transform-origin:50% 100%;transition:transform 1.2s linear}
+.pet-bowl.food .b-fill{display:block;background:#C98A4B}
+.pet-bowl.food .b-fill::after{content:'';position:absolute;top:3px;left:5px;width:5px;height:5px;border-radius:999px;background:#A96B32;box-shadow:10px 1px 0 #A96B32,20px -1px 0 #A96B32,30px 1px 0 #A96B32}
+.pet-bowl.can .b-fill{display:block;background:#E8A08F}
+.pet-bowl.can .b-fill::after{content:'';position:absolute;top:3px;left:6px;width:6px;height:6px;border-radius:999px;background:#D17B66;box-shadow:11px 2px 0 #D17B66,20px -1px 0 #C96E58}
+.pet-bowl.strip .b-fill{display:block;background:#F4B942;box-shadow:inset 0 -3px 0 #D89A28}
 .pet-bowl .b-body{position:absolute;bottom:0;left:0;right:0;height:17px;background:#fff;border-radius:6px 6px 16px 16px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.06)}
 .pet-bowl.empty .b-body{background:#F3EADA}
 .pet-tree{position:absolute;right:3%;bottom:12%;width:86px;height:172px;display:none}
@@ -267,9 +270,6 @@ function ptInjectStyle() {
 /* 吃饭时飘出的心情字 */
 .pt-word{position:absolute;font:700 13px/1.3 var(--ff);color:#8F6210;text-shadow:0 1px 0 #fff,0 0 6px #fff;pointer-events:none;white-space:nowrap;z-index:4;animation:ptWordUp 1.75s ease-out forwards}
 @keyframes ptWordUp{0%{opacity:0;transform:translateY(8px) scale(.7)}22%{opacity:1;transform:translateY(-4px) scale(1)}100%{opacity:0;transform:translateY(-48px)}}
-/* 猫条（手喂）：躺在碗边，被舔着变短 */
-.pt-strip{position:absolute;width:36px;height:12px;border-radius:6px;background:#F4B942;box-shadow:inset 0 -3px 0 #D89A28;transform-origin:left center;animation:ptStripEat 2.5s ease-in forwards;z-index:2}
-@keyframes ptStripEat{0%{transform:scaleX(1)}80%{transform:scaleX(.14)}100%{transform:scaleX(.05);opacity:0}}
 /* 玩具特效实物：滚动的毛线球/弹跳的皮球/摆动的逗猫棒/逃跑的老鼠 */
 .pt-toyfx{position:absolute;bottom:13%;width:46px;height:46px;z-index:2;pointer-events:none}
 .pt-toyfx svg{width:100%;height:100%}
@@ -348,11 +348,12 @@ function ptLock(ms, kind) {
 }
 function ptUnlock() { ptLockUntil = 0; ptLockKind = ''; }
 function ptBlockedMsg() {
-  if (Date.now() >= ptLockUntil) return '';
-  return ptLockKind === 'eat' ? '猫猫正在进食哦，请等我进食完再来找我玩吧~' : '团子还在忙，等它一下下~';
+  if (ptS && ptS.meal && Date.now() < ptS.meal.e) return '猫猫正在进食哦，请等我进食完再来找我玩吧~'; // 30 分钟一餐，餐中禁喂禁玩
+  if (Date.now() < ptLockUntil) return '团子还在忙，等它一下下~';
+  return '';
 }
 function ptDefault() {
-  return { v: 1, coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0 };
+  return { v: 1, coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0, meal: null };
 }
 function ptLoad() {
   var key = ptAccKey();
@@ -421,7 +422,7 @@ function ptBuild() {
   <div class="pet-room" id="ptRoom">
     <div class="pet-window" aria-hidden="true"></div>
     <div class="pet-rug" aria-hidden="true"></div>
-    <div class="pet-bowl empty" id="ptBowl" aria-hidden="true"><div class="b-food"></div><div class="b-can"></div><div class="b-body"></div></div>
+    <div class="pet-bowl empty" id="ptBowl" aria-hidden="true"><div class="b-fill" id="ptBowlFill"></div><div class="b-body"></div></div>
     <div class="pet-tree" aria-hidden="true"><div class="ball"></div><div class="pl pl3"></div><div class="post"></div><div class="pl pl2"></div><div class="pl pl1"></div></div>
     <div class="pet-actor" id="ptActor">
       <div class="pet-bubble" id="ptBubble"></div>
@@ -441,7 +442,6 @@ function ptBuild() {
 }
 
 // ---------- 渲染 ----------
-var ptBowlFx = ''; // 进食特效的临时碗状态（'can'），结束即清空回落到库存反映
 function ptRender() {
   var stg = ptStage(), idx = PT_STAGES.indexOf(stg), next = PT_STAGES[idx + 1];
   document.getElementById('ptCoins').textContent = ptS.coins;
@@ -453,7 +453,12 @@ function ptRender() {
   var fed = Math.min(ptS.fedToday || 0, cap);
   document.getElementById('ptGrowT').textContent = '陪伴第 ' + days + ' 天 · 每天吃 ' + stg.app + ' 袋 · 今日已喂 ' + fed + '/' + cap + ' 餐'
     + (next ? ' · 再吃 ' + ptR2(next.need - ptS.eaten) + ' 袋长大' : ' · 已经完全长大啦');
-  document.getElementById('ptBowl').className = 'pet-bowl ' + (ptBowlFx || (ptS.food > 0 ? 'food' : 'empty'));
+  // 碗：只有进食会话中才有食物（猫粮/罐头/猫条），且随剩余时间变少；吃完/平时为空碗
+  var meal = ptS.meal && Date.now() < ptS.meal.e ? ptS.meal : null;
+  document.getElementById('ptBowl').className = 'pet-bowl ' + (meal ? (meal.k === 'can' ? 'can' : (meal.k === 'strip' ? 'strip' : 'food')) : 'empty');
+  var fill = document.getElementById('ptBowlFill');
+  if (fill) fill.style.transform = meal && (meal.e - Date.now()) / (meal.e - meal.s) < 0.97
+    ? 'scaleX(' + Math.max(0.06, (meal.e - Date.now()) / (meal.e - meal.s)).toFixed(3) + ')' : '';
   var room = document.getElementById('ptRoom');
   if (room) room.classList.toggle('withtree', !!ptS.tree);
   // 库存即入口：点猫粮/罐头/猫条直接喂（无弹窗）
@@ -594,7 +599,9 @@ function ptPlayFx(cls, dur, cb) {
 function ptTick() {
   setTimeout(ptTick, 600);
   if (document.hidden || curTab !== 'pet' || sessionRole !== 'kid' || !ptS) return;
-  if (ptBusy || Date.now() < ptLockUntil) return; // 进食/玩耍编排期间不自主活动
+  ptMealStep(); // 进食会话推进（到点收碗/守碗循环吃/飘字/食物渐少）
+  if (ptS.meal) return; // 餐中不自主活动（一直进食）
+  if (ptBusy || Date.now() < ptLockUntil) return; // 玩耍编排期间不自主活动
   ptNextAct -= 0.6;
   if (ptNextAct > 0) return;
   ptNextAct = 5 + Math.random() * 7;
@@ -619,10 +626,13 @@ function ptTap() {
   ptSay(ptTalk(PT_TALK.pet));
 }
 // 喂食无弹窗：点库存 chip 直接喂；每日上限 = 阶段胃口折算餐数（0.25袋/餐），
-// 超出提示「今天已经喂够了」；进食过程可视化：碗里盛粮/罐头/猫条 + 低头吃 + 心情字飘出。
+// 超出提示「今天已经喂够了」。
+// 进食会话：喂下后开一餐 30 分钟（PT_MEAL_MS）——碗内出现食物并随时间逐渐减少，
+// 期间小猫一直守在碗边循环进食、随机飘心情字，餐中禁喂禁玩；30 分钟吃完碗回空。
+// 会话随 localStorage 持久化：刷新/换页/离线期间照常计时（进页面时对齐）。
 function ptFeed(kind) {
   if (!ptS) return;
-  var blk = ptBlockedMsg(); // 进食中/玩耍中：拒绝并提示（进食优先提示）
+  var blk = ptBlockedMsg(); // 上一餐未吃完/玩耍中：拒绝并提示（进食优先提示）
   if (blk) { toast(blk); return; }
   var cap = Math.max(1, Math.round(ptStage().app / PT_FOOD_MEAL));
   if ((ptS.fedToday || 0) >= cap) { toast('今天已经喂够了，明天再来吧~'); return; }
@@ -640,42 +650,56 @@ function ptFeed(kind) {
   var before = PT_STAGES.indexOf(ptStage());
   ptS.fedToday = (ptS.fedToday || 0) + 1;
   ptS.lastFeed = today();
+  ptS.meal = { s: Date.now(), e: Date.now() + PT_MEAL_MS, k: kind }; // 开餐
   ptSave();
-  if (kind === 'can') ptBowlFx = 'can'; // 罐头进碗（吃完回落）
   ptRender();
-  ptLock(6300, 'eat'); // 走位+进食全程锁交互（完成时提前解锁）
-  ptSay('开饭啦～');
+  ptLock(4200, 'move'); // 仅走位期间锁，之后由「餐中」状态接管
+  ptSay('开饭啦～这顿要吃好一会儿');
+  ptWordSeq(kind === 'food' ? PT_TALK.eatWords : (kind === 'can' ? PT_TALK.canWords : PT_TALK.stripWords), 3);
   ptGo(ptBowlX() + 12, function () {
-    if (kind === 'strip') ptStripFx();
-    ptPlayFx('eat', 2700);
-    ptWordSeq(kind === 'food' ? PT_TALK.eatWords : (kind === 'can' ? PT_TALK.canWords : PT_TALK.stripWords), 3);
-    setTimeout(function () {
-      ptUnlock();
-      ptBowlFx = '';
-      var after = PT_STAGES.indexOf(ptStage());
-      if (after > before) { // 长大：体型脉冲 + 气泡庆祝
-        var svg = document.querySelector('#p-pet .pt-svg');
-        if (svg) { svg.classList.add('grow'); setTimeout(function () { svg.classList.remove('grow'); }, 1000); }
-        ptSay(ptTalk(PT_TALK.levelup), true);
-        toast('团子长大啦：' + ptStage().name);
-        ptHeartsBurst(5);
-      } else {
-        ptSay(ptTalk(kind === 'food' ? PT_TALK.full : (kind === 'can' ? PT_TALK.canFull : PT_TALK.stripFull)));
-      }
-      ptRender();
-    }, 2750);
+    ptUnlock();
+    ptNextEatAt = 0; ptNextMealWord = 0; // 立即开始进食循环
+    var after = PT_STAGES.indexOf(ptStage());
+    if (after > before) { // 长大：体型脉冲 + 气泡庆祝
+      var svg = document.querySelector('#p-pet .pt-svg');
+      if (svg) { svg.classList.add('grow'); setTimeout(function () { svg.classList.remove('grow'); }, 1000); }
+      ptSay(ptTalk(PT_TALK.levelup), true);
+      toast('团子长大啦：' + ptStage().name);
+      ptHeartsBurst(5);
+    }
+    ptRender();
   });
 }
-// 猫条手喂：碗边出现一根猫条，被慢慢舔短直至消失
-function ptStripFx() {
-  var room = document.getElementById('ptRoom');
-  if (!room) return;
-  var s = document.createElement('div');
-  s.className = 'pt-strip';
-  s.style.left = (ptBowlX() + 46) + 'px';
-  s.style.bottom = '13%';
-  room.appendChild(s);
-  setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 2600);
+// 一餐 30 分钟的推进：到点收碗；未到点则保证猫守在碗边、循环低头吃、随机飘字、食物渐少
+var ptNextEatAt = 0, ptNextMealWord = 0;
+function ptMealStep() {
+  var m = ptS && ptS.meal;
+  if (!m) return;
+  var now = Date.now();
+  if (now >= m.e) { // 吃完：碗回空 + 满足语
+    ptS.meal = null;
+    ptSave();
+    ptRender();
+    ptHeartsBurst(4);
+    ptSay(ptTalk(m.k === 'food' ? PT_TALK.full : (m.k === 'can' ? PT_TALK.canFull : PT_TALK.stripFull)), true);
+    return;
+  }
+  if (!ptBusy && Date.now() >= ptLockUntil) {
+    var a = ptActorEl();
+    var x = parseFloat(a && a.style.left) || 0;
+    if (Math.abs(x - (ptBowlX() + 12)) > 8) ptGo(ptBowlX() + 12); // 离开碗边了就回去继续吃
+  }
+  if (now >= ptNextEatAt) { ptNextEatAt = now + 3200; ptPlayFx('eat', 2800); } // 一直低头吃
+  if (now >= ptNextMealWord) {
+    ptNextMealWord = now + 8000 + Math.random() * 9000;
+    var list = m.k === 'food' ? PT_TALK.eatWords : (m.k === 'can' ? PT_TALK.canWords : PT_TALK.stripWords);
+    ptWordSeq([ptTalk(list)], 1);
+  }
+  var fill = document.getElementById('ptBowlFill'); // 食物随剩余时间变少
+  if (fill) {
+    var frac = (m.e - now) / (m.e - m.s);
+    fill.style.transform = frac >= 0.97 ? '' : 'scaleX(' + Math.max(0.06, frac).toFixed(3) + ')';
+  }
 }
 // 玩具无弹窗：点玩具按钮即玩——实物出现在房间里，小猫追逐/扑跳
 var PT_TOYFX = {
@@ -930,6 +954,7 @@ function ptShow() {
   if (sessionRole !== 'kid') return; // 宠物是孩子端专属
   ptBuild();
   ptLoad();
+  ptMealSync(); // 离线/换页期间跨过 30 分钟的餐：收碗回空；未吃完的餐恢复进食循环
   var a = ptActorEl();
   if (a && !a.style.left) a.style.left = Math.round(ptRoomW() * 0.38) + 'px'; // 首次出现的位置
   ptRender();
@@ -946,3 +971,12 @@ function ptShow() {
     ptSay(ptTalk(PT_TALK.greet), true);
   }
 }
+// 进页面时对齐进食会话：已跨过 30 分钟 → 收碗（碗回空）；仍在餐中 → 重置循环计时立即继续吃
+function ptMealSync() {
+  if (ptS.meal && Date.now() >= ptS.meal.e) { ptS.meal = null; ptSave(); }
+  ptNextEatAt = 0;
+  ptNextMealWord = 0;
+}
+
+// 页脚样式立即注入：宠物页签爪印图标在登录后即可见（不等到首次进入宠物页才注入）
+ptInjectStyle();
