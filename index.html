@@ -609,6 +609,9 @@ body.kid-mode{padding-bottom:72px}
   <div id="reportBody" style="padding-bottom:24px"></div>
 </div>
 
+<!-- 电子宠物（孩子端专属）：结构由 pet.js 构建注入；状态按账号存本机 sp_pet__<phone>（与刷题数据同级，不上云） -->
+<div class="pg" id="p-pet"></div>
+
 <!-- 设置 -->
 <div class="pg" id="p-settings">
   <div style="padding-top:12px">
@@ -680,10 +683,11 @@ body.kid-mode{padding-bottom:72px}
   <div class="ti" id="tabSettings" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
 </div>
 
-<!-- Tab Bar（孩子端轻量导航：仅 记录 / 商城 两项，applyRoleUI 切换显隐；刷题仅家长端开放） -->
+<!-- Tab Bar（孩子端轻量导航：记录/商城/宠物/报告，applyRoleUI 切换显隐；宠物页为 pet.js 孩子端专属） -->
 <div class="tb" id="kidTb" style="display:none">
   <div class="ti on" id="kt-records" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
   <div class="ti" id="kt-shop" onclick="st('shop')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">商城</span></div>
+  <div class="ti" id="kt-pet" onclick="st('pet')"><span class="t-ico"><span class="tico-pet" aria-hidden="true"></span></span><span class="tl">宠物</span></div>
   <div class="ti" id="kt-report" onclick="st('report')"><span class="t-ico"><span class="tico-chart" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">报告</span></div>
 </div>
 
@@ -921,6 +925,48 @@ body.kid-mode{padding-bottom:72px}
       <button class="ml-close" onclick="cm('mRd')">✕</button>
     </div>
     <div class="ml-body" id="mRdBody"></div>
+  </div>
+</div>
+
+<!-- 宠物弹窗 ×4（内容均由 pet.js 动态填充）：猫商店 / 喂食 / 玩耍 / 背单词 -->
+<div class="mo" id="ptMoShop">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">猫咪商店</div>
+      <button class="ml-close" onclick="ptCloseModal('ptMoShop')">✕</button>
+    </div>
+    <div class="ml-body"></div>
+  </div>
+</div>
+<div class="mo" id="ptMoFeed">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">喂食</div>
+      <button class="ml-close" onclick="ptCloseModal('ptMoFeed')">✕</button>
+    </div>
+    <div class="ml-body"></div>
+  </div>
+</div>
+<div class="mo" id="ptMoPlay">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">玩耍</div>
+      <button class="ml-close" onclick="ptCloseModal('ptMoPlay')">✕</button>
+    </div>
+    <div class="ml-body"></div>
+  </div>
+</div>
+<div class="mo" id="ptMoQuiz">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">背单词赚猫币</div>
+      <button class="ml-close" onclick="ptCloseModal('ptMoQuiz')">✕</button>
+    </div>
+    <div class="ml-body"></div>
   </div>
 </div>
 
@@ -2074,9 +2120,9 @@ var dpSelectedEnd=null;
 
 function st(tab){
   if(sessionRole==='kid'){
-    // 孩子端三个页签：记录 / 商城 / 报告（刷题仍仅家长端开放，孩子端无入口，此处双保险拦截）
+    // 孩子端四个页签：记录 / 商城 / 宠物 / 报告（刷题仍仅家长端开放，孩子端无入口，此处双保险拦截）
     if(tab==='quiz')return;
-    if(tab!=='records'&&tab!=='shop'&&tab!=='report')return;
+    if(tab!=='records'&&tab!=='shop'&&tab!=='pet'&&tab!=='report')return;
     var pages=document.querySelectorAll('.pg');
     for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
     document.getElementById('p-'+tab).classList.add('on');
@@ -2084,6 +2130,7 @@ function st(tab){
     for(var j=0;j<ktabs.length;j++) ktabs[j].classList.remove('on');
     document.getElementById('kt-'+tab).classList.add('on');
     curTab=tab;
+    if(tab==='pet')ptShow();       // 宠物页：本机状态渲染 + 欢迎语（数据不上云，无需等待 syncPull）
     if(tab==='report')renderReport(); // 先按当前数据渲染，拉取后刷新
     if(!currentUser){render();return}
     // 进入记录页/商城/报告均重新拉取：家长桶（总积分/奖励项/刷题只读字段）
@@ -2097,6 +2144,7 @@ function st(tab){
   }
   // 刷题页：进度按账号存本机（sp_quiz__<phone>）并随账号桶上云 → 先备好题目列表再显示页面，
   // 避免 syncPull 返回前的窗口期内判分按钮已可点、而 qzList 仍为空
+  if(tab==='pet')return; // 宠物页为孩子端专属：家长端无入口且不开放（双保险）
   if(tab==='quiz')qzShow();
   if(tab==='report')renderReport(); // 报告页：先按当前内存数据渲染，拉取完成后刷新
   var pages=document.querySelectorAll('.pg');
@@ -3398,5 +3446,6 @@ window.addEventListener('resize',function(){typeof qzSetStickyTop==='function'&&
   });
 })();
 </script>
+<script src="pet.js?v=20260930"></script>
 </body>
 </html>
