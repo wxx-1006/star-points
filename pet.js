@@ -4,8 +4,9 @@
 //   拼写/中文选英文/英文选中文 三种题型随机混出；答对 +3 猫币、答错 -2 猫币，
 //   猫币不为负；连对 COMBO 鼓励），猫币在猫咪商店购物：
 //   猫粮 20/袋 · 猫罐头 20 · 猫条 15 · 玩具 20~80 · 猫爬架 100（一次性）。
-//   喂食开一餐 30 分钟：碗内才出现食物并随时间减少，小猫守碗持续进食、餐中禁喂禁玩，吃完回空；
-//   喂食/玩耍会从语言库随机飘出心情弹幕；
+//   只有猫粮是正餐：喂下开一餐 30 分钟（碗内出现食物并随时间减少，小猫守碗持续进食、
+//   餐中禁正餐禁玩具，吃完回空）；猫罐头/猫条是零食——即时吃完，不计成长值、不计今日餐数，
+//   正餐中也可以加零食；喂食/玩耍会从语言库随机飘出心情弹幕；
 //   小猫随累计食量长大（4 个阶段，体型随阶段变大），每天胃口随阶段变大（0.25 → 1 袋/天）；
 //   每日喂食上限=阶段胃口折算餐数；隔天未开粮/未喂，进页面触发低落欢迎语。
 // 数据：按账号存本机 localStorage 'sp_pet__<phone>'（孩子端与刷题数据同级，不上云）。
@@ -156,7 +157,7 @@ function ptInjectStyle() {
 .pet-tree .pl3{top:26px;left:12px;width:62px;height:11px}
 .pet-tree .ball{position:absolute;top:6px;left:22px;width:22px;height:22px;border-radius:999px;background:#F2708A;box-shadow:inset -3px -3px 0 rgba(0,0,0,.12)}
 .pet-actor{position:absolute;bottom:11.5%;left:40px;width:140px;transition:left 2.6s ease-in-out;will-change:left}
-.pet-actor .pt-svg{display:block;width:140px;height:116px;transition:width .9s ease,height .9s ease;filter:drop-shadow(0 5px 4px rgba(120,80,40,.16));cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pet-actor .pt-svg{display:block;position:relative;z-index:5;width:140px;height:116px;transition:width .9s ease,height .9s ease;filter:drop-shadow(0 5px 4px rgba(120,80,40,.16));cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pt-svg.flip{transform:scaleX(-1)}
 .pet-bubble{position:absolute;bottom:122px;left:50%;transform:translateX(-50%);max-width:210px;width:max-content;background:#fff;border:2px solid #F0C9A0;border-radius:14px;padding:8px 11px;font:600 12px/1.5 var(--ff);color:#6B4F35;text-align:center;opacity:0;transition:opacity .25s,bottom .9s ease;pointer-events:none;box-shadow:0 4px 10px rgba(120,80,40,.12);z-index:3}
 .pet-bubble::after{content:'';position:absolute;bottom:-7px;left:50%;margin-left:-6px;width:11px;height:11px;background:#fff;border-right:2px solid #F0C9A0;border-bottom:2px solid #F0C9A0;transform:rotate(45deg)}
@@ -625,37 +626,34 @@ function ptTap() {
   ptHeartsBurst(3);
   ptSay(ptTalk(PT_TALK.pet));
 }
-// 喂食无弹窗：点库存 chip 直接喂；每日上限 = 阶段胃口折算餐数（0.25袋/餐），
-// 超出提示「今天已经喂够了」。
-// 进食会话：喂下后开一餐 30 分钟（PT_MEAL_MS）——碗内出现食物并随时间逐渐减少，
-// 期间小猫一直守在碗边循环进食、随机飘心情字，餐中禁喂禁玩；30 分钟吃完碗回空。
+// 喂食分发：猫粮=正餐（30 分钟进食会话 + 成长值 + 今日餐数）；罐头/猫条=零食（即时吃完，
+// 不计成长值与餐数，正餐中也可以加餐，但玩耍/爬架编排期间会被拦）。
+// 正餐：每日上限 = 阶段胃口折算餐数（0.25袋/餐），超出提示「今天已经喂够了」。
+// 进食会话：碗内出现食物并随时间逐渐减少，期间小猫守在碗边循环进食、随机飘心情字；吃完碗回空。
 // 会话随 localStorage 持久化：刷新/换页/离线期间照常计时（进页面时对齐）。
 function ptFeed(kind) {
+  if (!ptS) return;
+  if (kind === 'food') ptFeedMeal();
+  else ptSnack(kind);
+}
+function ptFeedMeal() {
   if (!ptS) return;
   var blk = ptBlockedMsg(); // 上一餐未吃完/玩耍中：拒绝并提示（进食优先提示）
   if (blk) { toast(blk); return; }
   var cap = Math.max(1, Math.round(ptStage().app / PT_FOOD_MEAL));
   if ((ptS.fedToday || 0) >= cap) { toast('今天已经喂够了，明天再来吧~'); return; }
-  if (kind === 'food') {
-    if (ptS.food < PT_FOOD_MEAL) { toast('猫粮不够啦，去猫商店买一袋吧'); return; }
-    ptS.food = ptR2(ptS.food - PT_FOOD_MEAL);
-    ptS.eaten = ptR2(ptS.eaten + PT_FOOD_MEAL);
-  } else if (kind === 'can') {
-    if (ptS.cans < 1) { toast('罐头吃完了，去猫商店补货吧'); return; }
-    ptS.cans--;
-  } else if (kind === 'strip') {
-    if (ptS.strips < 1) { toast('猫条吃完了，去猫商店补货吧'); return; }
-    ptS.strips--;
-  } else return;
+  if (ptS.food < PT_FOOD_MEAL) { toast('猫粮不够啦，去猫商店买一袋吧'); return; }
   var before = PT_STAGES.indexOf(ptStage());
+  ptS.food = ptR2(ptS.food - PT_FOOD_MEAL);
+  ptS.eaten = ptR2(ptS.eaten + PT_FOOD_MEAL);
   ptS.fedToday = (ptS.fedToday || 0) + 1;
   ptS.lastFeed = today();
-  ptS.meal = { s: Date.now(), e: Date.now() + PT_MEAL_MS, k: kind }; // 开餐
+  ptS.meal = { s: Date.now(), e: Date.now() + PT_MEAL_MS, k: 'food' }; // 开餐
   ptSave();
   ptRender();
   ptLock(4200, 'move'); // 仅走位期间锁，之后由「餐中」状态接管
   ptSay('开饭啦～这顿要吃好一会儿');
-  ptWordSeq(kind === 'food' ? PT_TALK.eatWords : (kind === 'can' ? PT_TALK.canWords : PT_TALK.stripWords), 3);
+  ptWordSeq(PT_TALK.eatWords, 3);
   ptGo(ptBowlX() + 12, function () {
     ptUnlock();
     ptNextEatAt = 0; ptNextMealWord = 0; // 立即开始进食循环
@@ -670,6 +668,42 @@ function ptFeed(kind) {
     ptRender();
   });
 }
+// 零食（罐头/猫条）：即时吃完的小互动——不计成长值、不计今日餐数、无 30 分钟会话，
+// 正餐中也可以加餐（小猫停下来吃口零食再继续吃饭）；玩耍/爬架编排中会被拦。
+function ptSnack(kind) {
+  if (!ptS) return;
+  if (Date.now() < ptLockUntil) { toast('团子还在忙，等它一下下~'); return; }
+  if (kind === 'can') {
+    if (ptS.cans < 1) { toast('罐头吃完了，去猫商店补货吧'); return; }
+    ptS.cans--;
+  } else if (kind === 'strip') {
+    if (ptS.strips < 1) { toast('猫条吃完了，去猫商店补货吧'); return; }
+    ptS.strips--;
+  } else return;
+  ptS.lastFeed = today(); // 吃零食也算今天照顾过（避免隔天未喂的误判），但不计入餐数/成长
+  ptSave();
+  ptRender();
+  var words = kind === 'can' ? PT_TALK.canWords : PT_TALK.stripWords;
+  var atBowl = false;
+  var a = ptActorEl();
+  var x = parseFloat(a && a.style.left) || 0;
+  if (Math.abs(x - (ptBowlX() + 12)) <= 8) atBowl = true; // 正在碗边（含吃饭中）：原地吃零食
+  ptLock(5600, 'move'); // 零食互动期间锁正餐循环与其他操作（走位+进食动画全程）
+  var snackAnim = function () {
+    ptPlayFx('eat', 1800);
+    ptWordSeq([ptTalk(words), ptTalk(words)], 2);
+    ptHeartsBurst(2);
+    setTimeout(function () {
+      ptUnlock();
+      ptSay(ptTalk(kind === 'can' ? PT_TALK.canFull : PT_TALK.stripFull));
+      ptHeartsBurst(2);
+      ptRender();
+    }, 1900);
+  };
+  ptSay('呀，是' + (kind === 'can' ? '罐头' : '猫条') + '！');
+  if (atBowl) snackAnim();
+  else ptGo(ptBowlX() + 12, snackAnim);
+}
 // 一餐 30 分钟的推进：到点收碗；未到点则保证猫守在碗边、循环低头吃、随机飘字、食物渐少
 var ptNextEatAt = 0, ptNextMealWord = 0;
 function ptMealStep() {
@@ -681,24 +715,22 @@ function ptMealStep() {
     ptSave();
     ptRender();
     ptHeartsBurst(4);
-    ptSay(ptTalk(m.k === 'food' ? PT_TALK.full : (m.k === 'can' ? PT_TALK.canFull : PT_TALK.stripFull)), true);
+    ptSay(ptTalk(PT_TALK.full), true);
     return;
   }
-  if (!ptBusy && Date.now() >= ptLockUntil) {
-    var a = ptActorEl();
-    var x = parseFloat(a && a.style.left) || 0;
-    if (Math.abs(x - (ptBowlX() + 12)) > 8) ptGo(ptBowlX() + 12); // 离开碗边了就回去继续吃
-  }
-  if (now >= ptNextEatAt) { ptNextEatAt = now + 3200; ptPlayFx('eat', 2800); } // 一直低头吃
-  if (now >= ptNextMealWord) {
-    ptNextMealWord = now + 8000 + Math.random() * 9000;
-    var list = m.k === 'food' ? PT_TALK.eatWords : (m.k === 'can' ? PT_TALK.canWords : PT_TALK.stripWords);
-    ptWordSeq([ptTalk(list)], 1);
-  }
-  var fill = document.getElementById('ptBowlFill'); // 食物随剩余时间变少
+  var fill = document.getElementById('ptBowlFill'); // 食物随剩余时间变少（零食加餐期间也照常减少）
   if (fill) {
     var frac = (m.e - now) / (m.e - m.s);
     fill.style.transform = frac >= 0.97 ? '' : 'scaleX(' + Math.max(0.06, frac).toFixed(3) + ')';
+  }
+  if (ptBusy || Date.now() < ptLockUntil) return; // 走位/加零食等编排期间暂停进食循环，结束后继续
+  var a = ptActorEl();
+  var x = parseFloat(a && a.style.left) || 0;
+  if (Math.abs(x - (ptBowlX() + 12)) > 8) ptGo(ptBowlX() + 12); // 离开碗边了就回去继续吃
+  if (now >= ptNextEatAt) { ptNextEatAt = now + 3200; ptPlayFx('eat', 2800); } // 一直低头吃
+  if (now >= ptNextMealWord) {
+    ptNextMealWord = now + 8000 + Math.random() * 9000;
+    ptWordSeq([ptTalk(PT_TALK.eatWords)], 1);
   }
 }
 // 玩具无弹窗：点玩具按钮即玩——实物出现在房间里，小猫追逐/扑跳
