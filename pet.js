@@ -3,10 +3,13 @@
 //   背单词赚猫币（人教版 PEP 2024 新课标版：四上 2025秋 / 四下 2026春 教材单元词汇表；
 //   拼写/中文选英文/英文选中文 三种题型随机混出；答对 +3 猫币、答错 -2 猫币，
 //   猫币不为负；连对 COMBO 鼓励），猫币在猫咪商店购物：
-//   猫粮 20/袋 · 猫罐头 20 · 猫条 15 · 玩具 20~80 · 猫爬架 100（一次性）。
+//   猫粮 20/袋 · 猫罐头 20 · 猫条 15 · 玩具 20~80 · 家具多档：猫爬架 100/200/350 · 猫窝 50/120/250（各一次性）。
 //   只有猫粮是正餐：喂下开一餐 30 分钟（碗内出现食物并随时间减少，小猫守碗持续进食、
 //   餐中禁正餐禁玩具，吃完回空）；猫罐头/猫条是零食——即时吃完，不计成长值、不计今日餐数，
 //   正餐中也可以加零食；喂食/玩耍会从语言库随机飘出心情弹幕；
+//   家具系统：猫爬架/猫窝多档次（买回≠摆放——点「摆放」进房、点房间家具收回、可同摆多件）；
+//   猫窝摆放后可「睡觉觉」（趴窝闭眼 Zzz，点小猫唤醒）；商店分区展示（食物/玩具/家具）；
+//   背单词每天最多 3 次（跨天重置）；
 //   小猫随累计食量长大（4 个阶段，体型随阶段变大），每天胃口随阶段变大（0.25 → 1 袋/天）；
 //   每日喂食上限=阶段胃口折算餐数；隔天未开粮/未喂，进页面触发低落欢迎语。
 // 数据：按账号存本机 localStorage 'sp_pet__<phone>'（孩子端与刷题数据同级，不上云）。
@@ -15,6 +18,7 @@
 // ---------- 常量 ----------
 var PET_KEY_PREFIX = 'sp_pet__';
 var PT_RIGHT = 3, PT_WRONG = 2, PT_ROUND = 10;   // 答对+3 / 答错-2 / 每轮10题
+var PT_QUIZ_DAILY = 3;                            // 背单词每天最多参加次数
 var PT_FOOD_MEAL = 0.25;                          // 每次喂猫粮吃 1/4 袋
 var PT_MEAL_MS = 30 * 60 * 1000;                  // 一餐进食时长：30 分钟（碗内食物随时间减少，吃完回空）
 // 成长阶段：need=进入该阶段累计吃袋数；app=每天胃口（袋）；size=显示缩放
@@ -25,15 +29,25 @@ var PT_STAGES = [
   { name: '大猫',   need: 20,  app: 1,    size: 1.12 }
 ];
 var PT_SHOP = [
-  { id: 'food',  name: '猫粮（1袋）', cost: 20,  type: 'stack', desc: '主食。每次喂 1/4 袋，小猫每天都要吃' },
-  { id: 'can',   name: '猫罐头',      cost: 20,  type: 'stack', desc: '豪华大餐，吃完整只猫都精神了' },
-  { id: 'strip', name: '猫条',        cost: 15,  type: 'stack', desc: '一口一个幸福的小零食' },
-  { id: 'yarn',  name: '毛线球',      cost: 20,  type: 'toy',   desc: '滚来滚去抓不停' },
-  { id: 'ball',  name: '小皮球',      cost: 30,  type: 'toy',   desc: '弹跳追逐最开心' },
-  { id: 'wand',  name: '逗猫棒',      cost: 50,  type: 'toy',   desc: '跳高高必备神器' },
-  { id: 'mouse', name: '玩偶老鼠',    cost: 80,  type: 'toy',   desc: '要叼着到处跑的宝贝' },
-  { id: 'tree',  name: '猫爬架',      cost: 100, type: 'tree',  desc: '猫大王专属座驾，放进了房间里' }
+  // 食物 & 零食（消耗品）
+  { id: 'food',  name: '猫粮（1袋）', cost: 20,  type: 'stack', sec: 'food', desc: '正餐。每次喂 1/4 袋，吃一餐 30 分钟' },
+  { id: 'can',   name: '猫罐头',      cost: 20,  type: 'stack', sec: 'food', desc: '零食，即时吃完，不计成长与餐数' },
+  { id: 'strip', name: '猫条',        cost: 15,  type: 'stack', sec: 'food', desc: '零食，即时吃完，不计成长与餐数' },
+  // 玩具（互动道具，买了即可反复玩）
+  { id: 'yarn',  name: '毛线球',      cost: 20,  type: 'toy',   sec: 'toy',  desc: '滚来滚去抓不停' },
+  { id: 'ball',  name: '小皮球',      cost: 30,  type: 'toy',   sec: 'toy',  desc: '弹跳追逐最开心' },
+  { id: 'wand',  name: '逗猫棒',      cost: 50,  type: 'toy',   sec: 'toy',  desc: '跳高高必备神器' },
+  { id: 'mouse', name: '玩偶老鼠',    cost: 80,  type: 'toy',   sec: 'toy',  desc: '要叼着到处跑的宝贝' },
+  // 家具（摆放物）：买回后先「摆放」才放进房间；点击房间里的家具可收回；多档可同时摆放
+  { id: 'tree1', name: '基础猫爬架',  cost: 100, type: 'furn',  sec: 'furn', desc: '入门款。买回后点「摆放」放进房间' },
+  { id: 'tree2', name: '豪华猫爬架',  cost: 200, type: 'furn',  sec: 'furn', desc: '带小窝平台，更气派' },
+  { id: 'tree3', name: '旗舰猫爬架',  cost: 350, type: 'furn',  sec: 'furn', desc: '双毛球+尊贵小窝，猫大王座驾' },
+  { id: 'bed1',  name: '小猫窝',      cost: 50,  type: 'furn',  sec: 'furn', desc: '藤编小窝，猫咪可以进去睡觉觉' },
+  { id: 'bed2',  name: '舒适猫窝',    cost: 120, type: 'furn',  sec: 'furn', desc: '粉色软垫窝，睡得更香' },
+  { id: 'bed3',  name: '豪华猫窝',    cost: 250, type: 'furn',  sec: 'furn', desc: '带小枕头+金边的顶配窝' }
 ];
+// 商店分区标题（需求③：家具不与猫粮混排）
+var PT_SHOP_SECS = [['food', '食物 & 零食'], ['toy', '玩具'], ['furn', '家具（摆放物）']];
 
 // ---------- 单词库（人教版 PEP 三年级起点 · 2024 新课标版） ----------
 // 四上=2025秋版 / 四下=2026春版教材「单元词汇表」：
@@ -103,6 +117,7 @@ var PT_ICO = {
   wand: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L15 9" stroke="#8F6210" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="7" r="3.4" fill="#F4B942"/><path d="M20.5 10.5l1.5 1.5M21 4.5l1.6-1.2" stroke="#EE6F5F" stroke-width="1.7" stroke-linecap="round"/></svg>',
   mouse: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="10.5" cy="14" rx="7" ry="5" fill="#B7AFA4"/><circle cx="6.5" cy="9" r="2.6" fill="#B7AFA4"/><circle cx="11.5" cy="9" r="2.6" fill="#B7AFA4"/><path d="M17 14q4.5 1 4-3.5" stroke="#8F8578" stroke-width="1.5" fill="none"/><circle cx="7.8" cy="13" r="1" fill="#4A4238"/></svg>',
   tree: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="11" y="4" width="2.4" height="16" rx="1" fill="#D9B98C"/><rect x="4" y="18" width="16" height="3" rx="1.5" fill="#F3E3C8" stroke="#E0C9A5" stroke-width="0.6"/><rect x="6" y="11" width="12" height="3" rx="1.5" fill="#F3E3C8" stroke="#E0C9A5" stroke-width="0.6"/><rect x="8.5" y="4" width="7.5" height="3" rx="1.5" fill="#F3E3C8" stroke="#E0C9A5" stroke-width="0.6"/></svg>',
+  bed: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="15" rx="9" ry="5.5" fill="#E2B98F"/><ellipse cx="12" cy="14" rx="6.5" ry="3.4" fill="#FFF3DC"/><circle cx="9.5" cy="13.6" r="1.2" fill="#E8B57E"/><circle cx="14.5" cy="13.6" r="1.2" fill="#E8B57E"/></svg>',
   coin: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#F4B942" stroke="#D89A28" stroke-width="1.6"/><ellipse cx="12" cy="13.8" rx="3.4" ry="2.7" fill="#8F6210"/><circle cx="8.6" cy="10" r="1.3" fill="#8F6210"/><circle cx="12" cy="8.8" r="1.3" fill="#8F6210"/><circle cx="15.4" cy="10" r="1.3" fill="#8F6210"/></svg>',
   book: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4" width="15" height="16" rx="2" fill="#6FA6D8"/><path d="M12 4v16" stroke="#FFF" stroke-width="1.6"/><path d="M7 8.5h3M7 11h3M14 8.5h3M14 11h3" stroke="#EAF2FA" stroke-width="1.3" stroke-linecap="round"/></svg>',
   bowlIco: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="10" rx="7.6" ry="2.4" fill="#C98A4B"/><path d="M4.4 10h15.2a7.6 6.4 0 01-15.2 0z" fill="#EE6F5F"/><ellipse cx="12" cy="17.2" rx="4.4" ry="1.4" fill="#C9503F"/></svg>',
@@ -148,14 +163,38 @@ function ptInjectStyle() {
 .pet-bowl.strip .b-fill{display:block;background:#F4B942;box-shadow:inset 0 -3px 0 #D89A28}
 .pet-bowl .b-body{position:absolute;bottom:0;left:0;right:0;height:17px;background:#fff;border-radius:6px 6px 16px 16px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.06)}
 .pet-bowl.empty .b-body{background:#F3EADA}
-.pet-tree{position:absolute;right:3%;bottom:12%;width:86px;height:172px;display:none}
-.pet-room.withtree .pet-tree{display:block}
-.pet-tree .post{position:absolute;left:35px;bottom:0;width:16px;height:136px;background:#D9B98C;border-radius:8px;box-shadow:inset -5px 0 0 rgba(0,0,0,.08)}
-.pet-tree .pl{position:absolute;background:#F5E6CB;border-radius:7px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.06)}
-.pet-tree .pl1{bottom:0;left:0;width:86px;height:13px}
-.pet-tree .pl2{bottom:64px;left:-5px;width:72px;height:11px}
-.pet-tree .pl3{top:26px;left:12px;width:62px;height:11px}
-.pet-tree .ball{position:absolute;top:6px;left:22px;width:22px;height:22px;border-radius:999px;background:#F2708A;box-shadow:inset -3px -3px 0 rgba(0,0,0,.12)}
+/* 家具（摆放物）：买回后「摆放」出现，点击可收回；多档可同时摆放（猫窝靠左/爬架靠右） */
+.pet-furn{position:absolute;bottom:12%;z-index:2;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pet-furn:active{transform:scale(.96)}
+.pet-furn.pet-tree{width:86px;height:172px}
+.pet-furn.pet-tree .post{position:absolute;left:35px;bottom:0;width:16px;height:136px;background:#D9B98C;border-radius:8px;box-shadow:inset -5px 0 0 rgba(0,0,0,.08)}
+.pet-furn.pet-tree .pl{position:absolute;background:#F5E6CB;border-radius:7px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.06)}
+.pet-furn.pet-tree .pl1{bottom:0;left:0;width:86px;height:13px}
+.pet-furn.pet-tree .pl2{bottom:64px;left:-5px;width:72px;height:11px}
+.pet-furn.pet-tree .pl3{top:26px;left:12px;width:62px;height:11px}
+.pet-furn.pet-tree .ball{position:absolute;top:6px;left:22px;width:22px;height:22px;border-radius:999px;background:#F2708A;box-shadow:inset -3px -3px 0 rgba(0,0,0,.12)}
+.pet-furn.pet-tree .ball.b2{left:auto;right:4px;top:2px;background:#6FA6D8}
+.pet-furn.pet-tree .condo{position:absolute;bottom:30px;left:23px;width:40px;height:32px;background:#E8C9A0;border-radius:8px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.06)}
+.pet-furn.pet-tree .condo::after{content:'';position:absolute;bottom:4px;left:50%;margin-left:-8px;width:16px;height:14px;border-radius:8px 8px 0 0;background:#8A6B47}
+/* 猫窝：外沿+软垫（+豪华款枕头/金边），档位越高配色越豪华 */
+.pet-furn.pet-bed{width:66px;height:40px}
+.pet-furn.pet-bed .rim{position:absolute;bottom:0;left:0;right:0;height:26px;border-radius:999px;box-shadow:inset 0 -6px 0 rgba(0,0,0,.10)}
+.pet-furn.pet-bed .mat{position:absolute;bottom:8px;left:7px;right:7px;height:13px;border-radius:999px}
+.pet-furn.pet-bed .pillow{position:absolute;bottom:14px;left:50%;margin-left:-10px;width:20px;height:9px;border-radius:999px;background:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.06)}
+.pet-furn.bed1 .rim{background:#E2B98F}
+.pet-furn.bed1 .mat{background:#FFF3DC}
+.pet-furn.bed2 .rim{background:#F2B8C6}
+.pet-furn.bed2 .mat{background:#FFF}
+.pet-furn.bed3 .rim{background:#C9A7E0;box-shadow:inset 0 -6px 0 rgba(0,0,0,.10),0 0 0 2px #F4D98A}
+.pet-furn.bed3 .mat{background:#FFF6E6}
+/* 睡觉：趴窝闭眼，缓慢摇尾 */
+.pt-svg.sleep .pt-all{transform:translateY(10px) scale(1.05,.84)}
+.pt-svg.sleep .pt-body{animation:none}
+.pt-svg.sleep .pt-tail{animation-duration:4.5s}
+.pt-svg.sleep .pt-eye{animation:none;transform:scaleY(.1)}
+.pt-toy.sleeping{opacity:.7}
+/* 商店分区标题 */
+.pet-sec-t{font:700 12px/1 var(--ff);color:var(--ink2);margin:14px 0 2px}
 .pet-actor{position:absolute;bottom:11.5%;left:40px;width:140px;transition:left 2.6s ease-in-out;will-change:left}
 .pet-actor .pt-svg{display:block;position:relative;z-index:5;width:140px;height:116px;transition:width .9s ease,height .9s ease;filter:drop-shadow(0 5px 4px rgba(120,80,40,.16));cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pt-svg.flip{transform:scaleX(-1)}
@@ -349,12 +388,13 @@ function ptLock(ms, kind) {
 }
 function ptUnlock() { ptLockUntil = 0; ptLockKind = ''; }
 function ptBlockedMsg() {
-  if (ptS && ptS.meal && Date.now() < ptS.meal.e) return '猫猫正在进食哦，请等我进食完再来找我玩吧~'; // 30 分钟一餐，餐中禁喂禁玩
+  if (ptS && ptS.meal && Date.now() < ptS.meal.e) return '猫猫正在进食哦，请等我进食完再来找我玩吧~'; // 30 分钟正餐，餐中禁喂正餐禁玩
+  if (ptS && ptS.sleeping) return '团子睡觉觉中，别吵醒它呀~';
   if (Date.now() < ptLockUntil) return '团子还在忙，等它一下下~';
   return '';
 }
 function ptDefault() {
-  return { v: 1, coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0, meal: null };
+  return { v: 1, coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, owned: {}, placed: [], sleeping: false, quiz: null, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0, meal: null };
 }
 function ptLoad() {
   var key = ptAccKey();
@@ -367,8 +407,19 @@ function ptLoad() {
   var d = ptDefault();
   for (var k in d) if (o[k] === undefined) o[k] = d[k];
   if (Object.prototype.toString.call(o.toys) !== '[object Array]') o.toys = [];
+  // 家具系统迁移：旧版 ptS.tree（bool，默认已摆放）→ owned.tree1 + 摆放列表
+  if (o.tree) {
+    o.owned = o.owned || {};
+    o.owned.tree1 = true;
+    if (Object.prototype.toString.call(o.placed) !== '[object Array]' || o.placed.indexOf('tree1') < 0) {
+      o.placed = (Object.prototype.toString.call(o.placed) === '[object Array]' ? o.placed : []).concat(['tree1']);
+    }
+    o.tree = false;
+  }
+  if (Object.prototype.toString.call(o.owned) !== '[object Object]') o.owned = {};
+  if (Object.prototype.toString.call(o.placed) !== '[object Array]') o.placed = [];
   ptS = o;
-  ptRoll();      // 补结算离线天数（猫粮消耗/挨饿）
+  ptRoll();      // 补结算离线天数（猫粮消耗/挨饿）+ 跨天重置
   ptSave();
   return ptS;
 }
@@ -401,6 +452,7 @@ function ptRoll() {
   }
   ptS.lastVisit = t;
   ptS.fedToday = 0;
+  if (ptS.quiz && ptS.quiz.d !== t) ptS.quiz = { d: t, n: 0 }; // 跨天重置背单词次数
 }
 
 // ---------- 页面骨架（构建一次，随后只刷新数据） ----------
@@ -424,7 +476,7 @@ function ptBuild() {
     <div class="pet-window" aria-hidden="true"></div>
     <div class="pet-rug" aria-hidden="true"></div>
     <div class="pet-bowl empty" id="ptBowl" aria-hidden="true"><div class="b-fill" id="ptBowlFill"></div><div class="b-body"></div></div>
-    <div class="pet-tree" aria-hidden="true"><div class="ball"></div><div class="pl pl3"></div><div class="post"></div><div class="pl pl2"></div><div class="pl pl1"></div></div>
+    <!-- 家具（猫爬架/猫窝）由 ptRenderFurn 按摆放列表动态渲染 -->
     <div class="pet-actor" id="ptActor">
       <div class="pet-bubble" id="ptBubble"></div>
       <span id="ptHearts"></span>
@@ -454,31 +506,47 @@ function ptRender() {
   var fed = Math.min(ptS.fedToday || 0, cap);
   document.getElementById('ptGrowT').textContent = '陪伴第 ' + days + ' 天 · 每天吃 ' + stg.app + ' 袋 · 今日已喂 ' + fed + '/' + cap + ' 餐'
     + (next ? ' · 再吃 ' + ptR2(next.need - ptS.eaten) + ' 袋长大' : ' · 已经完全长大啦');
-  // 碗：只有进食会话中才有食物（猫粮/罐头/猫条），且随剩余时间变少；吃完/平时为空碗
+  // 碗：只有猫粮正餐会话中才有食物，且随剩余时间变少；吃完/平时为空碗
   var meal = ptS.meal && Date.now() < ptS.meal.e ? ptS.meal : null;
-  document.getElementById('ptBowl').className = 'pet-bowl ' + (meal ? (meal.k === 'can' ? 'can' : (meal.k === 'strip' ? 'strip' : 'food')) : 'empty');
+  document.getElementById('ptBowl').className = 'pet-bowl ' + (meal ? 'food' : 'empty');
   var fill = document.getElementById('ptBowlFill');
   if (fill) fill.style.transform = meal && (meal.e - Date.now()) / (meal.e - meal.s) < 0.97
     ? 'scaleX(' + Math.max(0.06, (meal.e - Date.now()) / (meal.e - meal.s)).toFixed(3) + ')' : '';
-  var room = document.getElementById('ptRoom');
-  if (room) room.classList.toggle('withtree', !!ptS.tree);
-  // 库存即入口：点猫粮/罐头/猫条直接喂（无弹窗）
+  // 库存即入口：点猫粮/罐头/猫条直接喂（无弹窗；罐头猫条为零食）
   var inv = document.getElementById('ptInv');
   inv.innerHTML = '<button class="pet-chip' + (ptS.food <= 0 ? ' zero' : '') + '" onclick="ptFeed(\'food\')">' + PT_ICO.food + '猫粮 <b>' + ptR2(ptS.food) + '</b> 袋</button>'
     + '<button class="pet-chip' + (ptS.cans < 1 ? ' zero' : '') + '" onclick="ptFeed(\'can\')">' + PT_ICO.can + '罐头 <b>' + ptS.cans + '</b></button>'
-    + '<button class="pet-chip' + (ptS.strips < 1 ? ' zero' : '') + '" onclick="ptFeed(\'strip\')">' + PT_ICO.strip + '猫条 <b>' + ptS.strips + '</b></button>'
-    + (ptS.tree ? '<span class="pet-chip">' + PT_ICO.tree + '猫爬架</span>' : '');
+    + '<button class="pet-chip' + (ptS.strips < 1 ? ' zero' : '') + '" onclick="ptFeed(\'strip\')">' + PT_ICO.strip + '猫条 <b>' + ptS.strips + '</b></button>';
+  // 玩具 + 家具行：玩具=玩；家具=摆放/已摆放（置灰），猫窝摆放后多出「睡觉」入口
   var toys = document.getElementById('ptToys');
   var h = '';
   for (var i = 0; i < ptS.toys.length; i++) {
     var it = PT_SHOP.filter(function (x) { return x.id === ptS.toys[i]; })[0];
     if (it) h += '<button class="pet-toy" onclick="ptPlayToy(\'' + it.id + '\')">' + PT_ICO[it.id] + '玩 ' + it.name.replace('玩偶', '') + '</button>';
   }
-  if (ptS.tree) h += '<button class="pet-toy" onclick="ptClimb()">' + PT_ICO.tree + '爬爬架</button>';
+  var treePlaced = false, bedPlaced = false;
+  for (var j = 0; j < PT_SHOP.length; j++) {
+    var f = PT_SHOP[j];
+    if (f.type !== 'furn' || !ptS.owned[f.id]) continue;
+    var isPlaced = ptS.placed.indexOf(f.id) >= 0;
+    if (isPlaced) {
+      h += '<span class="pet-chip zero">' + ptFurnIco(f.id) + escHtml(f.name) + ' 已摆放</span>';
+      if (f.id.indexOf('tree') === 0) treePlaced = true;
+      if (f.id.indexOf('bed') === 0) bedPlaced = true;
+    } else {
+      h += '<button class="pet-toy" onclick="ptPlaceFurn(\'' + f.id + '\')">' + ptFurnIco(f.id) + '摆放 ' + escHtml(f.name) + '</button>';
+    }
+  }
+  if (treePlaced) h += '<button class="pet-toy" onclick="ptClimb()">' + PT_ICO.tree + '爬爬架</button>';
+  if (bedPlaced) h += '<button class="pet-toy' + (ptS.sleeping ? ' sleeping' : '') + '" onclick="ptToggleSleep()">' + PT_ICO.bed + (ptS.sleeping ? '唤醒' : '睡觉') + '</button>';
   toys.innerHTML = h;
-  // 心情外观：挨饿/隔天未喂 → 耷拉耳朵+撇嘴+垂泪
+  // 心情外观：挨饿/隔天未喂 → 耷拉耳朵+撇嘴+垂泪；睡觉 → 闭眼趴窝
   var svg = document.querySelector('#p-pet .pt-svg');
-  if (svg) svg.classList.toggle('sad', ptIsSad() && !ptBusy);
+  if (svg) {
+    svg.classList.toggle('sad', ptIsSad() && !ptBusy && !ptS.sleeping);
+    svg.classList.toggle('sleep', !!ptS.sleeping);
+  }
+  ptRenderFurn();
   ptApplySize();
 }
 // 成长可视化：按阶段设置体型大小（css 过渡平滑变大），并同步气泡高度
@@ -586,7 +654,6 @@ function ptRoomW() {
   return r ? r.clientWidth : 320;
 }
 function ptBowlX() { return Math.round(ptRoomW() * 0.05) + 6; }
-function ptTreeX() { return Math.max(ptRoomW() - 160, ptRoomW() * 0.6); }
 function ptPlayFx(cls, dur, cb) {
   var svg = document.querySelector('#p-pet .pt-svg');
   if (!svg) { if (cb) cb(); return; }
@@ -601,6 +668,13 @@ function ptTick() {
   setTimeout(ptTick, 600);
   if (document.hidden || curTab !== 'pet' || sessionRole !== 'kid' || !ptS) return;
   ptMealStep(); // 进食会话推进（到点收碗/守碗循环吃/飘字/食物渐少）
+  if (ptS.sleeping) { // 睡觉觉：趴在猫窝里不动，偶尔冒 Zzz
+    if (Date.now() >= ptNextZzz) {
+      ptNextZzz = Date.now() + 3000;
+      ptWordSeq(['z', 'Z', 'zzz'], 1);
+    }
+    return;
+  }
   if (ptS.meal) return; // 餐中不自主活动（一直进食）
   if (ptBusy || Date.now() < ptLockUntil) return; // 玩耍编排期间不自主活动
   ptNextAct -= 0.6;
@@ -619,9 +693,10 @@ function ptTick() {
 setTimeout(ptTick, 800);
 
 // ---------- 交互：撸猫 / 喂食 / 玩耍 / 爬架 ----------
-// 撸猫：点小猫本体 → 开心眯眼张嘴 + 爱心 + 随机撒娇语（进食/玩耍中不切换表情动画，避免打断）
+// 撸猫：点小猫本体 → 开心眯眼张嘴 + 爱心 + 随机撒娇语；睡觉中点它=轻轻唤醒
 function ptTap() {
   if (curTab !== 'pet' || sessionRole !== 'kid' || !ptS) return;
+  if (ptS.sleeping) { ptWake(false); return; }
   if (Date.now() >= ptLockUntil) ptPlayFx('hjoy', 1200);
   ptHeartsBurst(3);
   ptSay(ptTalk(PT_TALK.pet));
@@ -672,6 +747,7 @@ function ptFeedMeal() {
 // 正餐中也可以加餐（小猫停下来吃口零食再继续吃饭）；玩耍/爬架编排中会被拦。
 function ptSnack(kind) {
   if (!ptS) return;
+  if (ptS.sleeping) { toast('团子睡觉觉中，别吵醒它呀~'); return; }
   if (Date.now() < ptLockUntil) { toast('团子还在忙，等它一下下~'); return; }
   if (kind === 'can') {
     if (ptS.cans < 1) { toast('罐头吃完了，去猫商店补货吧'); return; }
@@ -775,29 +851,127 @@ function ptPlayToy(id) {
   }
 }
 function ptClimb() {
-  if (!ptS || !ptS.tree) return;
+  if (!ptS) return;
   var blk = ptBlockedMsg();
   if (blk) { toast(blk); return; }
+  var trees = ptPlacedOf('tree');
+  if (!trees.length) { toast('先摆放一个猫爬架哦~'); return; }
   ptLock(6200, 'move'); // 走位+攀爬期间锁交互
-  ptGo(ptTreeX(), function () {
+  ptGo(Math.max(16, ptFurnX('tree', 0) - 84), function () {
     ptSay(ptTalk(PT_TALK.climb));
     ptPlayFx('climb', 2350, function () { ptUnlock(); ptHeartsBurst(3); });
   });
 }
 
-// ---------- 商店 ----------
+// ---------- 家具系统（猫爬架/猫窝）：买回≠摆放，摆放后才出现在房间；点房间里的家具可收回 ----------
+function ptFurnInfo(id) { return PT_SHOP.filter(function (x) { return x.id === id; })[0]; }
+function ptFurnKind(id) { return id.indexOf('tree') === 0 ? 'tree' : 'bed'; }
+function ptFurnIco(id) { return PT_ICO[ptFurnKind(id)]; } // 家具图标按类型取（PT_ICO 无分档键）
+function ptPlacedOf(kind) { // kind: 'tree' | 'bed' → 已摆放的同类型家具 id 列表（按摆放顺序）
+  return (ptS.placed || []).filter(function (id) { return id.indexOf(kind) === 0; });
+}
+function ptFurnX(kind, idx) { // 家具在房间里的横向位置：猫窝靠左（饭碗右侧），猫爬架靠右
+  return kind === 'bed' ? 86 + idx * 76 : Math.max(120, ptRoomW() - 78 - idx * 76);
+}
+// 渲染房间家具：每个已摆放家具一个可点击元素（点击=收回）
+function ptRenderFurn() {
+  var room = document.getElementById('ptRoom');
+  if (!room) return;
+  var olds = room.querySelectorAll('.pet-furn');
+  for (var i = 0; i < olds.length; i++) olds[i].parentNode.removeChild(olds[i]);
+  var tCount = 0, bCount = 0;
+  for (var j = 0; j < (ptS.placed || []).length; j++) {
+    var id = ptS.placed[j];
+    var info = ptFurnInfo(id);
+    if (!info) continue;
+    var kind = ptFurnKind(id);
+    var idx = kind === 'tree' ? tCount++ : bCount++;
+    var el = document.createElement('div');
+    el.className = 'pet-furn pet-' + kind + ' ' + id; // pet-tree/pet-bed：与 CSS 选择器对应
+    el.style.left = ptFurnX(kind, idx) + 'px';
+    el.title = '点击收回';
+    if (kind === 'tree') {
+      el.innerHTML = '<div class="ball"></div>' + (id === 'tree3' ? '<div class="ball b2"></div>' : '')
+        + '<div class="pl pl3"></div><div class="post"></div><div class="pl pl2"></div>'
+        + (id !== 'tree1' ? '<div class="condo"></div>' : '') + '<div class="pl pl1"></div>';
+    } else {
+      el.innerHTML = '<div class="rim"></div><div class="mat"></div>'
+        + (id === 'bed3' ? '<div class="pillow"></div>' : '');
+    }
+    el.addEventListener('pointerdown', function (fid) { return function () { ptFurnClick(fid); }; }(id));
+    room.appendChild(el);
+  }
+}
+// 摆放：把已拥有的家具放进房间
+function ptPlaceFurn(id) {
+  if (!ptS || !ptS.owned[id] || ptS.placed.indexOf(id) >= 0) return;
+  var info = ptFurnInfo(id);
+  var sameKind = ptPlacedOf(id.indexOf('tree') === 0 ? 'tree' : 'bed');
+  if (sameKind.length >= 3) { toast('同类家具最多摆放 3 件，先收回一件吧'); return; }
+  ptS.placed.push(id);
+  ptSave();
+  ptRender();
+  ptHeartsBurst(2);
+  ptSay('哇，' + info.name + '摆好啦！');
+}
+// 点房间里的家具 → 确认收回（睡在该窝上时顺带唤醒）
+function ptFurnClick(id) {
+  if (!ptS) return;
+  var info = ptFurnInfo(id);
+  if (!info) return;
+  sc2('收回' + info.name, '把' + info.name + '收回仓库吗？随时可以再摆放出来。', function () {
+    var ix = ptS.placed.indexOf(id);
+    if (ix >= 0) ptS.placed.splice(ix, 1);
+    if (ptS.sleeping && id.indexOf('bed') === 0) ptWake(true); // 收走睡窝：静默唤醒
+    ptSave();
+    ptRender();
+    toast(info.name + '已收回');
+  });
+}
+// ---------- 睡觉：进猫窝睡觉觉（趴下闭眼+Zzz），点小猫或「唤醒」结束 ----------
+var ptNextZzz = 0;
+function ptToggleSleep() {
+  if (!ptS) return;
+  if (ptS.sleeping) { ptWake(false); return; }
+  var blk = ptBlockedMsg(); // 进食中/编排中不入睡
+  if (blk) { toast(blk); return; }
+  var beds = ptPlacedOf('bed');
+  if (!beds.length) { toast('先摆放一个猫窝哦~'); return; }
+  ptLock(3800, 'move');
+  ptGo(ptFurnX('bed', 0) - 26, function () {
+    ptUnlock();
+    ptS.sleeping = true;
+    ptSave();
+    ptRender();
+    ptSay('呼……晚安喵……', true);
+  });
+}
+function ptWake(silent) {
+  ptS.sleeping = false;
+  ptSave();
+  ptRender();
+  if (silent) return;
+  ptHeartsBurst(2);
+  ptSay(ptTalk(['喵呜～睡饱啦！','伸个懒腰……好舒服','唔，醒了醒了~']));
+}
+
+// 商店分区渲染（食物&零食 / 玩具 / 家具），家具：已拥有→「已拥有」置灰（购买后需在下方「摆放」）
 function ptShopRows() {
   var h = '';
-  for (var i = 0; i < PT_SHOP.length; i++) {
-    var it = PT_SHOP[i];
-    var owned = (it.type === 'stack') ? false : (it.type === 'tree' ? ptS.tree : ptS.toys.indexOf(it.id) >= 0);
-    var btn = owned
-      ? '<button class="pet-buy owned" disabled>已拥有</button>'
-      : '<button class="pet-buy" ' + (ptS.coins < it.cost ? 'disabled' : '') + ' onclick="ptBuy(\'' + it.id + '\')">' + it.cost + ' 币兑换</button>';
-    h += '<div class="pet-item"><div class="pet-ico">' + PT_ICO[it.id] + '</div>'
-      + '<div class="pet-inf"><div class="pet-nm">' + escHtml(it.name) + '</div>'
-      + '<div class="pet-desc">' + escHtml(it.desc) + '</div>'
-      + '<div class="pet-cost">' + PT_ICO.coin + escHtml(String(it.cost)) + ' 猫币</div></div>' + btn + '</div>';
+  for (var s = 0; s < PT_SHOP_SECS.length; s++) {
+    h += '<div class="pet-sec-t">' + PT_SHOP_SECS[s][1] + '</div>';
+    for (var i = 0; i < PT_SHOP.length; i++) {
+      var it = PT_SHOP[i];
+      if (it.sec !== PT_SHOP_SECS[s][0]) continue;
+      var owned = it.type === 'stack' ? false : (it.type === 'furn' ? !!ptS.owned[it.id] : ptS.toys.indexOf(it.id) >= 0);
+      var btn = owned
+        ? '<button class="pet-buy owned" disabled>已拥有</button>'
+        : '<button class="pet-buy" ' + (ptS.coins < it.cost ? 'disabled' : '') + ' onclick="ptBuy(\'' + it.id + '\')">' + it.cost + ' 币兑换</button>';
+      h += '<div class="pet-item"><div class="pet-ico">' + (it.type === 'furn' ? ptFurnIco(it.id) : PT_ICO[it.id]) + '</div>'
+        + '<div class="pet-inf"><div class="pet-nm">' + escHtml(it.name) + '</div>'
+        + '<div class="pet-desc">' + escHtml(it.desc) + '</div>'
+        + '<div class="pet-cost">' + PT_ICO.coin + escHtml(String(it.cost)) + ' 猫币</div></div>' + btn + '</div>';
+    }
   }
   return h;
 }
@@ -812,18 +986,21 @@ function ptOpenShop() {
 function ptBuy(id) {
   var it = PT_SHOP.filter(function (x) { return x.id === id; })[0];
   if (!it || ptS.coins < it.cost) return;
+  if (it.type === 'furn' && ptS.owned[id]) return; // 家具一次性
   ptSetCoins(-it.cost, false);
   if (it.type === 'stack') {
     if (id === 'food') ptS.food = ptR2(ptS.food + 1);
     if (id === 'can') ptS.cans++;
     if (id === 'strip') ptS.strips++;
-  } else if (it.type === 'tree') ptS.tree = true;
-  else ptS.toys.push(id);
+  } else if (it.type === 'furn') {
+    ptS.owned[id] = true; // 家具买回不自动摆放：需在下方点「摆放」
+    toast('买到了！点下方「摆放」放进房间哦');
+  } else ptS.toys.push(id);
   ptSave();
   ptRender();
   ptHeartsBurst(4);
   ptSay(ptTalk(PT_TALK.buy));
-  toast('买到了「' + it.name + '」');
+  if (it.type !== 'furn') toast('买到了「' + it.name + '」');
   ptOpenShop(); // 刷新商店余额/按钮态
 }
 
@@ -865,9 +1042,15 @@ function ptDistractors(w, field) {
   if (same.length < 3) for (i = 0; i < all.length; i++) if (same.indexOf(all[i][field]) < 0 && ptNorm(all[i][field]) !== ansKey) same.push(all[i][field]);
   return ptShuffle(same).slice(0, 3);
 }
-// 点「背单词」直接开考：三种题型随机混出，不再显示题型选择；连对有 COMBO 鼓励
+// 点「背单词」直接开考：三种题型随机混出，不再显示题型选择；连对有 COMBO 鼓励；
+// 每天最多参加 3 次（跨天自动重置），用完提示「今日机会已用完」
+function ptQuizSync() {
+  if (!ptS.quiz || ptS.quiz.d !== today()) ptS.quiz = { d: today(), n: 0 };
+}
 function ptOpenQuiz() {
   if (!ptS) return;
+  ptQuizSync();
+  if (ptS.quiz.n >= PT_QUIZ_DAILY) { toast('今日机会已用完，请明日再来~'); return; }
   document.getElementById('ptMoQuiz').classList.add('show');
   ptQStart();
 }
@@ -875,6 +1058,14 @@ var PT_QMODES = ['spell', 'ce', 'ec'];
 var PT_COMBO_WORDS = { 2: '厉害！', 3: '超棒！', 4: '太强啦！', 5: '势不可挡！' };
 function ptComboWord(n) { return PT_COMBO_WORDS[Math.min(n, 5)] || '厉害！'; }
 function ptQStart() {
+  ptQuizSync();
+  if (ptS.quiz.n >= PT_QUIZ_DAILY) { // 结果页「再来一轮」同样受限
+    toast('今日机会已用完，请明日再来~');
+    ptCloseModal('ptMoQuiz');
+    return;
+  }
+  ptS.quiz.n++;
+  ptSave();
   ptQ = { qmode: 'ce', idx: 0, right: 0, wrong: 0, combo: 0, maxCombo: 0, cur: null, answered: false, list: ptShuffle(ptFlat()).slice(0, PT_ROUND) };
   ptQRender();
 }
@@ -976,7 +1167,7 @@ function ptQResult() {
     + '<button class="bn-pet p" onclick="ptQStart()">再来一轮</button>'
     + '<button class="bn-pet q" onclick="ptCloseModal(\'ptMoQuiz\')">回去撸猫</button>'
     + '</div>'
-    + '<div class="sub" style="margin-top:12px;font-size:11px">词库：人教版PEP（2024新版）四上+四下 · 三种题型随机 · 答对 +3 / 答错 -2 猫币</div>'
+    + '<div class="sub" style="margin-top:12px;font-size:11px">今日剩余机会 ' + Math.max(0, PT_QUIZ_DAILY - ptS.quiz.n) + '/' + PT_QUIZ_DAILY + ' · 词库：人教版PEP（2024新版）四上+四下 · 答对 +3 / 答错 -2 猫币</div>'
     + '</div>';
   ptQ = null;
 }
@@ -988,7 +1179,9 @@ function ptShow() {
   ptLoad();
   ptMealSync(); // 离线/换页期间跨过 30 分钟的餐：收碗回空；未吃完的餐恢复进食循环
   var a = ptActorEl();
-  if (a && !a.style.left) a.style.left = Math.round(ptRoomW() * 0.38) + 'px'; // 首次出现的位置
+  if (ptS.sleeping) { // 睡觉中：直接落在猫窝位置
+    if (a) a.style.left = (ptFurnX('bed', 0) - 26) + 'px';
+  } else if (a && !a.style.left) a.style.left = Math.round(ptRoomW() * 0.38) + 'px'; // 首次出现的位置
   ptRender();
   // 欢迎语：隔天没喂 → 低落；喂过但有粮没喂今天 → 温和提醒；否则正常欢迎
   var base = ptS.lastFeed || ptS.created;
