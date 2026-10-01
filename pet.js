@@ -335,7 +335,7 @@ function ptInjectStyle() {
 #ptMoRename .pt-rename-input:focus{border-color:#a78bfa}
 #ptMoRename .pt-rename-tip{margin-top:8px;font-size:11px;color:#9b8f83}
 #ptMoRename .pt-rename-btns{display:flex;gap:10px;margin-top:14px}
-#ptMoRename .pt-rename-btns button{flex:1}`};
+#ptMoRename .pt-rename-btns button{flex:1}`;
   var stl = document.createElement('style');
   stl.id = 'petStyle';
   stl.textContent = css;
