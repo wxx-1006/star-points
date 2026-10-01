@@ -50,29 +50,29 @@ var PT_SHOP = [
 var PT_SHOP_SECS = [['food', '食物 & 零食'], ['toy', '玩具'], ['furn', '家具（摆放物）']];
 
 // ---------- 单词库（人教版 PEP 三年级起点 · 2024 新课标版） ----------
-// 四上=2025秋版 / 四下=2026春版教材「单元词汇表」：
-//   四上 U1 Helping at home / U2 My friends / U3 Places we live in / U4 Helping in the community /
-//        U5 The weather and us / U6 Changing for the seasons
-//   四下 U1 Class rules / U2 Family rules / U3 Time for school / U4 Going shopping /
-//        U5 Farms and us / U6 On the farm
+// 三上=2024秋版 / 三下=2025春版教材「单元词汇表」：
+//   三上 U1 Making friends / U2 Different families / U3 Amazing animals / U4 Plants around us /
+//        U5 The colourful world / U6 Useful numbers
+//   三下 U1 Meeting new people / U2 Expressing yourself / U3 Learning better / U4 Healthy food /
+//        U5 Old toys / U6 Numbers in life
 // 结构：[英文, 中文]，按单元分组；拼写/选择题都从这里出题。
-// 说明：cook 在教材 U1/U4 重复出现，此处合并为一条（烹饪；煮；厨师）避免出题歧义。
+// 说明：nice/see/cool/so 等跨册重复词只在首次出现的单元保留，避免出题歧义。
 var PT_WB = {
-  '四上': {
-    'U1 Helping at home': [['PE','体育（课）'],['job','工作；职业'],['doctor','医生'],['farmer','农场主；农民'],['nurse','护士'],['worker','工人'],['office worker','公司职员'],['factory worker','工厂工人'],['busy','忙碌的'],['tired','疲倦的'],['chore','家庭杂务'],['cook','烹饪；煮；厨师'],['clean','打扫；干净的'],['room','房间'],['also','也'],['look after','照顾'],['sweep','扫'],['floor','地板；地面'],['together','在一起；共同'],['fun','享乐；乐趣'],['helpful','有帮助的；有用的'],['people','人；人们'],['child','儿童；小孩'],['children','孩子们；儿童们']],
-    'U2 My friends': [['his','他的'],['strong','强壮的'],['hair','头发'],['kind','友好的'],['quiet','文静的'],['best','最好的'],['read','阅读'],['Chinese','中文；中国人；中国的'],['play','玩耍'],['game','游戏'],['football','足球运动'],['both','两者'],['basketball','篮球运动'],['always','总是']],
-    'U3 Places we live in': [['afternoon','下午'],['there','（表示存在或发生）；在那里'],['playground','游乐场；操场'],['park','公园'],['over','在……的远端（或对面）'],['hospital','医院'],['shop','商店'],['toilet','厕所；卫生间'],['bus','公共汽车'],['stop','车站'],['library','图书馆'],['sport','体育运动'],['walk','散步；行走'],['take','（与名词连用，表示举动、动作等）；带走；运走'],['take a walk','散步'],['community','社区'],['favourite','最喜欢的'],['place','地方；场所'],['photo','照片'],['story','故事'],['buy','购买']],
-    'U4 Helping in the community': [['firefighter','消防队员'],['why','为什么'],['driver','司机'],['cleaner','清洁工'],['delivery worker','快递员'],['police','警察'],['police officer','警察；警员'],['a lot of','大量；许多'],['now','现在'],['those','那些'],['bed','床'],['make the bed','铺床'],['old','过去的；年纪大的；老的'],['tell','讲述；告诉'],['everyone','每人'],['volunteer','志愿者'],['Ms','女士']],
-    'U5 The weather and us': [['speak','说话；发言'],['weather','天气'],['sunny','阳光充足的'],['hot','热的'],['bad','令人不快的；坏的'],['cold','冷的'],['windy','多风的'],['cloudy','多云的'],['rainy','阴雨的'],['snowy','多雪的'],['cool','凉爽的'],['warm','温暖的'],['tomorrow','在明天'],['rain','下雨；雨'],['closed','关闭的'],['film','电影'],['idea','想法；注意'],['fly','操纵（飞行器等）；飞'],['kite','风筝'],['snowman','雪人'],['their','他们的；她们的；它们的'],['swim','游泳'],['Sydney','悉尼']],
-    'U6 Changing for the seasons': [['whose','谁的'],['sweater','毛衣'],['sock','短袜'],['mine','我的'],['wear','穿；戴'],['shirt','衬衫'],['coat','大衣；外套'],['dress','连衣裙'],['which','哪一个；哪一些'],['season','季节'],['winter','冬天'],['snow','下雪；雪'],['get','（使）达到，处于'],['get together','聚会'],['spring','春天'],['summer','夏天'],['autumn','秋天'],['T-shirt','T恤衫'],['fall','落下；秋天'],['leaf','叶子'],['glove','手套'],['then','然后；那时'],['festival','节日']]
+  '三上': {
+    'U1 Making friends': [['name','名字'],['nice','友好的；令人愉快的'],['ear','耳朵'],['hand','手'],['eye','眼睛'],['mouth','嘴'],['arm','胳膊'],['can','可以；能够'],['share','分享'],['smile','微笑'],['listen','听'],['help','帮助'],['say','说；讲'],['friend','朋友'],['good','好的'],['hello','你好'],['hi','嗨'],['too','也'],['goodbye','再见']],
+    'U2 Different families': [['mum','妈妈（口语）'],['dad','爸爸（口语）'],['grandma','奶奶；姥姥'],['grandpa','爷爷；姥爷'],['grandmother','（外）祖母'],['grandfather','（外）祖父'],['mother','母亲；妈妈'],['father','父亲；爸爸'],['family','家；家庭'],['have','有'],['big','大的'],['sister','姐；妹'],['brother','兄；弟'],['cousin','堂（表）兄弟姐妹'],['me','我'],['small','小的'],['baby','婴儿'],['aunt','姑母；姨母；婶母'],['uncle','叔父；伯父；舅父']],
+    'U3 Amazing animals': [['panda','大熊猫'],['dog','狗'],['monkey','猴子'],['elephant','大象'],['pet','宠物'],['like','喜欢'],['this','这；这个'],['that','那；那个'],['cat','猫'],['bird','鸟'],['fish','鱼'],['rabbit','兔子'],['tiger','老虎'],['bear','熊'],['cool','酷']],
+    'U4 Plants around us': [['apple','苹果'],['banana','香蕉'],['tree','树'],['fruit','水果'],['wood','木头'],['farm','农场'],['plant','植物'],['leaf','叶子'],['flower','花'],['grass','草'],['get','得到；获取'],['do','做'],["don't",'不']],
+    'U5 The colourful world': [['red','红色；红色的'],['yellow','黄色；黄色的'],['blue','蓝色；蓝色的'],['white','白色；白色的'],['orange','橙色；橙色的'],['see','看见'],['colour','颜色'],['black','黑色；黑色的'],['green','绿色；绿色的'],['brown','棕色；棕色的']],
+    'U6 Useful numbers': [['one','一'],['two','二'],['three','三'],['four','四'],['five','五'],['six','六'],['seven','七'],['eight','八'],['nine','九'],['how old','多大年龄'],['how many','多少'],['year','年；岁数'],['so','如此；那么'],['many','许多']]
   },
-  '四下': {
-    'U1 Class rules': [['sorry','对不起'],['late','迟到；迟发生'],['class','课；课程；班；班级'],['hurry up','快点；赶快'],['ready','准备好'],['rule','规则；规章'],['classroom','教室'],['turn off','关掉'],['light','灯；光'],['blackboard','黑板'],['desk','书桌；办公桌'],['chair','椅子'],['tidy','整洁的；整齐的；使整洁；整理'],['music','音乐'],['wall','墙；壁'],['door','门'],['window','窗'],['fan','风扇'],['when','当……时；什么时候'],['understand','懂；理解'],['newspaper','报纸'],['hand out','分发'],['workbook','练习册；作业本']],
-    'U2 Family rules': [['watch','看'],['TV','电视'],['homework','家庭作业'],['first','首先；首次；第一'],['wet','湿的；未干的'],['run','跑；奔跑'],['house','房子'],['safe','安全的'],['word','言语；单词；字'],['wash','洗'],['loud','说话太大声的；吵闹的'],['sleep','睡觉'],['bedroom','卧室'],['kitchen','厨房'],['living room','客厅；起居室'],['study','书房'],['bathroom','浴室；洗手间'],['work','（花费时间和精力）做（某事）；工作'],['think','想；思考'],['hard','努力地；费力地'],['follow','遵循，听从（忠告、指示等）'],['feel','觉得；感到']],
-    'U3 Time for school': [['over','结束（的）'],['kid','小孩'],['dinner','（中午或晚上吃的）正餐'],['art','美术；艺术'],['lunch','午餐'],['maths','数学'],['get up','起床'],['go to school','上学'],['go home','回家'],['go to bed','上床睡觉'],['want','想要'],['clock','时钟'],['just','只是；仅仅；正要'],['minute','分钟']],
-    'U4 Going shopping': [['trousers','裤子'],['pair','（由连在一起的相似两部分构成的）一条，一副'],['clothes','衣服；服装'],['shorts','短裤'],['jacket','夹克衫'],['skirt','裙子'],['dear','天哪'],['expensive','昂贵的；价格高的'],['take','买下'],['cheap','便宜的'],['shoe','鞋'],['beautiful','美丽的'],['hat','帽子'],['sunglasses','太阳镜；墨镜'],['free','免费的'],['large','（服装、食物、日用品等）大型号的'],['size','尺码；号'],['list','清单；目录'],['try on','试穿'],['any','任何的；任一的']],
-    'U5 Farms and us': [['cow','奶牛'],['horse','马'],['sheep','绵羊'],['pig','猪'],['chicken','鸡；鸡肉'],['tomato','西红柿'],['bee','蜜蜂'],['mouse','老鼠'],['carrot','胡萝卜'],['potato','土豆'],['green bean','四季豆'],['can','（盛食品或饮料的）金属罐'],['a box of','一盒，一箱（东西）']],
-    'U6 On the farm': [['feed','给（人或动物）食物；饲养'],['pass','给；递'],['pick','采；摘'],['milk','挤奶'],['knife','刀'],['fork','餐叉'],['chopstick','（常用复数）筷子'],['waste','浪费；废品'],['food','菜肴；食物'],['delicious','美味的；可口的'],['clear the table','收拾餐桌'],['bowl','碗'],['spoon','勺；匙；调羹'],['set the table','摆放餐具'],['supermarket','超市'],['by oneself','（某人）独立地；单独'],['week','周；星期'],['salad','蔬菜沙拉'],['ad','广告']]
+  '三下': {
+    'U1 Meeting new people': [['UK','英国'],['USA','美国'],['China','中国'],['Canada','加拿大'],['where','在哪里；到哪里'],['from','来自；从……来'],['about','关于；大约'],['today','今天'],['teacher','教师'],['student','学生'],['she','她'],['he','他'],['after','在……后面'],['who','谁；什么人'],['neighbour','邻居'],['boy','男孩'],['girl','女孩'],['woman','成年女子；妇女'],['man','成年男子；男人'],['Mr','先生'],['classmate','同班同学'],['also','也'],['English','英语；英语的'],['very','很；非常']],
+    'U2 Expressing yourself': [['long','长的'],['body','身体'],['short','短的；个子矮的'],['right','准确；确切；恰当'],['fat','肥的；肥胖的'],['thin','瘦的'],['slow','缓慢的；慢的'],['love','喜爱；爱'],['tail','尾；尾巴'],['her','她；她的'],['gift','礼物'],['picture','图画；绘画'],['card','贺卡；卡片'],['sing','唱（歌）；演唱'],['dance','跳舞'],['talk','说话；讲话；谈话'],['face','脸；面孔'],['all','所有；全部'],['song','歌；歌曲'],['or','或者；还是']],
+    'U3 Learning better': [['eraser','橡皮'],['find','找到；找回'],['ruler','直尺'],['pen','钢笔'],['pencil','铅笔'],['book','书；书籍'],['bag','包；袋'],['paper','纸'],['these','这些'],['smell','闻（气味）'],['taste','尝（味道）'],['hear','听见；听到'],['touch','触摸；碰'],['nose','鼻；鼻子'],['tongue','舌；舌头'],['class','课；班级'],['in class','在课堂上'],['computer','计算机；电脑'],['learn','学；学习']],
+    'U4 Healthy food': [['time','时间'],['breakfast','早餐；早饭'],['bread','面包'],['egg','蛋；鸡蛋'],['milk','奶'],['noodle','面条（常用复数）'],['juice','果汁'],['cake','蛋糕'],['rice','大米'],['meat','肉'],['vegetable','蔬菜'],['healthy','健康的'],['plate','盘子'],['soup','汤'],['colourful','五彩缤纷的'],['candy','糖果'],['yummy','很好吃的']],
+    'U5 Old toys': [['boat','小船'],['keep','保有；留着'],['at','在（某处）'],['home','家；住所'],['ball','球'],['doll','玩偶；玩具娃娃'],['car','小汽车；轿车'],['on','在……上'],['shelf','架子'],['in','在……里'],['box','盒子'],['cap','帽子'],['map','地图'],['under','在……下面'],['still','还是；仍然'],['put','放；安置']],
+    'U6 Numbers in life': [['eleven','十一'],['twelve','十二'],['thirteen','十三'],['fourteen','十四'],['fifteen','十五'],['sixteen','十六'],['seventeen','十七'],['eighteen','十八'],['nineteen','十九'],['twenty','二十'],['piggy bank','猪形储钱罐'],['pay','付费'],['back','回到原处']]
   }
 };
 
@@ -326,7 +326,16 @@ function ptInjectStyle() {
 .pt-q-combo{position:absolute;top:30px;right:14px;z-index:6;pointer-events:none;text-align:center;animation:ptComboPop 1.4s ease forwards}
 .pt-q-combo b{display:block;font:800 21px/1.1 var(--ff);color:var(--red-deep);text-shadow:0 1px 0 #fff}
 .pt-q-combo span{font:700 11px/1.4 var(--ff);color:var(--yel-deep)}
-@keyframes ptComboPop{0%{opacity:0;transform:scale(.4)}18%{opacity:1;transform:scale(1.18)}32%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}`;
+@keyframes ptComboPop{0%{opacity:0;transform:scale(.4)}18%{opacity:1;transform:scale(1.18)}32%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+/* 宠物改名：点名字可改 */
+#ptNameBox{cursor:pointer;user-select:none}
+#ptNameBox:active{opacity:.7}
+.pet-name-edit{font-style:normal;font-size:11px;margin-left:3px;opacity:.5}
+#ptMoRename .pt-rename-input{width:100%;box-sizing:border-box;border:1.5px solid #e2d9ff;border-radius:12px;padding:11px 14px;font:600 16px/1.3 var(--ff);background:#faf8ff;color:#4a3f35;outline:none}
+#ptMoRename .pt-rename-input:focus{border-color:#a78bfa}
+#ptMoRename .pt-rename-tip{margin-top:8px;font-size:11px;color:#9b8f83}
+#ptMoRename .pt-rename-btns{display:flex;gap:10px;margin-top:14px}
+#ptMoRename .pt-rename-btns button{flex:1}`};
   var stl = document.createElement('style');
   stl.id = 'petStyle';
   stl.textContent = css;
@@ -387,14 +396,15 @@ function ptLock(ms, kind) {
   ptLockUntil = Math.max(ptLockUntil, Date.now() + ms);
 }
 function ptUnlock() { ptLockUntil = 0; ptLockKind = ''; }
+function ptName() { return (ptS && ptS.name) || '团子'; }
 function ptBlockedMsg() {
   if (ptS && ptS.meal && Date.now() < ptS.meal.e) return '猫猫正在进食哦，请等我进食完再来找我玩吧~'; // 30 分钟正餐，餐中禁喂正餐禁玩
-  if (ptS && ptS.sleeping) return '团子睡觉觉中，别吵醒它呀~';
-  if (Date.now() < ptLockUntil) return '团子还在忙，等它一下下~';
+  if (ptS && ptS.sleeping) return ptName() + '睡觉觉中，别吵醒它呀~';
+  if (Date.now() < ptLockUntil) return ptName() + '还在忙，等它一下下~';
   return '';
 }
 function ptDefault() {
-  return { v: 1, coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, owned: {}, placed: [], sleeping: false, quiz: null, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0, meal: null };
+  return { v: 1, name: '团子', coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, owned: {}, placed: [], sleeping: false, quiz: null, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0, meal: null };
 }
 function ptLoad() {
   var key = ptAccKey();
@@ -464,7 +474,7 @@ function ptBuild() {
   host.innerHTML = `<div class="pet-wrap">
   <div class="pet-hd">
     <div class="pet-hd-main">
-      <div class="pet-name">团子 <span class="pet-stage-chip" id="ptStageChip">小奶猫</span></div>
+      <div class="pet-name" id="ptNameBox" onclick="ptOpenRename()" title="点击给宠物改名"><span id="ptNameTxt">团子</span> <span class="pet-stage-chip" id="ptStageChip">小奶猫</span><i class="pet-name-edit">✎</i></div>
       <div class="pet-grow"><i id="ptGrowBar"></i></div>
       <div class="pet-grow-t" id="ptGrowT"></div>
     </div>
@@ -498,6 +508,7 @@ function ptBuild() {
 function ptRender() {
   var stg = ptStage(), idx = PT_STAGES.indexOf(stg), next = PT_STAGES[idx + 1];
   document.getElementById('ptCoins').textContent = ptS.coins;
+  document.getElementById('ptNameTxt').textContent = ptName();
   document.getElementById('ptStageChip').textContent = stg.name;
   var pct = next ? Math.min(100, Math.round((ptS.eaten - stg.need) / (next.need - stg.need) * 100)) : 100;
   document.getElementById('ptGrowBar').style.width = pct + '%';
@@ -737,7 +748,7 @@ function ptFeedMeal() {
       var svg = document.querySelector('#p-pet .pt-svg');
       if (svg) { svg.classList.add('grow'); setTimeout(function () { svg.classList.remove('grow'); }, 1000); }
       ptSay(ptTalk(PT_TALK.levelup), true);
-      toast('团子长大啦：' + ptStage().name);
+      toast(ptName() + '长大啦：' + ptStage().name);
       ptHeartsBurst(5);
     }
     ptRender();
@@ -747,8 +758,8 @@ function ptFeedMeal() {
 // 正餐中也可以加餐（小猫停下来吃口零食再继续吃饭）；玩耍/爬架编排中会被拦。
 function ptSnack(kind) {
   if (!ptS) return;
-  if (ptS.sleeping) { toast('团子睡觉觉中，别吵醒它呀~'); return; }
-  if (Date.now() < ptLockUntil) { toast('团子还在忙，等它一下下~'); return; }
+  if (ptS.sleeping) { toast(ptName() + '睡觉觉中，别吵醒它呀~'); return; }
+  if (Date.now() < ptLockUntil) { toast(ptName() + '还在忙，等它一下下~'); return; }
   if (kind === 'can') {
     if (ptS.cans < 1) { toast('罐头吃完了，去猫商店补货吧'); return; }
     ptS.cans--;
@@ -979,7 +990,7 @@ function ptOpenShop() {
   if (!ptS) return;
   var m = document.getElementById('ptMoShop');
   m.querySelector('.ml-body').innerHTML =
-    '<div class="pet-shop-hd"><span class="pet-desc">背单词赚猫币，来给团子买好吃的吧</span><span class="bal">' + PT_ICO.coin + ptS.coins + ' 猫币</span></div>'
+    '<div class="pet-shop-hd"><span class="pet-desc">背单词赚猫币，来给' + ptName() + '买好吃的吧</span><span class="bal">' + PT_ICO.coin + ptS.coins + ' 猫币</span></div>'
     + ptShopRows();
   m.classList.add('show');
 }
@@ -1008,6 +1019,28 @@ function ptBuy(id) {
 function ptCloseModal(id) {
   var m = document.getElementById(id);
   if (m) m.classList.remove('show');
+}
+
+// ---------- 宠物改名（点名字打开弹窗，≤6 字，随账号持久化） ----------
+function ptOpenRename() {
+  if (!ptS) return;
+  var m = document.getElementById('ptMoRename');
+  var inp = m.querySelector('input');
+  inp.value = ptS.name || '';
+  m.classList.add('show');
+  setTimeout(function () { inp.focus(); inp.select(); }, 120);
+}
+function ptConfirmRename() {
+  var n = (document.getElementById('ptRenameInput').value || '').trim();
+  if (!n) { toast('名字不能为空哦~'); return; }
+  if (n.length > 6) { toast('名字最多 6 个字哦~'); return; }
+  var old = ptS.name;
+  ptS.name = n;
+  ptSave();
+  ptRender();
+  ptCloseModal('ptMoRename');
+  ptSay('我的新名字是「' + n + '」，以后请叫我' + n + '哦~', true);
+  if (old !== n) toast('已改名为「' + n + '」');
 }
 
 // ---------- 背单词赚猫币 ----------
@@ -1144,13 +1177,13 @@ function ptQJudge(ok) {
         setTimeout(function () { if (cb && cb.parentNode) cb.parentNode.removeChild(cb); }, 1450);
       }
     }
-    if (fb) fb.className = 'pet-q-fb ok', fb.innerHTML = '答对啦！猫币 +3' + ctext + '<small>团子：' + escHtml(remark) + '</small>';
+    if (fb) fb.className = 'pet-q-fb ok', fb.innerHTML = '答对啦！猫币 +3' + ctext + '<small>' + ptName() + '：' + escHtml(remark) + '</small>';
   } else {
     ptQ.wrong++;
     ptQ.combo = 0;
     ptSetCoins(-PT_WRONG);
     var ans = ptQ.cur.e + '（' + ptQ.cur.c + '）';
-    if (fb) fb.className = 'pet-q-fb no', fb.innerHTML = '答错了，猫币 -2 · 正确答案：' + escHtml(ans) + '<small>团子：' + escHtml(remark) + '</small>';
+    if (fb) fb.className = 'pet-q-fb no', fb.innerHTML = '答错了，猫币 -2 · 正确答案：' + escHtml(ans) + '<small>' + ptName() + '：' + escHtml(remark) + '</small>';
   }
   ptQ.idx++;
   setTimeout(function () { if (ptQ && document.getElementById('ptMoQuiz').classList.contains('show')) ptQRender(); }, ok ? 1000 : 1700);
@@ -1167,7 +1200,7 @@ function ptQResult() {
     + '<button class="bn-pet p" onclick="ptQStart()">再来一轮</button>'
     + '<button class="bn-pet q" onclick="ptCloseModal(\'ptMoQuiz\')">回去撸猫</button>'
     + '</div>'
-    + '<div class="sub" style="margin-top:12px;font-size:11px">今日剩余机会 ' + Math.max(0, PT_QUIZ_DAILY - ptS.quiz.n) + '/' + PT_QUIZ_DAILY + ' · 词库：人教版PEP（2024新版）四上+四下 · 答对 +3 / 答错 -2 猫币</div>'
+    + '<div class="sub" style="margin-top:12px;font-size:11px">今日剩余机会 ' + Math.max(0, PT_QUIZ_DAILY - ptS.quiz.n) + '/' + PT_QUIZ_DAILY + ' · 词库：人教版PEP（2024新版）三上+三下 · 答对 +3 / 答错 -2 猫币</div>'
     + '</div>';
   ptQ = null;
 }

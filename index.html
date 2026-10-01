@@ -950,6 +950,25 @@ body.kid-mode{padding-bottom:72px}
   </div>
 </div>
 
+<!-- 宠物改名弹窗（点宠物页头像旁的名字打开） -->
+<div class="mo" id="ptMoRename">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">给宠物改名</div>
+      <button class="ml-close" onclick="ptCloseModal('ptMoRename')">✕</button>
+    </div>
+    <div class="ml-body">
+      <input type="text" id="ptRenameInput" class="pt-rename-input" maxlength="6" placeholder="输入新名字（最多 6 个字）" onkeydown="if(event.key==='Enter')ptConfirmRename()">
+      <div class="pt-rename-tip">名字会保存在本机，换个称呼换个心情～</div>
+      <div class="pt-rename-btns">
+        <button class="bn-pet p" onclick="ptConfirmRename()">确认</button>
+        <button class="bn-pet q" onclick="ptCloseModal('ptMoRename')">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="to" id="toast"><span class="to-dot"></span><span id="toTx"></span></div>
 <div class="co2" id="cd2">
   <div class="cb">
@@ -3426,6 +3445,6 @@ window.addEventListener('resize',function(){typeof qzSetStickyTop==='function'&&
   });
 })();
 </script>
-<script src="pet.js?v=20260930i"></script>
+<script src="pet.js?v=20261001a"></script>
 </body>
 </html>
