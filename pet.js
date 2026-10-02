@@ -10,7 +10,7 @@
 //   家具系统：猫爬架/猫窝多档次（买回≠摆放——点「摆放」进房、点房间家具收回、可同摆多件）；
 //   猫窝摆放后可「睡觉觉」（趴窝闭眼 Zzz，点小猫唤醒）；商店分区展示（食物/玩具/家具）；
 //   背单词每天最多 3 次（跨天重置）；
-//   逗猫玩耍按次数限制：玩具逗猫每天 5 次、点猫撸猫每天 10 次（跨天重置）；
+//   逗猫玩耍按次数限制：每种玩具每天 5 次、点猫撸猫每天 10 次（跨天重置）；
 //   小猫随累计食量长大（4 个阶段，体型随阶段变大），每天胃口随阶段变大（0.25 → 1 袋/天）；
 //   每日喂食上限=阶段胃口折算餐数；隔天未开粮/未喂，进页面触发低落欢迎语。
 // 数据：按账号存本机 localStorage 'sp_pet__<phone>'（孩子端与刷题数据同级，不上云）。
@@ -22,7 +22,7 @@ var PT_RIGHT = 3, PT_WRONG = 2, PT_ROUND = 10;   // 答对+3 / 答错-2 / 每轮
 var PT_QUIZ_DAILY = 3;                            // 背单词每天最多参加次数
 var PT_FOOD_MEAL = 0.25;                          // 每次喂猫粮吃 1/4 袋
 var PT_MEAL_MS = 30 * 60 * 1000;                  // 一餐进食时长：30 分钟（碗内食物随时间减少，吃完回空）
-var PT_TOY_DAILY = 5;                             // 玩具逗猫每天最多次数
+var PT_TOY_DAILY = 5;                             // 每种玩具每天最多次数（按拥有的玩具分别计）
 var PT_PAT_DAILY = 10;                            // 点猫撸猫每天最多次数
 // 成长阶段：need=进入该阶段累计吃袋数；app=每天胃口（袋）；size=显示缩放
 var PT_STAGES = [
@@ -407,7 +407,7 @@ function ptBlockedMsg() {
   return '';
 }
 function ptDefault() {
-  return { v: 1, name: '团子', coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, owned: {}, placed: [], sleeping: false, quiz: null, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0, toyN: 0, patN: 0, meal: null };
+  return { v: 1, name: '团子', coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, owned: {}, placed: [], sleeping: false, quiz: null, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0, toyN: {}, patN: 0, meal: null };
 }
 function ptLoad() {
   var key = ptAccKey();
@@ -465,7 +465,7 @@ function ptRoll() {
   }
   ptS.lastVisit = t;
   ptS.fedToday = 0;
-  ptS.toyN = 0; ptS.patN = 0; // 跨天重置今日玩耍次数
+  ptS.toyN = {}; ptS.patN = 0; // 跨天重置今日玩耍次数（toyN 按玩具 id 分计）
   if (ptS.quiz && ptS.quiz.d !== t) ptS.quiz = { d: t, n: 0 }; // 跨天重置背单词次数
 }
 
@@ -838,7 +838,8 @@ function ptPlayToy(id) {
   if (!ptS) return;
   var blk = ptBlockedMsg(); // 进食中拒绝：等吃完再来玩
   if (blk) { toast(blk); return; }
-  if ((ptS.toyN || 0) >= PT_TOY_DAILY) { toast('今日玩耍次数已用完，请明日再来陪我玩吧~'); return; } // 玩具逗猫每日限 5 次
+  if (!ptS.toyN || typeof ptS.toyN !== 'object') ptS.toyN = {}; // 老结构兼容（原为合计次数）
+  if ((ptS.toyN[id] || 0) >= PT_TOY_DAILY) { toast('这个玩具今天玩耍次数已用完，请明日再来陪我玩吧~'); return; } // 每种玩具每日限 5 次
   var cfg = PT_TOYFX[id];
   var room = document.getElementById('ptRoom');
   if (!cfg || !room) return;
@@ -851,7 +852,7 @@ function ptPlayToy(id) {
   room.appendChild(fx);
   setTimeout(function () { if (fx.parentNode) fx.parentNode.removeChild(fx); }, 2800);
   ptWordSeq(PT_TALK.toyWords[id] || PT_TALK.play, 3);
-  ptS.toyN = (ptS.toyN || 0) + 1; // 累计今日玩耍次数
+  ptS.toyN[id] = (ptS.toyN[id] || 0) + 1; // 按玩具累计今日玩耍次数
   ptSave();
   if (cfg.chase) {
     var target = Math.min((parseFloat(fx.style.left) || 0) + 104, Math.max(16, ptRoomW() - 160));
