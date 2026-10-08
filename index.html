@@ -1366,6 +1366,83 @@ function syncPush(data){
       updateSyncUI();
     });
 }
+// ===== 宠物数据同步（独立文件 sync-pet.json，孩子端允许推送） =====
+//   宠物是孩子端专属功能，syncPush 对孩子端禁推（防旧账本覆盖云端），故宠物走独立文件：
+//   结构 { [phone]: 宠物状态对象(含 updatedAt 毫秒时间戳) }；冲突策略：updatedAt 较新者胜，
+//   合并时累计资源字段（coins/eaten/food/cans/strips/hungryDays）取较大值，防双设备交替玩时资源回退。
+//   推送失败标记 sp_pet_sync_pending，网络恢复/成功拉取后补推；未配置 token 时全部静默跳过。
+var GH_PET_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-pet.json';
+var PET_SYNC_PENDING_KEY='sp_pet_sync_pending';
+var petSyncSHA='',petSyncTimer=null;
+function markPetPending(){try{localStorage.setItem(PET_SYNC_PENDING_KEY,'1')}catch(e){}}
+function clearPetPending(){try{localStorage.removeItem(PET_SYNC_PENDING_KEY)}catch(e){}}
+function hasPetPending(){try{return localStorage.getItem(PET_SYNC_PENDING_KEY)==='1'}catch(e){return false}}
+function petLocalState(){ // 本机当前账号宠物状态（键须与 pet.js PET_KEY_PREFIX 一致）
+  try{var r=localStorage.getItem('sp_pet__'+currentUser);return r?JSON.parse(r):null}catch(e){return null}
+}
+function petMerge(local,remote){ // 较新者为基础，累计资源取两设备较大值
+  var a=local||null,b=remote||null;
+  if(!a)return b;if(!b)return a;
+  var base=((b.updatedAt||0)>=(a.updatedAt||0))?b:a,other=(base===b)?a:b;
+  var m=JSON.parse(JSON.stringify(base));
+  ['coins','eaten','food','cans','strips','hungryDays'].forEach(function(k){
+    if(typeof other[k]==='number'&&typeof m[k]==='number')m[k]=Math.max(m[k],other[k]);
+  });
+  return m;
+}
+function petSyncQueue(){ // ptSave 防抖入口：5 秒内的多次保存合并为一次推送
+  if(!currentUser||!getSyncToken())return;
+  markPetPending();
+  if(petSyncTimer)clearTimeout(petSyncTimer);
+  petSyncTimer=setTimeout(petSyncPush,5000);
+}
+function petSyncPush(){
+  if(petSyncTimer){clearTimeout(petSyncTimer);petSyncTimer=null}
+  if(!hasPetPending()||!currentUser||!getSyncToken())return;
+  var local=petLocalState();
+  if(!local)return;
+  fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
+    .then(function(r){
+      if(r.status===404){petSyncSHA='';return {sha:'',content:null}}
+      if(!r.ok){markPetPending();return null}
+      return r.json();
+    })
+    .then(function(meta){
+      if(!meta)return;
+      petSyncSHA=meta.sha||'';
+      var allData={};
+      if(meta.content){try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
+      var remote=allData[currentUser]||null;
+      if(remote&&(!local||(remote.updatedAt||0)>(local.updatedAt||0))){
+        // 云端较新：吸收合并结果到本地（ptAdoptRemote 重新持久化后自动排队补推合并结果）
+        if(typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(petMerge(local,remote));
+        return;
+      }
+      allData[currentUser]=local;
+      return fetch(GH_PET_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'pet-sync:'+currentUser,content:utf8ToB64(JSON.stringify(allData)),sha:petSyncSHA})})
+        .then(function(r){if(r.ok)clearPetPending();else markPetPending()});
+    })
+    .catch(function(){markPetPending()});
+}
+function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收；有待推改动则补推
+  if(!currentUser||!getSyncToken())return;
+  fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
+    .then(function(r){
+      if(!r.ok){if(hasPetPending())petSyncPush();return}
+      return r.json().then(function(meta){
+        petSyncSHA=meta.sha||'';
+        if(!meta.content){if(hasPetPending())petSyncPush();return}
+        var allData={};try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
+        var remote=allData[currentUser]||null,local=petLocalState();
+        if(remote&&(!local||(remote.updatedAt||0)>(local.updatedAt||0))){
+          if(typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(petMerge(local,remote));
+        }
+        if(hasPetPending())petSyncPush();
+      });
+    })
+    .catch(function(){});
+}
+window.addEventListener('online',function(){if(hasPetPending())petSyncPush()});
 // 同步状态合并进用户胶囊：6px 色点（绿=已同步，黄=同步中，红=失败，灰=未配置）
 function updateSyncUI(){
   var el=document.getElementById('syncStatus');
@@ -3445,6 +3522,6 @@ window.addEventListener('resize',function(){typeof qzSetStickyTop==='function'&&
   });
 })();
 </script>
-<script src="pet.js?v=20261002c"></script>
+<script src="pet.js?v=20261008a"></script>
 </body>
 </html>

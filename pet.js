@@ -13,7 +13,8 @@
 //   逗猫玩耍按次数限制：每种玩具每天 5 次、点猫撸猫每天 10 次（跨天重置）；
 //   小猫随累计食量长大（4 个阶段，体型随阶段变大），每天胃口随阶段变大（0.25 → 1 袋/天）；
 //   每日喂食上限=阶段胃口折算餐数；隔天未开粮/未喂，进页面触发低落欢迎语。
-// 数据：按账号存本机 localStorage 'sp_pet__<phone>'（孩子端与刷题数据同级，不上云）。
+// 数据：按账号存本机 localStorage 'sp_pet__<phone>'，并同步到云端仓库 star-points-data 的 sync-pet.json
+//   （整对象较新者胜 + 累计资源取大；index.html 提供 petSyncPull/petSyncQueue，云端较新时经 ptAdoptRemote 吸收）。
 // 命名：所有函数加 pt 前缀，避免与账本/刷题全局函数冲突。
 
 // ---------- 常量 ----------
@@ -407,7 +408,7 @@ function ptBlockedMsg() {
   return '';
 }
 function ptDefault() {
-  return { v: 1, name: '团子', coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, owned: {}, placed: [], sleeping: false, quiz: null, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0, toyN: {}, patN: 0, meal: null };
+  return { v: 1, name: '团子', coins: 30, food: 0.5, cans: 0, strips: 0, toys: [], tree: false, owned: {}, placed: [], sleeping: false, quiz: null, eaten: 0, lastFeed: '', lastVisit: today(), created: today(), hungryDays: 0, fedToday: 0, toyN: {}, patN: 0, meal: null, updatedAt: 0 };
 }
 function ptLoad() {
   var key = ptAccKey();
@@ -437,7 +438,31 @@ function ptLoad() {
   return ptS;
 }
 function ptSave() {
-  try { localStorage.setItem(ptAccKey(), JSON.stringify(ptS)); } catch (e) {}
+  try { ptS.updatedAt = Date.now(); localStorage.setItem(ptAccKey(), JSON.stringify(ptS)); } catch (e) {}
+  if (typeof window.petSyncQueue === 'function') window.petSyncQueue(); // 防抖上云（index.html 提供；未配置 token 时静默跳过）
+}
+var ptSyncPullAt = 0;
+function ptSyncPullIfDue() { // 每次进宠物页最多拉一次云端（60 秒节流）
+  if (Date.now() - ptSyncPullAt < 60000) return;
+  ptSyncPullAt = Date.now();
+  if (typeof window.petSyncPull === 'function') window.petSyncPull();
+}
+function ptAdoptRemote(remote) { // 吸收云端宠物数据（index.html petSyncPull/petSyncPush 在云端较新时调用）
+  if (!remote || typeof remote !== 'object') return;
+  var o = {}, k;
+  for (k in remote) o[k] = remote[k];
+  var d = ptDefault();
+  for (k in d) if (o[k] === undefined) o[k] = d[k]; // 兜底补齐新字段（老结构兼容）
+  if (Object.prototype.toString.call(o.toys) !== '[object Array]') o.toys = [];
+  if (Object.prototype.toString.call(o.owned) !== '[object Object]') o.owned = {};
+  if (Object.prototype.toString.call(o.placed) !== '[object Array]') o.placed = [];
+  if (!o.name) o.name = '团子';
+  try { localStorage.setItem(ptAccKey(), JSON.stringify(o)); } catch (e) {}
+  ptLoadedKey = '';
+  ptS = null;
+  ptLoad(); // 重新载入（兜底补齐 + 跨天结算 + 持久化并排队补推）
+  var host = document.getElementById('p-pet');
+  if (host && host.dataset.built) ptRender();
 }
 function ptDaysBetween(a, b) {
   if (!a || !b) return 0;
@@ -1222,6 +1247,7 @@ function ptShow() {
   ptBuild();
   ptLoad();
   ptMealSync(); // 离线/换页期间跨过 30 分钟的餐：收碗回空；未吃完的餐恢复进食循环
+  ptSyncPullIfDue(); // 拉取云端宠物数据（60 秒节流；云端较新则吸收并刷新界面）
   var a = ptActorEl();
   if (ptS.sleeping) { // 睡觉中：直接落在猫窝位置
     if (a) a.style.left = (ptFurnX('bed', 0) - 26) + 'px';
