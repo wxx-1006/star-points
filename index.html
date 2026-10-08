@@ -620,8 +620,8 @@ body.kid-mode{padding-bottom:72px}
 .ck-dt{font:700 14px/1.3 var(--ff);color:#4A3F35}
 .ck-sum{margin:10px 16px 0;font:600 12px/1.5 var(--ff);color:#8F8578}
 .ck-sum b{color:#D89A28}
-.ck-sec{margin:14px 16px 6px;font:700 11.5px/1.3 var(--ff);color:#A99F90;letter-spacing:.5px}
-.ck-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1.5px solid #EFE9DC;border-radius:14px;padding:11px 13px;margin:0 16px 8px}
+.ck-bn{font:600 10.5px/1.5 var(--ff);color:#5B8A4E;margin-left:4px}
+.ck-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1.5px solid #EFE9DC;border-radius:14px;padding:11px 13px;margin:0 16px 8px;min-height:57px}
 .ck-item.done{background:#F3FAF1;border-color:#D8EDD2}
 .ck-item.claim{background:#FFF9EC;border-color:#F4E3C0}
 .ck-i-l{min-width:0}
@@ -629,25 +629,17 @@ body.kid-mode{padding-bottom:72px}
 .ck-item.done .ck-nm{color:#5B8A4E}
 .ck-min{display:inline-block;font:600 10px/1 var(--ff);color:#A99F90;background:#F6F2E9;border-radius:6px;padding:3px 6px;margin-left:6px;vertical-align:1px}
 .ck-zw{margin-top:3px;font:500 11px/1.55 var(--ff);color:#8F8578}
-.ck-st{font:700 12.5px/1.3 var(--ff);white-space:nowrap;text-align:right}
+.ck-st{font:700 12.5px/1.3 var(--ff);white-space:nowrap;text-align:right;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;min-height:33px}
 .ck-st.done{color:#5B8A4E}
 .ck-st.done span{display:block;font:700 10.5px/1.4 var(--ff);color:#D89A28}
 .ck-st.wait{color:#C98A28}
 .ck-b{border:0;border-radius:10px;padding:8px 13px;font:700 12px/1.3 var(--ff);background:#EAF2FA;color:#3C72A4;cursor:pointer;white-space:nowrap}
 .ck-b.p{background:#E8F5E4;color:#3E7D33}
 .ck-b:active{opacity:.75}
-.ck-tabs{display:flex;gap:8px;margin:12px 16px 0}
-.ck-tab{flex:1;border:1.5px solid #E8E0D2;background:#fff;border-radius:10px;padding:8px 0;font:700 12.5px/1.3 var(--ff);color:#8F8578;cursor:pointer}
-.ck-tab.on{background:#4A3F35;border-color:#4A3F35;color:#FFF7E6}
 .ck-prog{display:flex;align-items:center;gap:10px;margin:12px 16px 0}
 .ck-bar{flex:1;height:9px;border-radius:99px;background:#F0EADF;overflow:hidden}
 .ck-bar i{display:block;height:100%;border-radius:99px;background:#7FC26E;transition:width .3s}
 .ck-pct{font:800 13px/1 var(--ff);color:#5B8A4E;min-width:40px;text-align:right}
-.ck-wrow{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1.5px solid #EFE9DC;border-radius:12px;padding:9px 12px;margin:0 16px 6px;cursor:pointer}
-.ck-wrow.today{border-color:#D8EDD2;background:#F3FAF1}
-.ck-wd{font:700 11.5px/1.6 var(--ff);color:#6B5E4F;white-space:nowrap;padding-top:1px}
-.ck-wt{font:500 10.5px/1.7 var(--ff);color:#8F8578;word-break:break-all;min-width:0}
-.ck-wc{font:700 10.5px/1.5 var(--ff);color:#D89A28;margin-right:6px}
 </style>
 <div class="pg" id="p-checkin">
   <div class="ck-tip" id="ckTip"></div>
@@ -2410,8 +2402,8 @@ function renderRecord(r,currentDay,ro){
   var sign=u?'+':'';
   var noteStr=r.note?(' · '+escHtml(r.note)):'';
   var timeStr=(r.date===currentDay)?fdt(r.timestamp):fd(r.date)+' '+fdt(r.timestamp);
-  // 只读模式（报告明细）/孩子端只读 + 系统流水（答题奖励/打卡里程碑/补签卡/每日打卡奖励）不可删除 → 均不渲染删除按钮
-  var del=(ro||sessionRole==='kid'||r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward')?'':'<button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button>';
+  // 只读模式（报告明细）/孩子端只读 + 系统流水（答题奖励/打卡里程碑/补签卡/每日打卡奖励/全勤奖励）不可删除 → 均不渲染删除按钮
+  var del=(ro||sessionRole==='kid'||r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward'||r.itemId==='ck_bonus')?'':'<button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button>';
   return '<div class="ri"><span class="cat-dot" style="background:'+catColor(r.category)+'"></span><div class="inf"><div class="nm">'+escHtml(r.name)+'</div><div class="tm">'+timeStr+noteStr+'</div></div><div class="sc2 '+cls+'">'+sign+r.score+'</div>'+del+'</div>';
 }
 
@@ -2746,9 +2738,9 @@ function deleteRecord(id){
   var r=null;
   for(var i=0;i<ad.records.length;i++){if(ad.records[i].id===id){r=ad.records[i];break}}
   if(!r)return;
-  // 系统流水不可删除：答题奖励 / 连续打卡里程碑奖励 / 购买补签卡 / 每日打卡确认奖励
+  // 系统流水不可删除：答题奖励 / 连续打卡里程碑奖励 / 购买补签卡 / 每日打卡确认奖励 / 全勤奖励
   // （删除会破坏对应业务状态：奖励已发放、打卡已达成、补签卡已入库，故一律拦截）
-  if(r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward'){toast('系统积分流水不可删除','err');return}
+  if(r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward'||r.itemId==='ck_bonus'){toast('系统积分流水不可删除','err');return}
   var sign=r.score>0?'+':'';
   var action=r.score>0?'减少':'增加';
   sc2('删除记录','删除「'+r.name+'」('+sign+r.score+'分)？总分将'+action+Math.abs(r.score)+'分。',function(){
@@ -3536,7 +3528,8 @@ window.addEventListener('resize',function(){typeof qzSetStickyTop==='function'&&
 //   任务按日期规则生成：每日 / 工作日 / 每日轮流(3日轮换) / 周三·周六 / 周末 / 早读；
 //   语文作文训练按三阶段计划（2026-10-08 起）显示当日具体内容。
 //   流程：孩子端「我已完成」=申请(c=1，不计完成)；家长端「确认完成」=完成(d=1)并 +5 分
-//   （ck_reward 系统流水不可删除；家长也可不经申请直接确认）。加分只发一次（r 标记防重，不随状态回退）。
+//   （ck_reward 系统流水不可删除；家长也可不经申请直接确认）。加分只发一次（r 标记防重，不随状态回退）；
+//   分值：作文训练工作日 10 分 / 周末 20 分，其余每项 5 分；当日完成率 100% 额外 +10（ck_bonus 同为不可删流水）。
 //   状态按账号存本机 sp_ck__<phone>，云同步 sync-checkin.json（双端可推，逐字段并集合并：申请/完成/加分只进不退）。
 var CK_PT=5;               // 每项任务完成 +5 分
 var CK_EPOCH='2026-10-08'; // 每日轮流任务轮换基准日
@@ -3550,13 +3543,13 @@ var CK_TASKS=[
   {id:'w1',sec:'工作日任务',name:'数学拔尖',min:15,type:'weekday'},
   {id:'w2',sec:'工作日任务',name:'英语自然拼读',min:10,type:'weekday'},
   {id:'w3',sec:'工作日任务',name:'睡前英语音频',min:10,type:'weekday'},
-  {id:'w4',sec:'工作日任务',name:'语文作文训练',min:10,type:'weekday',zw:1},
+  {id:'w4',sec:'工作日任务',name:'语文作文训练',min:10,pt:10,type:'weekday',zw:1},
   {id:'r1',sec:'每日轮流任务',name:'数学精准学',min:20,type:'rotate',rot:0},
   {id:'r2',sec:'每日轮流任务',name:'科学精准学',min:15,type:'rotate',rot:1},
   {id:'r3',sec:'每日轮流任务',name:'语文听写',min:15,type:'rotate',rot:2},
   {id:'ws1',sec:'周三·周六任务',name:'语文阅读理解',min:20,type:'wedsat'},
   {id:'e1',sec:'周末任务',name:'数学加油包',sub:'华罗庚 / 举一反三 / 周周学 / 大白本',type:'weekend'},
-  {id:'e2',sec:'周末任务',name:'语文作文训练',min:10,type:'weekend',zw:1},
+  {id:'e2',sec:'周末任务',name:'语文作文训练',min:10,pt:20,type:'weekend',zw:1},
   {id:'e3',sec:'周末任务',name:'学习机语文练习',type:'weekend'},
   {id:'e4',sec:'周末任务',name:'校内背诵',type:'weekend'}
 ];
@@ -3605,7 +3598,6 @@ function ckTasksFor(ds){ // 按日期生成当日任务清单（定义顺序=分
 function ckTaskById(id){for(var i=0;i<CK_TASKS.length;i++){if(CK_TASKS[i].id===id)return CK_TASKS[i]}return null}
 function ckFmtD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function ckAddDays(ds,n){var d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return ckFmtD(d)}
-function ckShort(ds){return ds.slice(5).replace('-','.')}
 function ckStateKey(ds){ // 周末任务两天共用状态（以周六为锚）：周六完成→周日同显已完成，且只加一次分
   var d=new Date(ds+'T00:00:00');
   if(d.getDay()===0){d.setDate(d.getDate()-1);return ckFmtD(d)}
@@ -3614,9 +3606,8 @@ function ckStateKey(ds){ // 周末任务两天共用状态（以周六为锚）�
 function ckKeyFor(ds,t){ // 仅周末任务共用周末状态键；每日/轮流等任务仍按各自日期独立计
   return t.type==='weekend'?ckStateKey(ds):ds;
 }
-function ckWeekStart(ds){var d=new Date(ds+'T00:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return ckFmtD(d)} // 周一为一周起点
 // —— 状态：{[date]:{[taskId]:{c:孩子已申请,d:家长确认完成,r:已加分,t:最后操作时间}}}（date=状态键，周末任务以周六为锚）——
-var ckDate=today(),ckPullAt=0,ckView='day';
+var ckDate=today(),ckPullAt=0;
 function ckBucket(){try{return JSON.parse(localStorage.getItem('sp_ck__'+currentUser))||{}}catch(e){return {}}}
 function ckSaveBucket(b){try{localStorage.setItem('sp_ck__'+currentUser,JSON.stringify(b))}catch(e){}}
 function ckMergeAll(a,b){ // 双端状态并集：c/d/r 逐字段取大（申请/完成/加分均只进不退）
@@ -3702,58 +3693,58 @@ function ckConfirm(ds,id){ // 家长端：确认完成（可不经孩子申请�
   b[ds]=b[ds]||{};b[ds][id]={c:st.c||0,d:1,r:1,t:Date.now()};
   ckSaveBucket(b);ckQueue();
   if(!st.r)ckAward(ds,id); // r 标记防重：同日期同任务只加一次分（加分后不随状态回退）
+  ckDayBonus(ckDate); // 当日全部完成 → 额外 +10 全勤奖励
   ckShow();render();
 }
-function ckAward(ds,id){ // +5 分：ck_reward 系统流水（删除入口已拦截），计入总分
+function ckAward(ds,id){ // 加分：ck_reward 系统流水（删除入口已拦截），计入总分；作文训练工作日 10 分/周末 20 分，其余每项 5 分
   var t=ckTaskById(id);if(!t)return;
-  ad.records.push({id:'ck_'+ds+'_'+id,date:ds,timestamp:Date.now(),type:'up',itemId:'ck_reward',name:t.name+'（打卡）',category:'打卡',score:CK_PT,note:'每日打卡·家长确认'});
-  ad.totalPoints+=CK_PT;
+  var pts=t.pt||CK_PT;
+  ad.records.push({id:'ck_'+ds+'_'+id,date:ds,timestamp:Date.now(),type:'up',itemId:'ck_reward',name:t.name+'（打卡）',category:'打卡',score:pts,note:'每日打卡·家长确认'});
+  ad.totalPoints+=pts;
   sd(ad);
-  toast('已完成「'+t.name+'」，+'+CK_PT+' 分','ok');
+  toast('已完成「'+t.name+'」，+'+pts+' 分','ok');
+}
+function ckDayBonus(ds){ // 当日完成率 100% → 额外 +10 分（ck_bonus 系统流水不可删除；每个日期只发一次）
+  var b=ckBucket();
+  if(b[ds]&&b[ds]._bonus&&b[ds]._bonus.r)return;
+  var tasks=ckTasksFor(ds);
+  for(var i=0;i<tasks.length;i++){var k=ckKeyFor(ds,tasks[i]);if(!(b[k]&&b[k][tasks[i].id]&&b[k][tasks[i].id].d))return}
+  b[ds]=b[ds]||{};b[ds]._bonus={r:1,t:Date.now()};
+  ckSaveBucket(b);ckQueue();
+  ad.records.push({id:'ckb_'+ds,date:ds,timestamp:Date.now(),type:'up',itemId:'ck_bonus',name:'当日打卡全部完成',category:'打卡',score:10,note:'当日完成率100% 额外奖励'});
+  ad.totalPoints+=10;
+  sd(ad);
+  toast('当日任务全部完成，额外 +10 分！','ok');
 }
 // —— 渲染 ——
-function ckShift(n){ // 日视图 ±1 天；周计划视图 ±1 周
-  var step=(ckView==='week'?7:1)*n;
-  var ds=ckAddDays(ckDate,step);
-  if(ckAddDays(ds,(ckView==='week'?6:0))>today()&&ds>today())return; // 不允许查看未来
-  if(ds>today())return;
+function ckShift(n){ // 日视图 ±1 天；最多查看今天起 7 天内
+  var ds=ckAddDays(ckDate,n);
+  if(ds>ckAddDays(today(),7))return;
   ckDate=ds;ckShow();
 }
-function ckSetView(v){ckView=v;ckShow()}
-function ckJump(ds){ckDate=ds;ckView='day';ckShow()}
 function ckShow(){
   var host=document.getElementById('ckList');
   if(!host||!currentUser)return;
-  if(ckDate>today())ckDate=today();
+  if(ckDate>ckAddDays(today(),7))ckDate=ckAddDays(today(),7);
   if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull()} // 30 秒节流拉云端申请/完成状态
-  var html='<div class="ck-tabs">'
-    +'<button class="ck-tab'+(ckView==='day'?' on':'')+'" onclick="ckSetView(\'day\')">日视图</button>'
-    +'<button class="ck-tab'+(ckView==='week'?' on':'')+'" onclick="ckSetView(\'week\')">周计划</button>'
-    +'</div>';
-  if(ckView==='week'){
-    var ws0=ckWeekStart(ckDate);
-    html+='<div class="ck-nav">'
-      +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一周">‹</button>'
-      +'<div class="ck-dt">'+ckShort(ws0)+' ~ '+ckShort(ckAddDays(ws0,6))+'</div>'
-      +'<button class="ck-navb" onclick="ckShift(1)" aria-label="后一周"'+(ws0===ckWeekStart(today())?' disabled':'')+'>›</button>'
-      +'</div>';
-    host.innerHTML=html+ckWeekHtml();
-    return;
+  var tasks=ckTasksFor(ckDate),b=ckBucket(),done=0,earned=0,i;
+  for(i=0;i<tasks.length;i++){
+    var k0=ckKeyFor(ckDate,tasks[i]),st0=(b[k0]&&b[k0][tasks[i].id])||{};
+    if(st0.d){done++;earned+=(tasks[i].pt||CK_PT)}
   }
-  var tasks=ckTasksFor(ckDate),b=ckBucket(),done=0,i;
-  for(i=0;i<tasks.length;i++){var k0=ckKeyFor(ckDate,tasks[i]);if(b[k0]&&b[k0][tasks[i].id]&&b[k0][tasks[i].id].d)done++}
+  var hasBonus=!!(b[ckDate]&&b[ckDate]._bonus&&b[ckDate]._bonus.r);
+  if(hasBonus)earned+=10;
   var pct=tasks.length?Math.round(done/tasks.length*100):0;
-  html+='<div class="ck-nav">'
+  var maxD=ckAddDays(today(),7);
+  var html='<div class="ck-nav">'
     +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
     +'<div class="ck-dt">'+fd(ckDate)+(ckDate===today()?' · 今天':'')+'</div>'
-    +'<button class="ck-navb" onclick="ckShift(1)" aria-label="后一天"'+(ckDate>=today()?' disabled':'')+'>›</button>'
+    +'<button class="ck-navb" onclick="ckShift(1)" aria-label="后一天"'+(ckDate>=maxD?' disabled':'')+'>›</button>'
     +'</div>'
     +'<div class="ck-prog"><div class="ck-bar"><i style="width:'+pct+'%"></i></div><span class="ck-pct">'+pct+'%</span></div>'
-    +'<div class="ck-sum">完成 <b>'+done+'</b>/'+tasks.length+' 项 · 已得 <b>'+(done*CK_PT)+'</b> 分</div>';
-  var lastSec='';
+    +'<div class="ck-sum">完成 <b>'+done+'</b>/'+tasks.length+' 项 · 已得 <b>'+earned+'</b> 分'+(hasBonus?'<span class="ck-bn">（含全勤 +10）</span>':'')+'</div>';
   for(i=0;i<tasks.length;i++){
     var t=tasks[i],k=ckKeyFor(ckDate,t),st=(b[k]&&b[k][t.id])||{};
-    if(t.sec!==lastSec){html+='<div class="ck-sec">'+t.sec+'</div>';lastSec=t.sec}
     var zw=t.zw?ckZwText(ckDate):'';
     html+='<div class="ck-item '+(st.d?'done':(st.c?'claim':''))+'">'
       +'<div class="ck-i-l"><div class="ck-nm">'+escHtml(t.name)+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'</div>'
@@ -3761,44 +3752,20 @@ function ckShow(){
       +(t.sub?'<div class="ck-zw">'+escHtml(t.sub)+'</div>':'')
       +'</div>';
     if(st.d){
-      html+='<div class="ck-st done">已完成<span>+'+CK_PT+' 分</span></div>';
+      html+='<div class="ck-st done">已完成<span>+'+(t.pt||CK_PT)+' 分</span></div>';
     }else if(sessionRole==='kid'){
       html+=st.c?'<div class="ck-st wait">待家长确认</div>'
         :'<button class="ck-b" onclick="ckClaim(\''+k+'\',\''+t.id+'\')">我已完成</button>';
     }else{
-      html+='<button class="ck-b p" onclick="ckConfirm(\''+k+'\',\''+t.id+'\')">'+(st.c?'孩子已打卡请确认是否完成':'确认完成')+'</button>';
+      html+='<button class="ck-b p" onclick="ckConfirm(\''+k+'\',\''+t.id+'\')">'+(st.c?'孩子已打卡，请确认！':'确认完成')+'</button>';
     }
     html+='</div>';
   }
   host.innerHTML=html;
   document.getElementById('ckTip').textContent=sessionRole==='kid'
-    ?'点「我已完成」后请等家长确认，确认后才会 +'+CK_PT+' 分哦'
-    :'孩子申请后需家长确认；也可直接点「确认完成」。每项 +'+CK_PT+' 分，加分不可删除。';
+    ?'点「我已完成」后请等家长确认，确认后才会加分哦'
+    :'孩子申请后需家长确认；也可直接点「确认完成」。完成任务得分（作文训练工作日 10 分/周末 20 分，其余每项 5 分），当日全部完成额外 +10 分，加分不可删除。';
 }
-function ckWeekHtml(){ // 三周计划总览：上一周 / 锚点周 / 下一周（周一为一周起点；点某天回到日视图）
-  var ws=ckWeekStart(ckDate),html='';
-  var offs=[[-7,'上一周'],[0,(today()>=ws&&today()<=ckAddDays(ws,6))?'本周':'所选周'],[7,'下一周']];
-  var b=ckBucket();
-  for(var k=0;k<offs.length;k++){
-    var base=ckAddDays(ws,offs[k][0]),label=offs[k][1];
-    html+='<div class="ck-sec">'+label+' · '+ckShort(base)+' ~ '+ckShort(ckAddDays(base,6))+'</div>';
-    for(var i=0;i<7;i++){
-      var ds=ckAddDays(base,i);
-      var tasks=ckTasksFor(ds),done=0,names=[];
-      for(var j=0;j<tasks.length;j++){
-        var t=tasks[j],kk=ckKeyFor(ds,t),isDone=!!(b[kk]&&b[kk][t.id]&&b[kk][t.id].d);
-        if(isDone)done++;
-        names.push((isDone?'✓':'')+t.name);
-      }
-      html+='<div class="ck-wrow'+(ds===today()?' today':'')+'" onclick="ckJump(\''+ds+'\')">'
-        +'<div class="ck-wd">'+'一二三四五六日'[i]+' '+ckShort(ds)+(ds===today()?' ·今天':'')+'</div>'
-        +'<div class="ck-wt"><span class="ck-wc">'+done+'/'+tasks.length+'</span>'+escHtml(names.join('、'))+'</div>'
-        +'</div>';
-    }
-  }
-  return html;
-}
-
 // 初始化：检查登录状态（孩子会话优先，其次家长会话）
 (function init(){
   var kid=readKidSession();
