@@ -609,7 +609,40 @@ body.kid-mode{padding-bottom:72px}
   <div id="reportBody" style="padding-bottom:24px"></div>
 </div>
 
-<!-- 电子宠物（孩子端专属）：结构由 pet.js 构建注入；状态按账号存本机 sp_pet__<phone>（与刷题数据同级，不上云） -->
+<!-- 每日打卡（家长确认制）：任务按日期规则生成；状态按账号存本机 sp_ck__<phone>，云同步 sync-checkin.json；
+     孩子端「我已完成」=申请，家长端「确认完成」→ +5 分走 ck_reward 系统流水（不可删除） -->
+<style>
+/* ===== 每日打卡 ===== */
+.ck-tip{margin:14px 16px 0;padding:9px 12px;border-radius:12px;background:#FFF7E6;border:1px solid #F4E3C0;font:500 11px/1.6 var(--ff);color:#8F6210}
+.ck-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 16px 0}
+.ck-navb{width:40px;height:34px;border-radius:10px;border:1.5px solid #E8E0D2;background:#fff;font:700 17px/1 var(--ff);color:#6B5E4F;cursor:pointer}
+.ck-navb:disabled{opacity:.35}
+.ck-dt{font:700 14px/1.3 var(--ff);color:#4A3F35}
+.ck-sum{margin:10px 16px 0;font:600 12px/1.5 var(--ff);color:#8F8578}
+.ck-sum b{color:#D89A28}
+.ck-sec{margin:14px 16px 6px;font:700 11.5px/1.3 var(--ff);color:#A99F90;letter-spacing:.5px}
+.ck-item{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1.5px solid #EFE9DC;border-radius:14px;padding:11px 13px;margin:0 16px 8px}
+.ck-item.done{background:#F3FAF1;border-color:#D8EDD2}
+.ck-item.claim{background:#FFF9EC;border-color:#F4E3C0}
+.ck-i-l{min-width:0}
+.ck-nm{font:600 13.5px/1.4 var(--ff);color:#4A3F35}
+.ck-item.done .ck-nm{color:#5B8A4E}
+.ck-min{display:inline-block;font:600 10px/1 var(--ff);color:#A99F90;background:#F6F2E9;border-radius:6px;padding:3px 6px;margin-left:6px;vertical-align:1px}
+.ck-zw{margin-top:3px;font:500 11px/1.55 var(--ff);color:#8F8578}
+.ck-st{font:700 12.5px/1.3 var(--ff);white-space:nowrap;text-align:right}
+.ck-st.done{color:#5B8A4E}
+.ck-st.done span{display:block;font:700 10.5px/1.4 var(--ff);color:#D89A28}
+.ck-st.wait{color:#C98A28}
+.ck-b{border:0;border-radius:10px;padding:8px 13px;font:700 12px/1.3 var(--ff);background:#EAF2FA;color:#3C72A4;cursor:pointer;white-space:nowrap}
+.ck-b.p{background:#E8F5E4;color:#3E7D33}
+.ck-b:active{opacity:.75}
+</style>
+<div class="pg" id="p-checkin">
+  <div class="ck-tip" id="ckTip"></div>
+  <div class="rl" id="ckList" style="margin:12px 0 24px"></div>
+</div>
+
+<!-- 电子宠物（孩子端专属）：结构由 pet.js 构建注入；状态按账号存本机 sp_pet__<phone>，云同步 sync-pet.json -->
 <div class="pg" id="p-pet"></div>
 
 <!-- 设置 -->
@@ -678,15 +711,17 @@ body.kid-mode{padding-bottom:72px}
 <div class="tb" id="tbMain">
   <div class="ti on" onclick="st('home')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">首页</span></div>
   <div class="ti" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
+  <div class="ti" onclick="st('checkin')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">打卡</span></div>
   <div class="ti" onclick="st('quiz')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">刷题</span></div>
   <div class="ti" id="tabReport" onclick="st('report')"><span class="t-ico"><span class="tico-chart" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">报告</span></div>
   <div class="ti" id="tabSettings" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
 </div>
 
-<!-- Tab Bar（孩子端轻量导航：记录/商城/宠物/报告，applyRoleUI 切换显隐；宠物页为 pet.js 孩子端专属） -->
+<!-- Tab Bar（孩子端轻量导航：记录/商城/打卡/宠物/报告，applyRoleUI 切换显隐；宠物页为 pet.js 孩子端专属） -->
 <div class="tb" id="kidTb" style="display:none">
   <div class="ti on" id="kt-records" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
   <div class="ti" id="kt-shop" onclick="st('shop')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">商城</span></div>
+  <div class="ti" id="kt-checkin" onclick="st('checkin')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">打卡</span></div>
   <div class="ti" id="kt-pet" onclick="st('pet')"><span class="t-ico"><span class="tico-pet" aria-hidden="true"></span></span><span class="tl">宠物</span></div>
   <div class="ti" id="kt-report" onclick="st('report')"><span class="t-ico"><span class="tico-chart" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">报告</span></div>
 </div>
@@ -2196,9 +2231,9 @@ var dpSelectedEnd=null;
 
 function st(tab){
   if(sessionRole==='kid'){
-    // 孩子端四个页签：记录 / 商城 / 宠物 / 报告（刷题仍仅家长端开放，孩子端无入口，此处双保险拦截）
+    // 孩子端五个页签：记录 / 商城 / 打卡 / 宠物 / 报告（刷题仍仅家长端开放，孩子端无入口，此处双保险拦截）
     if(tab==='quiz')return;
-    if(tab!=='records'&&tab!=='shop'&&tab!=='pet'&&tab!=='report')return;
+    if(tab!=='records'&&tab!=='shop'&&tab!=='checkin'&&tab!=='pet'&&tab!=='report')return;
     var pages=document.querySelectorAll('.pg');
     for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
     document.getElementById('p-'+tab).classList.add('on');
@@ -2207,6 +2242,7 @@ function st(tab){
     document.getElementById('kt-'+tab).classList.add('on');
     curTab=tab;
     if(tab==='pet')ptShow();       // 宠物页：本机状态渲染 + 欢迎语（数据不上云，无需等待 syncPull）
+    if(tab==='checkin')ckShow();   // 打卡页：本机状态渲染 + 云端申请/完成状态合并（30 秒节流）
     if(tab==='report')renderReport(); // 先按当前数据渲染，拉取后刷新
     if(!currentUser){render();return}
     // 进入记录页/商城/报告均重新拉取：家长桶（总积分/奖励项/刷题只读字段）
@@ -2221,6 +2257,7 @@ function st(tab){
   // 刷题页：进度按账号存本机（sp_quiz__<phone>）并随账号桶上云 → 先备好题目列表再显示页面，
   // 避免 syncPull 返回前的窗口期内判分按钮已可点、而 qzList 仍为空
   if(tab==='pet')return; // 宠物页为孩子端专属：家长端无入口且不开放（双保险）
+  if(tab==='checkin')ckShow(); // 打卡页：本机状态渲染 + 云端合并（家长确认 / 查看孩子申请）
   if(tab==='quiz')qzShow();
   if(tab==='report')renderReport(); // 报告页：先按当前内存数据渲染，拉取完成后刷新
   var pages=document.querySelectorAll('.pg');
@@ -2228,7 +2265,7 @@ function st(tab){
   var tabs=document.querySelectorAll('.ti');
   for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('on');
   document.getElementById('p-'+tab).classList.add('on');
-  document.querySelector('.tb .ti:nth-child('+({'home':1,'records':2,'quiz':3,'report':4,'settings':5}[tab]||1)+')').classList.add('on');
+  document.querySelector('.tb .ti:nth-child('+({'home':1,'records':2,'checkin':3,'quiz':4,'report':5,'settings':6}[tab]||1)+')').classList.add('on');
   curTab=tab;
   // 切换页签时同步
   if(currentUser){
@@ -2361,8 +2398,8 @@ function renderRecord(r,currentDay,ro){
   var sign=u?'+':'';
   var noteStr=r.note?(' · '+escHtml(r.note)):'';
   var timeStr=(r.date===currentDay)?fdt(r.timestamp):fd(r.date)+' '+fdt(r.timestamp);
-  // 只读模式（报告明细）/孩子端只读 + 系统流水（答题奖励/打卡里程碑/补签卡）不可删除 → 均不渲染删除按钮
-  var del=(ro||sessionRole==='kid'||r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy')?'':'<button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button>';
+  // 只读模式（报告明细）/孩子端只读 + 系统流水（答题奖励/打卡里程碑/补签卡/每日打卡奖励）不可删除 → 均不渲染删除按钮
+  var del=(ro||sessionRole==='kid'||r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward')?'':'<button class="dl" onclick="deleteRecord(\''+r.id+'\')">✕</button>';
   return '<div class="ri"><span class="cat-dot" style="background:'+catColor(r.category)+'"></span><div class="inf"><div class="nm">'+escHtml(r.name)+'</div><div class="tm">'+timeStr+noteStr+'</div></div><div class="sc2 '+cls+'">'+sign+r.score+'</div>'+del+'</div>';
 }
 
@@ -2697,9 +2734,9 @@ function deleteRecord(id){
   var r=null;
   for(var i=0;i<ad.records.length;i++){if(ad.records[i].id===id){r=ad.records[i];break}}
   if(!r)return;
-  // 系统流水不可删除：答题奖励 / 连续打卡里程碑奖励 / 购买补签卡
+  // 系统流水不可删除：答题奖励 / 连续打卡里程碑奖励 / 购买补签卡 / 每日打卡确认奖励
   // （删除会破坏对应业务状态：奖励已发放、打卡已达成、补签卡已入库，故一律拦截）
-  if(r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'){toast('系统积分流水不可删除','err');return}
+  if(r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward'){toast('系统积分流水不可删除','err');return}
   var sign=r.score>0?'+':'';
   var action=r.score>0?'减少':'增加';
   sc2('删除记录','删除「'+r.name+'」('+sign+r.score+'分)？总分将'+action+Math.abs(r.score)+'分。',function(){
@@ -3482,6 +3519,221 @@ window.addEventListener('scroll',function(){
 
 // 顶栏高度随视口变化：同步刷题页吸顶条偏移
 window.addEventListener('resize',function(){typeof qzSetStickyTop==='function'&&qzSetStickyTop()},{passive:true});
+
+// ===== 每日打卡（家长确认制）=====
+//   任务按日期规则生成：每日 / 工作日 / 每日轮流(3日轮换) / 周三·周六 / 周末 / 早读；
+//   语文作文训练按三阶段计划（2026-10-08 起）显示当日具体内容。
+//   流程：孩子端「我已完成」=申请(c=1，不计完成)；家长端「确认完成」=完成(d=1)并 +5 分
+//   （ck_reward 系统流水不可删除；家长也可不经申请直接确认）。加分只发一次（r 标记防重，不随状态回退）。
+//   状态按账号存本机 sp_ck__<phone>，云同步 sync-checkin.json（双端可推，逐字段并集合并：申请/完成/加分只进不退）。
+var CK_PT=5;               // 每项任务完成 +5 分
+var CK_EPOCH='2026-10-08'; // 每日轮流任务轮换基准日
+var CK_TASKS=[
+  {id:'d1',sec:'每日任务',name:'语文天天练',min:10,type:'daily'},
+  {id:'d2',sec:'每日任务',name:'英语背单词',min:10,type:'daily'},
+  {id:'d3',sec:'每日任务',name:'英语RAZ分级阅读',min:15,type:'daily'},
+  {id:'d4',sec:'每日任务',name:'舒尔特方格',min:10,type:'daily'},
+  {id:'d5',sec:'每日任务',name:'课外阅读',min:30,type:'daily'},
+  {id:'w1',sec:'工作日任务',name:'数学拔尖',min:15,type:'weekday'},
+  {id:'w2',sec:'工作日任务',name:'英语自然拼读',min:10,type:'weekday'},
+  {id:'w3',sec:'工作日任务',name:'睡前英语音频',min:10,type:'weekday'},
+  {id:'w4',sec:'工作日任务',name:'语文作文训练',min:10,type:'weekday',zw:1},
+  {id:'r1',sec:'每日轮流任务',name:'数学精准学',min:20,type:'rotate',rot:0},
+  {id:'r2',sec:'每日轮流任务',name:'科学精准学',min:15,type:'rotate',rot:1},
+  {id:'r3',sec:'每日轮流任务',name:'语文听写',min:15,type:'rotate',rot:2},
+  {id:'ws1',sec:'周三·周六任务',name:'语文阅读理解',min:20,type:'wedsat'},
+  {id:'e1',sec:'周末任务',name:'数学加油包',sub:'华罗庚 / 举一反三 / 周周学 / 大白本',type:'weekend'},
+  {id:'e2',sec:'周末任务',name:'语文作文训练',min:10,type:'weekend',zw:1},
+  {id:'e3',sec:'周末任务',name:'学习机语文练习',type:'weekend'},
+  {id:'e4',sec:'周末任务',name:'校内背诵',type:'weekend'},
+  {id:'m1',sec:'早读任务',name:'文言文',type:'morning'},
+  {id:'m2',sec:'早读任务',name:'知行合一',type:'morning'},
+  {id:'m3',sec:'早读任务',name:'同步作文',type:'morning'}
+];
+function ckDays(a,b){var da=new Date(a+'T00:00:00'),db=new Date(b+'T00:00:00');return Math.max(0,Math.round((db-da)/86400000))}
+function ckZwStage(ds){ // 语文作文三阶段（按计划图）：1=观察与素材 2=结构与详略 3=细节打磨与情感；0=计划外
+  if(ds>='2026-10-08'&&ds<='2026-11-06')return 1;
+  if(ds>='2026-11-09'&&ds<='2026-12-04')return 2;
+  if(ds>='2026-12-07'&&ds<='2027-01-17')return 3;
+  return 0;
+}
+function ckZwText(ds){ // 作文训练当日内容；''=计划外日期（显示通用任务名）
+  var st=ckZwStage(ds),wd=new Date(ds+'T00:00:00').getDay();
+  if(st===1){
+    if(wd===0)return '日记扩写：挑本周 1 篇观察日记，扩写成 150-200 字';
+    return '观察日记（3-5 句话片段：日期+地点+看到了什么+想到了什么）';
+  }
+  if(st===2){
+    if(wd===1)return '动作片段：把"他很高兴"改成动作描写（150-200 字）';
+    if(wd===4)return '神态+心理片段：把"我很紧张"改成神态心理描写（150-200 字）';
+    if(wd===6)return '整篇首作：300-350 字，必须用五段式，核心段落≥40% 篇幅';
+    return '五段式框架练习（开头10%/起因15%/经过40%/结果感受25%/结尾10%）';
+  }
+  if(st===3){
+    if(wd===2||wd===5)return '首尾升级训练：同一个开头写 3 种（开门见山/设置悬念/环境描写）';
+    if(wd===6)return '整篇作文（300 字以上）+ 写后自查三项（细节≥2处/替换空词/首尾呼应）';
+    if(wd===0)return (Math.floor(ckDays('2026-12-07',ds)/7)%2===0)
+      ?'范文对照精读（习作例文：我家的杏熟了/小木船），摘抄 3 个好句'
+      :'修改誊写本周作文（对照写后自查三项检查）';
+    return '写后自查三项练习（细节描写≥2处/替换空词/开头结尾呼应题目）';
+  }
+  return '';
+}
+function ckTasksFor(ds){ // 按日期生成当日任务清单（定义顺序=分组展示顺序）
+  var wd=new Date(ds+'T00:00:00').getDay(),list=[];
+  for(var i=0;i<CK_TASKS.length;i++){
+    var t=CK_TASKS[i],ok=false;
+    if(t.type==='daily'||t.type==='morning')ok=true;
+    else if(t.type==='weekday')ok=(wd>=1&&wd<=5);
+    else if(t.type==='wedsat')ok=(wd===3||wd===6);
+    else if(t.type==='weekend')ok=(wd===0||wd===6);
+    else if(t.type==='rotate')ok=(ckDays(CK_EPOCH,ds)%3===t.rot);
+    if(ok)list.push(t);
+  }
+  return list;
+}
+function ckTaskById(id){for(var i=0;i<CK_TASKS.length;i++){if(CK_TASKS[i].id===id)return CK_TASKS[i]}return null}
+// —— 状态：{[date]:{[taskId]:{c:孩子已申请,d:家长确认完成,r:已加分,t:最后操作时间}}} ——
+var ckDate=today(),ckPullAt=0;
+function ckBucket(){try{return JSON.parse(localStorage.getItem('sp_ck__'+currentUser))||{}}catch(e){return {}}}
+function ckSaveBucket(b){try{localStorage.setItem('sp_ck__'+currentUser,JSON.stringify(b))}catch(e){}}
+function ckMergeAll(a,b){ // 双端状态并集：c/d/r 逐字段取大（申请/完成/加分均只进不退）
+  var out={},ds,tid;
+  for(ds in a)out[ds]=a[ds];
+  for(ds in b){
+    if(!out[ds]){out[ds]=b[ds];continue}
+    for(tid in b[ds]){
+      var x=out[ds][tid],y=b[ds][tid];
+      if(!x){out[ds][tid]=y;continue}
+      out[ds][tid]={c:Math.max(x.c||0,y.c||0),d:Math.max(x.d||0,y.d||0),r:Math.max(x.r||0,y.r||0),t:Math.max(x.t||0,y.t||0)};
+    }
+  }
+  return out;
+}
+// —— 云同步（sync-checkin.json，双端可推；未配置 token 时静默跳过）——
+var GH_CK_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-checkin.json';
+var CK_PENDING_KEY='sp_ck_sync_pending';
+var ckSyncSHA='',ckSyncTimer=null;
+function markCkPending(){try{localStorage.setItem(CK_PENDING_KEY,'1')}catch(e){}}
+function clearCkPending(){try{localStorage.removeItem(CK_PENDING_KEY)}catch(e){}}
+function hasCkPending(){try{return localStorage.getItem(CK_PENDING_KEY)==='1'}catch(e){return false}}
+function ckQueue(){ // 状态变更防抖上云（4 秒）
+  if(!currentUser||!getSyncToken())return;
+  markCkPending();
+  if(ckSyncTimer)clearTimeout(ckSyncTimer);
+  ckSyncTimer=setTimeout(ckSyncPush,4000);
+}
+function ckSyncPush(){
+  if(ckSyncTimer){clearTimeout(ckSyncTimer);ckSyncTimer=null}
+  if(!hasCkPending()||!currentUser||!getSyncToken())return;
+  var local=ckBucket();
+  fetch(GH_CK_API,{headers:{'Authorization':'token '+getSyncToken()}})
+    .then(function(r){
+      if(r.status===404){ckSyncSHA='';return {sha:'',content:null}}
+      if(!r.ok){markCkPending();return null}
+      return r.json();
+    })
+    .then(function(meta){
+      if(!meta)return;
+      ckSyncSHA=meta.sha||'';
+      var all={};
+      if(meta.content){try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
+      var merged=ckMergeAll(local,all[currentUser]||{});
+      ckSaveBucket(merged);
+      all[currentUser]=merged;
+      return fetch(GH_CK_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'ck-sync:'+currentUser,content:utf8ToB64(JSON.stringify(all)),sha:ckSyncSHA})})
+        .then(function(r){if(r.ok)clearCkPending();else markCkPending();if(curTab==='checkin')ckShow();});
+    })
+    .catch(function(){markCkPending()});
+}
+function ckSyncPull(){ // 进打卡页拉取：合并云端申请/完成状态后刷新
+  if(!currentUser||!getSyncToken())return;
+  fetch(GH_CK_API,{headers:{'Authorization':'token '+getSyncToken()}})
+    .then(function(r){
+      if(!r.ok){if(hasCkPending())ckSyncPush();return}
+      return r.json().then(function(meta){
+        ckSyncSHA=meta.sha||'';
+        if(!meta.content){if(hasCkPending())ckSyncPush();return}
+        var all={};try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
+        var merged=ckMergeAll(ckBucket(),all[currentUser]||{});
+        ckSaveBucket(merged);
+        if(hasCkPending())ckSyncPush();
+        if(curTab==='checkin')ckShow();
+      });
+    })
+    .catch(function(){});
+}
+window.addEventListener('online',function(){if(hasCkPending())ckSyncPush()});
+// —— 操作 ——
+function ckClaim(ds,id){ // 孩子端：我已完成（=申请，不计完成，待家长确认）
+  if(sessionRole!=='kid')return;
+  var b=ckBucket(),st=(b[ds]&&b[ds][id])||{};
+  if(st.d)return;
+  b[ds]=b[ds]||{};b[ds][id]={c:1,d:0,r:st.r||0,t:Date.now()};
+  ckSaveBucket(b);ckQueue();ckShow();
+  toast('已申请完成，等家长确认哦~','ok');
+}
+function ckConfirm(ds,id){ // 家长端：确认完成（可不经孩子申请直接确认）→ 完成 + 发放 +5 分
+  if(sessionRole!=='parent')return;
+  var b=ckBucket(),st=(b[ds]&&b[ds][id])||{};
+  if(st.d)return;
+  b[ds]=b[ds]||{};b[ds][id]={c:st.c||0,d:1,r:1,t:Date.now()};
+  ckSaveBucket(b);ckQueue();
+  if(!st.r)ckAward(ds,id); // r 标记防重：同日期同任务只加一次分（加分后不随状态回退）
+  ckShow();render();
+}
+function ckAward(ds,id){ // +5 分：ck_reward 系统流水（删除入口已拦截），计入总分
+  var t=ckTaskById(id);if(!t)return;
+  ad.records.push({id:'ck_'+ds+'_'+id,date:ds,timestamp:Date.now(),type:'up',itemId:'ck_reward',name:t.name+'（打卡）',category:'打卡',score:CK_PT,note:'每日打卡·家长确认'});
+  ad.totalPoints+=CK_PT;
+  sd(ad);
+  toast('已完成「'+t.name+'」，+'+CK_PT+' 分','ok');
+}
+// —— 渲染 ——
+function ckShift(n){
+  var d=new Date(ckDate+'T00:00:00');d.setDate(d.getDate()+n);
+  var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(ds>today())return; // 不允许查看未来
+  ckDate=ds;ckShow();
+}
+function ckShow(){
+  var host=document.getElementById('ckList');
+  if(!host||!currentUser)return;
+  if(ckDate>today())ckDate=today();
+  if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull()} // 30 秒节流拉云端申请/完成状态
+  var tasks=ckTasksFor(ckDate),b=ckBucket(),day=b[ckDate]||{},done=0,i;
+  for(i=0;i<tasks.length;i++){if(day[tasks[i].id]&&day[tasks[i].id].d)done++}
+  var html='<div class="ck-nav">'
+    +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
+    +'<div class="ck-dt">'+fd(ckDate)+(ckDate===today()?' · 今天':'')+'</div>'
+    +'<button class="ck-navb" onclick="ckShift(1)" aria-label="后一天"'+(ckDate>=today()?' disabled':'')+'>›</button>'
+    +'</div>'
+    +'<div class="ck-sum">完成 <b>'+done+'</b>/'+tasks.length+' 项 · 已得 <b>'+(done*CK_PT)+'</b> 分</div>';
+  var lastSec='';
+  for(i=0;i<tasks.length;i++){
+    var t=tasks[i],st=day[t.id]||{};
+    if(t.sec!==lastSec){html+='<div class="ck-sec">'+t.sec+'</div>';lastSec=t.sec}
+    var zw=t.zw?ckZwText(ckDate):'';
+    html+='<div class="ck-item '+(st.d?'done':(st.c?'claim':''))+'">'
+      +'<div class="ck-i-l"><div class="ck-nm">'+escHtml(t.name)+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'</div>'
+      +(zw?'<div class="ck-zw">'+escHtml(zw)+'</div>':'')
+      +(t.sub?'<div class="ck-zw">'+escHtml(t.sub)+'</div>':'')
+      +'</div>';
+    if(st.d){
+      html+='<div class="ck-st done">已完成<span>+'+CK_PT+' 分</span></div>';
+    }else if(sessionRole==='kid'){
+      html+=st.c?'<div class="ck-st wait">待家长确认</div>'
+        :'<button class="ck-b" onclick="ckClaim(\''+ckDate+'\',\''+t.id+'\')">我已完成</button>';
+    }else{
+      html+='<button class="ck-b p" onclick="ckConfirm(\''+ckDate+'\',\''+t.id+'\')">'+(st.c?'确认完成·孩子已打卡':'确认完成')+'</button>';
+    }
+    html+='</div>';
+  }
+  host.innerHTML=html;
+  document.getElementById('ckTip').textContent=sessionRole==='kid'
+    ?'点「我已完成」后请等家长确认，确认后才会 +'+CK_PT+' 分哦'
+    :'孩子申请后需家长确认；也可直接点「确认完成」。每项 +'+CK_PT+' 分，加分不可删除。';
+}
 
 // 初始化：检查登录状态（孩子会话优先，其次家长会话）
 (function init(){
