@@ -11,8 +11,8 @@
 //   猫窝摆放后可「睡觉觉」（趴窝闭眼 Zzz，点小猫唤醒）；商店分区展示（食物/玩具/家具）；
 //   背单词每天最多 3 次（跨天重置）；
 //   逗猫玩耍按次数限制：每种玩具每天 5 次、点猫撸猫每天 10 次（跨天重置）；
-//   小猫随累计食量长大（4 个阶段，体型随阶段变大），每天胃口随阶段变大（0.25 → 1 袋/天）；
-//   每日喂食上限=阶段胃口折算餐数；隔天未开粮/未喂，进页面触发低落欢迎语。
+//   小猫随累计食量长大（4 个阶段，体型随阶段变大），每日喂食上限随阶段变大（1 → 4 餐/天）；
+//   猫粮只在人工喂养时减少（不自动消耗）；隔天回来存粮为空 → 低落欢迎语，激励孩子背单词赚猫币买粮。
 // 数据：按账号存本机 localStorage 'sp_pet__<phone>'，并同步到云端仓库 star-points-data 的 sync-pet.json
 //   （整对象较新者胜 + 累计资源取大；index.html 提供 petSyncPull/petSyncQueue，云端较新时经 ptAdoptRemote 吸收）。
 // 命名：所有函数加 pt 前缀，避免与账本/刷题全局函数冲突。
@@ -476,18 +476,13 @@ function ptStage() {
   return s;
 }
 function ptR2(n) { return Math.round(n * 100) / 100; }
-// 离线结算：每过一天吃掉「当日胃口」，存粮不足记挨饿天数（进页面触发低落语）；跨天重置当日已喂餐数
+// 离线结算：猫粮只在人工喂养时减少（不自动消耗）；隔天回来存粮为空 → 记挨饿天数
+//   （starved 条件触发低落欢迎语，激励孩子背单词赚猫币买粮）；跨天重置当日已喂餐数/玩耍/背单词次数
 function ptRoll() {
   var t = today();
   if (ptS.lastVisit === t) return;
   var gap = ptDaysBetween(ptS.lastVisit, t);
-  var app = ptStage().app;
-  for (var i = 0; i < gap; i++) {
-    var eat = Math.min(ptS.food, app);
-    ptS.food = ptR2(Math.max(0, ptS.food - eat));
-    ptS.eaten = ptR2(ptS.eaten + eat);
-    if (eat <= 0) ptS.hungryDays++;
-  }
+  if (ptS.food <= 0) ptS.hungryDays += gap; // 存粮为空过夜：挨饿天数累计（不扣粮，仅记挨饿）
   ptS.lastVisit = t;
   ptS.fedToday = 0;
   ptS.toyN = {}; ptS.patN = 0; // 跨天重置今日玩耍次数（toyN 按玩具 id 分计）
@@ -544,7 +539,7 @@ function ptRender() {
   var days = ptDaysBetween(ptS.created, today()) + 1;
   var cap = Math.max(1, Math.round(stg.app / PT_FOOD_MEAL)); // 每日喂食上限（餐）= 胃口折算
   var fed = Math.min(ptS.fedToday || 0, cap);
-  document.getElementById('ptGrowT').textContent = '陪伴第 ' + days + ' 天 · 每天吃 ' + stg.app + ' 袋 · 今日已喂 ' + fed + '/' + cap + ' 餐'
+  document.getElementById('ptGrowT').textContent = '陪伴第 ' + days + ' 天 · 今日已喂 ' + fed + '/' + cap + ' 餐'
     + (next ? ' · 再吃 ' + ptR2(next.need - ptS.eaten) + ' 袋长大' : ' · 已经完全长大啦');
   // 碗：只有猫粮正餐会话中才有食物，且随剩余时间变少；吃完/平时为空碗
   var meal = ptS.meal && Date.now() < ptS.meal.e ? ptS.meal : null;
