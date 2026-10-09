@@ -2254,7 +2254,7 @@ function st(tab){
     document.getElementById('kt-'+tab).classList.add('on');
     curTab=tab;
     if(tab==='pet')ptShow();       // 宠物页：本机状态渲染 + 欢迎语（数据不上云，无需等待 syncPull）
-    if(tab==='checkin'){ckPullAt=0;ckShow();}   // 打卡页：每次进入强制拉取最新云端申请/完成状态
+    if(tab==='checkin'){ckPullAt=0;ckSweepStale();ckShow();}   // 打卡页：强制拉取最新状态 + 超时申请重置
     if(tab==='report')renderReport(); // 先按当前数据渲染，拉取后刷新
     if(!currentUser){render();return}
     // 进入记录页/商城/报告均重新拉取：家长桶（总积分/奖励项/刷题只读字段）
@@ -2269,7 +2269,7 @@ function st(tab){
   // 刷题页：进度按账号存本机（sp_quiz__<phone>）并随账号桶上云 → 先备好题目列表再显示页面，
   // 避免 syncPull 返回前的窗口期内判分按钮已可点、而 qzList 仍为空
   if(tab==='pet')return; // 宠物页为孩子端专属：家长端无入口且不开放（双保险）
-  if(tab==='checkin'){ckPullAt=0;ckReconcileAwards();ckShow();} // 打卡页：强制拉取最新状态 + 自愈补回缺失的打卡积分
+  if(tab==='checkin'){ckPullAt=0;ckReconcileAwards();ckSweepStale();ckShow();} // 打卡页：强制拉取最新状态 + 自愈补积分 + 超时申请重置
   if(tab==='quiz')qzShow();
   if(tab==='report')renderReport(); // 报告页：先按当前内存数据渲染，拉取完成后刷新
   var pages=document.querySelectorAll('.pg');
@@ -3447,10 +3447,10 @@ function openRdStreak(){
 function openRdEx(){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
   var exs=ad.exchanges.filter(function(e){return e.date>=rdStart&&e.date<=today()});
-  exs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  rdSortDesc(exs);
   var h='';
   if(!exs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内暂无兑换</div></div>';
-  for(var i=0;i<exs.length;i++)h+=renderExchange(exs[i],exs[i].date,true);
+  for(var i=0;i<exs.length;i++)h+=renderExchange(exs[i],'',true);
   rdShow('兑换明细（'+rdStart.replace(/-/g,'/')+' 起）',h);
 }
 
@@ -3675,7 +3675,7 @@ function ckKeyFor(ds,t){ // 仅周末任务共用周末状态键；每日/轮流
 var ckDate=today(),ckPullAt=0;
 function ckBucket(){try{return JSON.parse(localStorage.getItem('sp_ck__'+currentUser))||{}}catch(e){return {}}}
 function ckSaveBucket(b){try{localStorage.setItem('sp_ck__'+currentUser,JSON.stringify(b))}catch(e){}}
-function ckMergeAll(a,b){ // 双端状态并集：c/d/r 逐字段取大（申请/完成/加分均只进不退）
+function ckMergeAll(a,b){ // 双端合并：d/r 逐字段取大（完成/加分只进不退）；c（申请）以最后操作时间较新者为准（支持超时重置回退）
   var out={},ds,tid;
   for(ds in a)out[ds]=a[ds];
   for(ds in b){
@@ -3683,10 +3683,25 @@ function ckMergeAll(a,b){ // 双端状态并集：c/d/r 逐字段取大（申请
     for(tid in b[ds]){
       var x=out[ds][tid],y=b[ds][tid];
       if(!x){out[ds][tid]=y;continue}
-      out[ds][tid]={c:Math.max(x.c||0,y.c||0),d:Math.max(x.d||0,y.d||0),r:Math.max(x.r||0,y.r||0),t:Math.max(x.t||0,y.t||0)};
+      var nb=((y.t||0)>=(x.t||0))?y:x; // c 取较新操作的一侧；d/r 仍取大，防止旧申请覆盖已确认状态
+      out[ds][tid]={c:nb.c||0,d:Math.max(x.d||0,y.d||0),r:Math.max(x.r||0,y.r||0),t:Math.max(x.t||0,y.t||0)};
     }
   }
   return out;
+}
+function ckSweepStale(){ // 孩子申请（待家长确认）超过 24 小时未确认 → 自动重置回初始状态，可重新申请
+  var b=ckBucket(),changed=false,now=Date.now();
+  for(var ds in b){
+    var day=b[ds];
+    for(var id in day){
+      if(id==='_bonus')continue;
+      var st=day[id];
+      if(st&&st.c&&!st.d&&(now-(st.t||0))>=86400000){
+        day[id]={c:0,d:0,r:st.r||0,t:now};changed=true;
+      }
+    }
+  }
+  if(changed){ckSaveBucket(b);ckQueue();}
 }
 // —— 云同步（sync-checkin.json，双端可推；未配置 token 时静默跳过）——
 var GH_CK_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-checkin.json';
