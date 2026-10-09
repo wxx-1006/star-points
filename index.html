@@ -3638,7 +3638,7 @@ var CK_SUBJ={
   science:{n:'科学',c:'#6B5BA8',bg:'#F3F0FB',bd:'#DFD7F0'},
   other:{n:'其他',c:'#8F8578',bg:'#F7F5F0',bd:'#E8E2D6'}
 };
-// 默认打卡任务（首次使用时写入 _cfg 成为可编辑配置；id 与历史状态键保持一致）
+// 默认打卡任务（仅对「已有打卡记录」的老账号沿用，数据不动；全新账号从空白开始，任务由家长自行创建）
 // recur 循环：{type:'daily'} | {type:'weekly',days:[0-6]}(0=周日) | {type:'monthly',days:[1-31]} | {type:'rotate',rot:0-2}(3天一轮)
 // zw:1 = 备注按语文作文三阶段计划随日期自动显示（用户填写自定义备注后转为静态备注）
 var CK_DEFAULT_TASKS=[
@@ -3687,9 +3687,15 @@ function ckZwText(ds){ // 作文训练当日内容（周末两天共用同一内
   return '写后自查三项练习（细节描写≥2处/替换空词/开头结尾呼应题目）';
 }
 // —— 任务配置：存于 sp_ck__<phone> 的 _cfg（{tasks:[],t:最后修改时间}），随 sync-checkin.json 云同步（较新者胜）——
-function ckCfg(){
-  var b=ckBucket();
-  return (b._cfg&&b._cfg.tasks&&b._cfg.tasks.length)?{tasks:b._cfg.tasks,t:b._cfg.t||0}:{tasks:JSON.parse(JSON.stringify(CK_DEFAULT_TASKS)),t:0};
+function ckHasState(b){ // 账号是否已有打卡数据（任一日期/任务状态）
+  for(var k in b){if(k!=='_cfg')return true}
+  return false;
+}
+function ckCfg(){ // 配置：已有 _cfg 直接用（含空任务列表，即用户删光任务的合法状态）；
+  var b=ckBucket(); // 无配置的老账号（已有打卡记录）沿用默认任务、数据不动；全新账号返回空列表，任务由家长自行创建
+  if(b._cfg&&b._cfg.tasks)return {tasks:b._cfg.tasks,t:b._cfg.t||0};
+  if(ckHasState(b))return {tasks:JSON.parse(JSON.stringify(CK_DEFAULT_TASKS)),t:0};
+  return {tasks:[],t:0};
 }
 function ckCfgSave(tasks){ // 家长端保存配置（孩子端只读，不会走到）
   var b=ckBucket();
@@ -3911,21 +3917,29 @@ function ckShow(){
   if(!host||!currentUser)return;
   if(ckDate>ckAddDays(today(),7))ckDate=ckAddDays(today(),7);
   if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull()} // 30 秒节流拉云端申请/完成状态
-  var tasks=ckTasksFor(ckDate),b=ckBucket(),done=0,earned=0,i;
+  var tasks=ckTasksFor(ckDate),b=ckBucket();
+  var maxD=ckAddDays(today(),7);
+  var html='<div class="ck-nav">'
+    +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
+    +'<div class="ck-dt">'+fd(ckDate)+(ckDate===today()?' · 今天':'')+'</div>'
+    +'<button class="ck-navb" onclick="ckShift(1)" aria-label="后一天"'+(ckDate>=maxD?' disabled':'')+'>›</button>'
+    +'</div>';
+  if(!tasks.length){ // 全新账号：无任务，引导家长自行创建
+    html+='<div class="es" style="padding:40px 16px">'+esBricks()+'<div class="et">'+(sessionRole==='parent'?'还没有打卡任务，点右上角「管理任务」创建':'家长还没有创建打卡任务哦')+'</div></div>';
+    host.innerHTML=html;
+    document.getElementById('ckTip').innerHTML='<span>'+(sessionRole==='kid'?'打卡任务由家长在「管理任务」中创建后，这里就会显示':'打卡任务由你自行创建：支持每天/每周/每月/轮流循环，可设学科、时长、分值与备注')+'</span>'
+      +(sessionRole==='parent'?'<button class="ck-cfg-btn" onclick="ckCfgOpen()">管理任务</button>':'');
+    return;
+  }
+  var done=0,earned=0,i;
   for(i=0;i<tasks.length;i++){
     var k0=ckKeyFor(ckDate,tasks[i]),st0=(b[k0]&&b[k0][tasks[i].id])||{};
     if(st0.d){done++;earned+=(tasks[i].pt||CK_PT)}
   }
   var hasBonus=!!(b[ckDate]&&b[ckDate]._bonus&&b[ckDate]._bonus.r);
   if(hasBonus)earned+=10;
-  var pct=tasks.length?Math.round(done/tasks.length*100):0;
-  var maxD=ckAddDays(today(),7);
-  var html='<div class="ck-nav">'
-    +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
-    +'<div class="ck-dt">'+fd(ckDate)+(ckDate===today()?' · 今天':'')+'</div>'
-    +'<button class="ck-navb" onclick="ckShift(1)" aria-label="后一天"'+(ckDate>=maxD?' disabled':'')+'>›</button>'
-    +'</div>'
-    +'<div class="ck-prog"><div class="ck-bar"><i style="width:'+pct+'%"></i></div><span class="ck-pct">'+pct+'%</span></div>'
+  var pct=Math.round(done/tasks.length*100);
+  html+='<div class="ck-prog"><div class="ck-bar"><i style="width:'+pct+'%"></i></div><span class="ck-pct">'+pct+'%</span></div>'
     +'<div class="ck-sum">完成 <b>'+done+'</b>/'+tasks.length+' 项 · 已得 <b>'+earned+'</b> 分'+(hasBonus?'<span class="ck-bn">（含全勤 +10）</span>':'')+'</div>';
   for(i=0;i<tasks.length;i++){
     var t=tasks[i],k=ckKeyFor(ckDate,t),st=(b[k]&&b[k][t.id])||{};
@@ -3959,8 +3973,8 @@ function ckShow(){
 function ckCfgOpen(){
   if(sessionRole!=='parent')return;
   var b=ckBucket();
-  if(!(b._cfg&&b._cfg.tasks)){ // 首次使用：默认任务写入配置（id 不变，历史记录延续）
-    b._cfg={tasks:JSON.parse(JSON.stringify(CK_DEFAULT_TASKS)),t:Date.now()};
+  if(!(b._cfg&&b._cfg.tasks)){ // 首次打开管理：老账号（已有打卡记录）带入默认任务（数据不动）；全新账号从空白开始自行创建
+    b._cfg={tasks:ckHasState(b)?JSON.parse(JSON.stringify(CK_DEFAULT_TASKS)):[],t:Date.now()};
     ckSaveBucket(b);
   }
   ckCfgRender();
