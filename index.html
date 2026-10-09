@@ -1325,7 +1325,15 @@ function syncPull(phone){
             var content=b64ToUtf8(meta.content);
             var allData=JSON.parse(content);
             if(allData && allData[phone]){
-              localStorage.setItem(userKey(phone),JSON.stringify(allData[phone]));
+              // 本地有待推改动（曾推送失败）时不可被云端覆盖：把云端记录级合并进本地，随后由补推上云
+              if(hasPendingSync()){
+                var lb=null;
+                try{lb=JSON.parse(localStorage.getItem(userKey(phone)))}catch(e){lb=null}
+                if(lb&&typeof lb==='object'){localStorage.setItem(userKey(phone),JSON.stringify(mergeAccountData(lb,allData[phone]).data))}
+                else{localStorage.setItem(userKey(phone),JSON.stringify(allData[phone]))}
+              }else{
+                localStorage.setItem(userKey(phone),JSON.stringify(allData[phone]));
+              }
             }
           }catch(e){}
         }
@@ -2246,7 +2254,7 @@ function st(tab){
     document.getElementById('kt-'+tab).classList.add('on');
     curTab=tab;
     if(tab==='pet')ptShow();       // 宠物页：本机状态渲染 + 欢迎语（数据不上云，无需等待 syncPull）
-    if(tab==='checkin')ckShow();   // 打卡页：本机状态渲染 + 云端申请/完成状态合并（30 秒节流）
+    if(tab==='checkin'){ckPullAt=0;ckShow();}   // 打卡页：每次进入强制拉取最新云端申请/完成状态
     if(tab==='report')renderReport(); // 先按当前数据渲染，拉取后刷新
     if(!currentUser){render();return}
     // 进入记录页/商城/报告均重新拉取：家长桶（总积分/奖励项/刷题只读字段）
@@ -2261,7 +2269,7 @@ function st(tab){
   // 刷题页：进度按账号存本机（sp_quiz__<phone>）并随账号桶上云 → 先备好题目列表再显示页面，
   // 避免 syncPull 返回前的窗口期内判分按钮已可点、而 qzList 仍为空
   if(tab==='pet')return; // 宠物页为孩子端专属：家长端无入口且不开放（双保险）
-  if(tab==='checkin')ckShow(); // 打卡页：本机状态渲染 + 云端合并（家长确认 / 查看孩子申请）
+  if(tab==='checkin'){ckPullAt=0;ckReconcileAwards();ckShow();} // 打卡页：强制拉取最新状态 + 自愈补回缺失的打卡积分
   if(tab==='quiz')qzShow();
   if(tab==='report')renderReport(); // 报告页：先按当前内存数据渲染，拉取完成后刷新
   var pages=document.querySelectorAll('.pg');
@@ -3560,27 +3568,23 @@ function ckZwStage(ds){ // 语文作文三阶段（按计划图）：1=观察与
   if(ds<'2026-12-07')return 2;
   return 3;
 }
-function ckZwText(ds){ // 作文训练当日内容；''=计划外日期（显示通用任务名）
+function ckZwText(ds){ // 作文训练当日内容（周末两天共用同一内容；计划外日期就近归属阶段）
   var st=ckZwStage(ds),wd=new Date(ds+'T00:00:00').getDay();
-  if(st===1){
-    if(wd===0)return '日记扩写：挑本周 1 篇观察日记，扩写成 150-200 字';
-    return '观察日记（3-5 句话片段：日期+地点+看到了什么+想到了什么）';
+  if(wd===0||wd===6){ // 周末任务：周六/周日显示一致
+    if(st===1)return '日记扩写：挑本周 1 篇观察日记，扩写成 150-200 字';
+    if(st===2)return '整篇首作：300-350 字，必须用五段式，核心段落≥40% 篇幅';
+    return (Math.floor(ckDays('2026-12-07',ds)/7)%2===0)
+      ?'范文对照精读（习作例文：我家的杏熟了/小木船），摘抄 3 个好句'
+      :'整篇作文（300 字以上）+ 写后自查三项（细节≥2处/替换空词/首尾呼应）';
   }
+  if(st===1)return '观察日记（3-5 句话片段：日期+地点+看到了什么+想到了什么）';
   if(st===2){
     if(wd===1)return '动作片段：把"他很高兴"改成动作描写（150-200 字）';
     if(wd===4)return '神态+心理片段：把"我很紧张"改成神态心理描写（150-200 字）';
-    if(wd===6)return '整篇首作：300-350 字，必须用五段式，核心段落≥40% 篇幅';
     return '五段式框架练习（开头10%/起因15%/经过40%/结果感受25%/结尾10%）';
   }
-  if(st===3){
-    if(wd===2||wd===5)return '首尾升级训练：同一个开头写 3 种（开门见山/设置悬念/环境描写）';
-    if(wd===6)return '整篇作文（300 字以上）+ 写后自查三项（细节≥2处/替换空词/首尾呼应）';
-    if(wd===0)return (Math.floor(ckDays('2026-12-07',ds)/7)%2===0)
-      ?'范文对照精读（习作例文：我家的杏熟了/小木船），摘抄 3 个好句'
-      :'修改誊写本周作文（对照写后自查三项检查）';
-    return '写后自查三项练习（细节描写≥2处/替换空词/开头结尾呼应题目）';
-  }
-  return '';
+  if(wd===2||wd===5)return '首尾升级训练：同一个开头写 3 种（开门见山/设置悬念/环境描写）';
+  return '写后自查三项练习（细节描写≥2处/替换空词/开头结尾呼应题目）';
 }
 function ckTasksFor(ds){ // 按日期生成当日任务清单（定义顺序=分组展示顺序）
   var wd=new Date(ds+'T00:00:00').getDay(),list=[];
@@ -3698,8 +3702,10 @@ function ckConfirm(ds,id){ // 家长端：确认完成（可不经孩子申请�
 }
 function ckAward(ds,id){ // 加分：ck_reward 系统流水（删除入口已拦截），计入总分；作文训练工作日 10 分/周末 20 分，其余每项 5 分
   var t=ckTaskById(id);if(!t)return;
-  var pts=t.pt||CK_PT;
-  ad.records.push({id:'ck_'+ds+'_'+id,date:ds,timestamp:Date.now(),type:'up',itemId:'ck_reward',name:t.name+'（打卡）',category:'打卡',score:pts,note:'每日打卡·家长确认'});
+  var pts=t.pt||CK_PT,rid='ck_'+ds+'_'+id,has=false;
+  for(var i=0;i<ad.records.length;i++){if(ad.records[i].id===rid){has=true;break}}
+  if(has)return; // 账本已有该流水：防重复加分（兜底）
+  ad.records.push({id:rid,date:ds,timestamp:Date.now(),type:'up',itemId:'ck_reward',name:t.name+'（打卡）',category:'打卡',score:pts,note:'每日打卡·家长确认'});
   ad.totalPoints+=pts;
   sd(ad);
   toast('已完成「'+t.name+'」，+'+pts+' 分','ok');
@@ -3711,10 +3717,42 @@ function ckDayBonus(ds){ // 当日完成率 100% → 额外 +10 分（ck_bonus �
   for(var i=0;i<tasks.length;i++){var k=ckKeyFor(ds,tasks[i]);if(!(b[k]&&b[k][tasks[i].id]&&b[k][tasks[i].id].d))return}
   b[ds]=b[ds]||{};b[ds]._bonus={r:1,t:Date.now()};
   ckSaveBucket(b);ckQueue();
-  ad.records.push({id:'ckb_'+ds,date:ds,timestamp:Date.now(),type:'up',itemId:'ck_bonus',name:'当日打卡全部完成',category:'打卡',score:10,note:'当日完成率100% 额外奖励'});
-  ad.totalPoints+=10;
-  sd(ad);
+  var bid='ckb_'+ds,hasB=false;
+  for(var j=0;j<ad.records.length;j++){if(ad.records[j].id===bid){hasB=true;break}}
+  if(!hasB){
+    ad.records.push({id:bid,date:ds,timestamp:Date.now(),type:'up',itemId:'ck_bonus',name:'当日打卡全部完成',category:'打卡',score:10,note:'当日完成率100% 额外奖励'});
+    ad.totalPoints+=10;
+    sd(ad);
+  }
   toast('当日任务全部完成，额外 +10 分！','ok');
+}
+function ckReconcileAwards(){ // 自愈：打卡状态已确认加分、但账本流水缺失（如加分后账本推送失败被云端覆盖）→ 补回流水与总分
+  if(sessionRole!=='parent'||!currentUser||!ad||!ad.records)return;
+  var b=ckBucket(),changed=false,ds,id;
+  for(ds in b){
+    var day=b[ds];
+    for(id in day){
+      if(id==='_bonus')continue;
+      var st=day[id];
+      if(!(st&&st.d&&st.r))continue;
+      var rid='ck_'+ds+'_'+id,has=false;
+      for(var i=0;i<ad.records.length;i++){if(ad.records[i].id===rid){has=true;break}}
+      if(has)continue;
+      var t=ckTaskById(id);if(!t)continue;
+      var pts=t.pt||CK_PT;
+      ad.records.push({id:rid,date:ds,timestamp:st.t||Date.now(),type:'up',itemId:'ck_reward',name:t.name+'（打卡）',category:'打卡',score:pts,note:'每日打卡·家长确认'});
+      ad.totalPoints+=pts;changed=true;
+    }
+    if(day._bonus&&day._bonus.r){
+      var bid='ckb_'+ds,hasB=false;
+      for(var j=0;j<ad.records.length;j++){if(ad.records[j].id===bid){hasB=true;break}}
+      if(!hasB){
+        ad.records.push({id:bid,date:ds,timestamp:day._bonus.t||Date.now(),type:'up',itemId:'ck_bonus',name:'当日打卡全部完成',category:'打卡',score:10,note:'当日完成率100% 额外奖励'});
+        ad.totalPoints+=10;changed=true;
+      }
+    }
+  }
+  if(changed){sd(ad);toast('已补回缺失的打卡积分','ok');if(curTab==='checkin')ckShow();else render();}
 }
 // —— 渲染 ——
 function ckShift(n){ // 日视图 ±1 天；最多查看今天起 7 天内
@@ -3753,6 +3791,8 @@ function ckShow(){
       +'</div>';
     if(st.d){
       html+='<div class="ck-st done">已完成<span>+'+(t.pt||CK_PT)+' 分</span></div>';
+    }else if(ckDate>today()){
+      html+='<div class="ck-st wait">计划中</div>'; // 未来日期仅查看计划，不可操作
     }else if(sessionRole==='kid'){
       html+=st.c?'<div class="ck-st wait">待家长确认</div>'
         :'<button class="ck-b" onclick="ckClaim(\''+k+'\',\''+t.id+'\')">我已完成</button>';
@@ -3805,6 +3845,6 @@ function ckShow(){
   });
 })();
 </script>
-<script src="pet.js?v=20261008b"></script>
+<script src="pet.js?v=20261009a"></script>
 </body>
 </html>

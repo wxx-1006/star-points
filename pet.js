@@ -331,6 +331,8 @@ function ptInjectStyle() {
 .pt-q-combo b{display:block;font:800 21px/1.1 var(--ff);color:var(--red-deep);text-shadow:0 1px 0 #fff}
 .pt-q-combo span{font:700 11px/1.4 var(--ff);color:var(--yel-deep)}
 @keyframes ptComboPop{0%{opacity:0;transform:scale(.4)}18%{opacity:1;transform:scale(1.18)}32%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+.pet-q-okbtn{margin-top:10px;text-align:center}
+.pet-q-okbtn .bn-pet{min-width:96px}
 /* 宠物改名：点名字可改 */
 #ptNameBox{cursor:pointer;user-select:none}
 #ptNameBox:active{opacity:.7}
@@ -1217,7 +1219,17 @@ function ptQJudge(ok) {
     if (fb) fb.className = 'pet-q-fb no', fb.innerHTML = '答错了，猫币 -2 · 正确答案：' + escHtml(ans) + '<small>' + ptName() + '：' + escHtml(remark) + '</small>';
   }
   ptQ.idx++;
-  setTimeout(function () { if (ptQ && document.getElementById('ptMoQuiz').classList.contains('show')) ptQRender(); }, ok ? 1000 : 1700);
+  if (ok) { // 答对：1 秒后自动进入下一题
+    setTimeout(function () { if (ptQ && document.getElementById('ptMoQuiz').classList.contains('show')) ptQRender(); }, 1000);
+  } else { // 答错：停留在正确答案页，孩子点「确定」后再进入下一题
+    var fb2 = document.getElementById('ptQFb');
+    if (fb2) fb2.insertAdjacentHTML('beforeend', '<div class="pet-q-okbtn"><button class="bn-pet p" onclick="ptQNextGo()">确定</button></div>');
+  }
+}
+function ptQNextGo() { // 答错页「确定」→ 下一题（或结果页）
+  if (!ptQ) return;
+  var m = document.getElementById('ptMoQuiz');
+  if (m && m.classList.contains('show')) ptQRender();
 }
 function ptQResult() {
   var m = document.getElementById('ptMoQuiz');
