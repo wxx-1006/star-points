@@ -3152,6 +3152,14 @@ function renderReportTabs(){
   }
   el.innerHTML=h;
 }
+// —— 报告构成辅助：识别系统奖励/系统扣费（老版本答题流水无 itemId，需按记录名兜底识别）——
+function rdIsQuizReward(r){var iid=r.itemId||'',nm=r.name||'';return iid==='quiz_reward'||iid==='quiz_streak_reward'||nm==='答题获取'||nm.indexOf('连续刷题')===0}
+function rdIsCkReward(r){var iid=r.itemId||'';return iid==='ck_reward'||iid==='ck_bonus'}
+function rdIsSystem(r){return rdIsQuizReward(r)||rdIsCkReward(r)||r.itemId==='quiz_card_buy'}
+function rdSortDesc(recs){ // 明细统一排序：日期倒序，同日按时间倒序
+  recs.sort(function(a,b){return a.date===b.date?((b.timestamp||0)-(a.timestamp||0)):(a.date<b.date?1:-1)});
+  return recs;
+}
 function renderReport(){
   var body=document.getElementById('reportBody');
   if(!body)return;
@@ -3182,12 +3190,11 @@ function renderReport(){
   for(i=0;i<recs.length;i++){
     var r0=recs[i];
     if(r0.date in netBy)netBy[r0.date]+=r0.score;
-    var iid=r0.itemId||'';
     if(r0.score>0){
-      if(iid==='quiz_reward'||iid==='quiz_streak_reward')quizPts+=r0.score; // 答题奖励单独成项
-      else if(iid==='ck_reward'||iid==='ck_bonus')ckPts+=r0.score; // 打卡奖励单独成项
+      if(rdIsQuizReward(r0))quizPts+=r0.score; // 答题奖励单独成项（老流水无 itemId 也按名称识别）
+      else if(rdIsCkReward(r0))ckPts+=r0.score; // 打卡奖励单独成项
       else{var c0=r0.category||'其他';catBy[c0]=(catBy[c0]||0)+r0.score} // 手动加分按分类
-    }else if(r0.score<0&&iid!=='quiz_card_buy'){ // 扣分构成只统计人工扣分（补签卡购买为系统扣费，不计入）
+    }else if(r0.score<0&&!rdIsSystem(r0)){ // 扣分构成只统计人工扣分（补签卡购买为系统扣费，不计入）
       var c1=r0.category||'其他';downBy[c1]=(downBy[c1]||0)+r0.score;
     }
   }
@@ -3287,54 +3294,54 @@ function openRdDay(ds){
   for(i=0;i<items.length;i++)h+=items[i].t==='r'?renderRecord(items[i].d,ds,true):renderExchange(items[i].d,ds,true);
   rdShow(fd(ds)+' · 当日明细',h);
 }
-// 某分类加分明细：报告范围内该分类的全部加分记录
+// 某分类加分明细：报告范围内该分类的全部手动加分记录（答题/打卡等系统奖励不混入）
 function openRdCat(cat){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
-  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&(r.category||'其他')===cat});
-  recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&(r.category||'其他')===cat&&!rdIsSystem(r)});
+  rdSortDesc(recs);
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内「'+escHtml(cat)+'」暂无加分</div></div>';
-  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date,true);
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],'',true);
   rdShow(cat+' · 加分明细',h);
 }
 // 答题奖励明细（所选范围）：答题得分 + 连续刷题里程碑奖励
 function openRdQuizR(){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
-  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&(r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward')});
-  recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&rdIsQuizReward(r)});
+  rdSortDesc(recs);
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内暂无答题奖励</div></div>';
-  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date,true);
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],'',true);
   rdShow('答题奖励 · 加分明细',h);
 }
 // 打卡奖励明细（所选范围）：每日打卡确认奖励 + 当日全勤奖励
 function openRdCkR(){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
-  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&(r.itemId==='ck_reward'||r.itemId==='ck_bonus')});
-  recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&rdIsCkReward(r)});
+  rdSortDesc(recs);
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内暂无打卡奖励</div></div>';
-  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date,true);
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],'',true);
   rdShow('打卡奖励 · 加分明细',h);
 }
 // 某分类扣分明细（所选范围）：该分类的全部人工扣分记录
 function openRdCatD(cat){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
-  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score<0&&(r.category||'其他')===cat&&r.itemId!=='quiz_card_buy'});
-  recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score<0&&(r.category||'其他')===cat&&!rdIsSystem(r)});
+  rdSortDesc(recs);
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内「'+escHtml(cat)+'」暂无扣分</div></div>';
-  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date,true);
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],'',true);
   rdShow(cat+' · 扣分明细',h);
 }
 // 答题积分明细：全部 quiz_reward 流水（累计口径）
 function openRdQuiz(){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
   var recs=ad.records.filter(function(r){return r.itemId==='quiz_reward'});
-  recs.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0)});
+  rdSortDesc(recs);
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">还没有答题积分记录</div></div>';
-  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],recs[i].date,true);
+  for(var i=0;i<recs.length;i++)h+=renderRecord(recs[i],'',true);
   rdShow('答题积分明细（累计 '+recs.length+' 次）',h);
 }
 // —— 报告侧错题数据源：家长端=本机账号键（qzAccStore，随刷题实时落盘）；孩子端=账号桶只读字段
