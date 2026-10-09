@@ -613,7 +613,9 @@ body.kid-mode{padding-bottom:72px}
      孩子端「我已完成」=申请，家长端「确认完成」→ +5 分走 ck_reward 系统流水（不可删除） -->
 <style>
 /* ===== 每日打卡 ===== */
-.ck-tip{margin:14px 16px 0;padding:9px 12px;border-radius:12px;background:#FFF7E6;border:1px solid #F4E3C0;font:500 11px/1.6 var(--ff);color:#8F6210}
+.ck-tip{margin:14px 16px 0;padding:9px 12px;border-radius:12px;background:#FFF7E6;border:1px solid #F4E3C0;font:500 11px/1.6 var(--ff);color:#8F6210;display:flex;align-items:center;gap:10px}
+.ck-cfg-btn{border:0;background:#4A3F35;color:#FFF7E6;border-radius:8px;padding:5px 10px;font:700 11px/1.3 var(--ff);cursor:pointer;white-space:nowrap;margin-left:auto;flex:none}
+.ck-subj{display:inline-block;font:700 9.5px/1 var(--ff);color:#fff;border-radius:5px;padding:2.5px 5px;margin-right:5px;vertical-align:1px}
 .ck-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 16px 0}
 .ck-navb{width:40px;height:34px;border-radius:10px;border:1.5px solid #E8E0D2;background:#fff;font:700 17px/1 var(--ff);color:#6B5E4F;cursor:pointer}
 .ck-navb:disabled{opacity:.35}
@@ -640,10 +642,36 @@ body.kid-mode{padding-bottom:72px}
 .ck-bar{flex:1;height:9px;border-radius:99px;background:#F0EADF;overflow:hidden}
 .ck-bar i{display:block;height:100%;border-radius:99px;background:#7FC26E;transition:width .3s}
 .ck-pct{font:800 13px/1 var(--ff);color:#5B8A4E;min-width:40px;text-align:right}
+/* 打卡任务配置（家长端） */
+#mCkCfg .ml-body{max-height:70vh;overflow:auto}
+.ck-cfg-add{width:100%;border:1.5px dashed #C9BFAE;background:#fff;border-radius:10px;padding:9px 0;font:700 12.5px/1.3 var(--ff);color:#6B5E4F;cursor:pointer;margin-bottom:10px}
+.ck-cfg-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1.5px solid #EFE9DC;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.ck-cfg-i{min-width:0}
+.ck-cfg-btns{display:flex;gap:8px;flex:none}
+.ck-cfg-btns .ck-b.d{background:#FDEEEE;color:#B5544E}
+.ck-cfg-tip{font:500 10.5px/1.6 var(--ff);color:#A99F90;margin:6px 0}
+.ck-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ck-day{border:1.5px solid #E8E0D2;background:#fff;border-radius:8px;padding:5px 9px;font:700 11.5px/1 var(--ff);color:#8F8578;cursor:pointer;user-select:none}
+.ck-day.on{background:#4A3F35;border-color:#4A3F35;color:#FFF7E6}
+.ck-day input{display:none}
+#mCkCfg .fg{margin:10px 0}
+#mCkCfg .fi{width:100%;box-sizing:border-box}
 </style>
 <div class="pg" id="p-checkin">
   <div class="ck-tip" id="ckTip"></div>
   <div class="rl" id="ckList" style="margin:12px 0 24px"></div>
+</div>
+
+<!-- 打卡任务配置（家长端）：任务存于 sp_ck__<phone> 的 _cfg 键，随 sync-checkin.json 云同步 -->
+<div class="mo" id="mCkCfg">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">管理打卡任务</div>
+      <button class="ml-close" onclick="ckCfgClose()">✕</button>
+    </div>
+    <div class="ml-body" id="ckCfgBody"></div>
+  </div>
 </div>
 
 <!-- 电子宠物（孩子端专属）：结构由 pet.js 构建注入；状态按账号存本机 sp_pet__<phone>，云同步 sync-pet.json -->
@@ -3600,27 +3628,38 @@ window.addEventListener('resize',function(){typeof qzSetStickyTop==='function'&&
 //   （ck_reward 系统流水不可删除；家长也可不经申请直接确认）。加分只发一次（r 标记防重，不随状态回退）；
 //   分值：作文训练工作日 10 分 / 周末 20 分，其余每项 5 分；当日完成率 100% 额外 +10（ck_bonus 同为不可删流水）。
 //   状态按账号存本机 sp_ck__<phone>，云同步 sync-checkin.json（双端可推，逐字段并集合并：申请/完成/加分只进不退）。
-var CK_PT=5;               // 每项任务完成 +5 分
+var CK_PT=5;               // 默认每项任务分值（可在配置中按任务调整）
 var CK_EPOCH='2026-10-08'; // 每日轮流任务轮换基准日
-var CK_TASKS=[
-  {id:'m1',sec:'早读任务',name:'早读任务',sub:'文言文 / 知行合 / 同步作文',type:'morning'},
-  {id:'d1',sec:'每日任务',name:'语文天天练',min:10,type:'daily'},
-  {id:'d2',sec:'每日任务',name:'英语背单词',min:10,type:'daily'},
-  {id:'d3',sec:'每日任务',name:'英语RAZ分级阅读',min:15,type:'daily'},
-  {id:'d4',sec:'每日任务',name:'舒尔特方格',min:10,type:'daily'},
-  {id:'d5',sec:'每日任务',name:'课外阅读',min:30,type:'daily'},
-  {id:'w1',sec:'工作日任务',name:'数学拔尖',min:15,type:'weekday'},
-  {id:'w2',sec:'工作日任务',name:'英语自然拼读',min:10,type:'weekday'},
-  {id:'w3',sec:'工作日任务',name:'睡前英语音频',min:10,type:'weekday'},
-  {id:'w4',sec:'工作日任务',name:'语文作文训练',min:10,pt:10,type:'weekday',zw:1},
-  {id:'r1',sec:'每日轮流任务',name:'数学精准学',min:20,type:'rotate',rot:0},
-  {id:'r2',sec:'每日轮流任务',name:'科学精准学',min:15,type:'rotate',rot:1},
-  {id:'r3',sec:'每日轮流任务',name:'语文听写',min:15,type:'rotate',rot:2},
-  {id:'ws1',sec:'周三·周六任务',name:'语文阅读理解',min:20,type:'wedsat'},
-  {id:'e1',sec:'周末任务',name:'数学加油包',sub:'华罗庚 / 举一反三 / 周周学 / 大白本',type:'weekend'},
-  {id:'e2',sec:'周末任务',name:'语文作文训练',min:10,pt:20,type:'weekend',zw:1},
-  {id:'e3',sec:'周末任务',name:'学习机语文练习',type:'weekend'},
-  {id:'e4',sec:'周末任务',name:'校内背诵',type:'weekend'}
+// 学科配色：任务卡背景/描边 + 学科角标
+var CK_SUBJ={
+  chinese:{n:'语文',c:'#C25B5B',bg:'#FDF1F0',bd:'#F1D9D8'},
+  math:{n:'数学',c:'#3C72A4',bg:'#EEF4FD',bd:'#D4E3F5'},
+  english:{n:'英语',c:'#3E7D33',bg:'#EFF6EC',bd:'#D5E8D2'},
+  science:{n:'科学',c:'#6B5BA8',bg:'#F3F0FB',bd:'#DFD7F0'},
+  other:{n:'其他',c:'#8F8578',bg:'#F7F5F0',bd:'#E8E2D6'}
+};
+// 默认打卡任务（首次使用时写入 _cfg 成为可编辑配置；id 与历史状态键保持一致）
+// recur 循环：{type:'daily'} | {type:'weekly',days:[0-6]}(0=周日) | {type:'monthly',days:[1-31]} | {type:'rotate',rot:0-2}(3天一轮)
+// zw:1 = 备注按语文作文三阶段计划随日期自动显示（用户填写自定义备注后转为静态备注）
+var CK_DEFAULT_TASKS=[
+  {id:'m1',name:'早读任务',subj:'chinese',min:15,pt:5,note:'文言文 / 知行合 / 同步作文',recur:{type:'daily'}},
+  {id:'d1',name:'语文天天练',subj:'chinese',min:10,pt:5,recur:{type:'daily'}},
+  {id:'d2',name:'英语背单词',subj:'english',min:10,pt:5,recur:{type:'daily'}},
+  {id:'d3',name:'英语RAZ分级阅读',subj:'english',min:15,pt:5,recur:{type:'daily'}},
+  {id:'d4',name:'舒尔特方格',subj:'other',min:10,pt:5,recur:{type:'daily'}},
+  {id:'d5',name:'课外阅读',subj:'other',min:30,pt:5,recur:{type:'daily'}},
+  {id:'w1',name:'数学拔尖',subj:'math',min:15,pt:5,recur:{type:'weekly',days:[1,2,3,4,5]}},
+  {id:'w2',name:'英语自然拼读',subj:'english',min:10,pt:5,recur:{type:'weekly',days:[1,2,3,4,5]}},
+  {id:'w3',name:'睡前英语音频',subj:'english',min:10,pt:5,recur:{type:'weekly',days:[1,2,3,4,5]}},
+  {id:'w4',name:'语文作文训练',subj:'chinese',min:10,pt:10,zw:1,recur:{type:'weekly',days:[1,2,3,4,5]}},
+  {id:'r1',name:'数学精准学',subj:'math',min:20,pt:5,recur:{type:'rotate',rot:0}},
+  {id:'r2',name:'科学精准学',subj:'science',min:15,pt:5,recur:{type:'rotate',rot:1}},
+  {id:'r3',name:'语文听写',subj:'chinese',min:15,pt:5,recur:{type:'rotate',rot:2}},
+  {id:'ws1',name:'语文阅读理解',subj:'chinese',min:20,pt:5,recur:{type:'weekly',days:[3,6]}},
+  {id:'e1',name:'数学加油包',subj:'math',pt:5,note:'华罗庚 / 举一反三 / 周周学 / 大白本',recur:{type:'weekly',days:[0,6]}},
+  {id:'e2',name:'语文作文训练',subj:'chinese',min:10,pt:20,zw:1,recur:{type:'weekly',days:[0,6]}},
+  {id:'e3',name:'学习机语文练习',subj:'chinese',pt:5,recur:{type:'weekly',days:[0,6]}},
+  {id:'e4',name:'校内背诵',subj:'other',pt:5,recur:{type:'weekly',days:[0,6]}}
 ];
 function ckDays(a,b){var da=new Date(a+'T00:00:00'),db=new Date(b+'T00:00:00');return Math.max(0,Math.round((db-da)/86400000))}
 function ckZwStage(ds){ // 语文作文三阶段（按计划图）：1=观察与素材 2=结构与详略 3=细节打磨与情感
@@ -3647,20 +3686,45 @@ function ckZwText(ds){ // 作文训练当日内容（周末两天共用同一内
   if(wd===2||wd===5)return '首尾升级训练：同一个开头写 3 种（开门见山/设置悬念/环境描写）';
   return '写后自查三项练习（细节描写≥2处/替换空词/开头结尾呼应题目）';
 }
-function ckTasksFor(ds){ // 按日期生成当日任务清单（定义顺序=分组展示顺序）
-  var wd=new Date(ds+'T00:00:00').getDay(),list=[];
-  for(var i=0;i<CK_TASKS.length;i++){
-    var t=CK_TASKS[i],ok=false;
-    if(t.type==='daily'||t.type==='morning')ok=true;
-    else if(t.type==='weekday')ok=(wd>=1&&wd<=5);
-    else if(t.type==='wedsat')ok=(wd===3||wd===6);
-    else if(t.type==='weekend')ok=(wd===0||wd===6);
-    else if(t.type==='rotate'){var df=Math.round((new Date(ds+'T00:00:00')-new Date(CK_EPOCH+'T00:00:00'))/86400000);ok=(((df%3)+3)%3===t.rot)} // 负数日期（查看历史）也正常轮换
+// —— 任务配置：存于 sp_ck__<phone> 的 _cfg（{tasks:[],t:最后修改时间}），随 sync-checkin.json 云同步（较新者胜）——
+function ckCfg(){
+  var b=ckBucket();
+  return (b._cfg&&b._cfg.tasks&&b._cfg.tasks.length)?{tasks:b._cfg.tasks,t:b._cfg.t||0}:{tasks:JSON.parse(JSON.stringify(CK_DEFAULT_TASKS)),t:0};
+}
+function ckCfgSave(tasks){ // 家长端保存配置（孩子端只读，不会走到）
+  var b=ckBucket();
+  b._cfg={tasks:tasks,t:Date.now()};
+  ckSaveBucket(b);ckQueue();
+}
+function ckRecurDesc(t){ // 循环规则的文字描述
+  var rc=t.recur||{type:'daily'};
+  if(rc.type==='daily')return '每天';
+  if(rc.type==='weekly'){
+    var nm=['日','一','二','三','四','五','六'],dd=(rc.days||[]).slice().sort(),arr=[];
+    for(var i=0;i<dd.length;i++)arr.push('周'+nm[dd[i]]);
+    return '每'+arr.join('、');
+  }
+  if(rc.type==='monthly'){
+    var md=(rc.days||[]).slice().sort(function(a,b){return a-b}),arr2=[];
+    for(var j=0;j<md.length;j++)arr2.push(md[j]+'号');
+    return '每月'+arr2.join('、');
+  }
+  return '每日轮流·第'+((rc.rot||0)+1)+'位';
+}
+function ckTasksFor(ds){ // 按日期 + 循环规则生成当日任务清单（配置顺序=展示顺序）
+  var wd=new Date(ds+'T00:00:00').getDay(),dom=new Date(ds+'T00:00:00').getDate();
+  var tasks=ckCfg().tasks,list=[];
+  for(var i=0;i<tasks.length;i++){
+    var t=tasks[i],rc=t.recur||{type:'daily'},ok=false;
+    if(rc.type==='daily')ok=true;
+    else if(rc.type==='weekly')ok=(rc.days||[]).indexOf(wd)>=0;
+    else if(rc.type==='monthly')ok=(rc.days||[]).indexOf(dom)>=0;
+    else if(rc.type==='rotate'){var df=Math.round((new Date(ds+'T00:00:00')-new Date(CK_EPOCH+'T00:00:00'))/86400000);ok=(((df%3)+3)%3===(rc.rot||0))} // 负数日期（查看历史）也正常轮换
     if(ok)list.push(t);
   }
   return list;
 }
-function ckTaskById(id){for(var i=0;i<CK_TASKS.length;i++){if(CK_TASKS[i].id===id)return CK_TASKS[i]}return null}
+function ckTaskById(id){var tasks=ckCfg().tasks;for(var i=0;i<tasks.length;i++){if(tasks[i].id===id)return tasks[i]}return null}
 function ckFmtD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function ckAddDays(ds,n){var d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return ckFmtD(d)}
 function ckStateKey(ds){ // 周末任务两天共用状态（以周六为锚）：周六完成→周日同显已完成，且只加一次分
@@ -3675,10 +3739,11 @@ function ckKeyFor(ds,t){ // 仅周末任务共用周末状态键；每日/轮流
 var ckDate=today(),ckPullAt=0;
 function ckBucket(){try{return JSON.parse(localStorage.getItem('sp_ck__'+currentUser))||{}}catch(e){return {}}}
 function ckSaveBucket(b){try{localStorage.setItem('sp_ck__'+currentUser,JSON.stringify(b))}catch(e){}}
-function ckMergeAll(a,b){ // 双端合并：d/r 逐字段取大（完成/加分只进不退）；c（申请）以最后操作时间较新者为准（支持超时重置回退）
+function ckMergeAll(a,b){ // 双端合并：d/r 逐字段取大（完成/加分只进不退）；c（申请）以最后操作时间较新者为准（支持超时重置回退）；_cfg 配置取修改时间较新者
   var out={},ds,tid;
-  for(ds in a)out[ds]=a[ds];
+  for(ds in a)if(ds!=='_cfg')out[ds]=a[ds];
   for(ds in b){
+    if(ds==='_cfg')continue;
     if(!out[ds]){out[ds]=b[ds];continue}
     for(tid in b[ds]){
       var x=out[ds][tid],y=b[ds][tid];
@@ -3687,11 +3752,15 @@ function ckMergeAll(a,b){ // 双端合并：d/r 逐字段取大（完成/加分�
       out[ds][tid]={c:nb.c||0,d:Math.max(x.d||0,y.d||0),r:Math.max(x.r||0,y.r||0),t:Math.max(x.t||0,y.t||0)};
     }
   }
+  var ca=a?a._cfg:null,cb=b?b._cfg:null;
+  if(ca&&(!cb||((ca.t||0)>=(cb.t||0))))out._cfg=ca;
+  else if(cb)out._cfg=cb;
   return out;
 }
 function ckSweepStale(){ // 孩子申请（待家长确认）超过 24 小时未确认 → 自动重置回初始状态，可重新申请
   var b=ckBucket(),changed=false,now=Date.now();
   for(var ds in b){
+    if(ds==='_cfg')continue;
     var day=b[ds];
     for(var id in day){
       if(id==='_bonus')continue;
@@ -3806,6 +3875,7 @@ function ckReconcileAwards(){ // 自愈：打卡状态已确认加分、但账�
   if(sessionRole!=='parent'||!currentUser||!ad||!ad.records)return;
   var b=ckBucket(),changed=false,ds,id;
   for(ds in b){
+    if(ds==='_cfg')continue;
     var day=b[ds];
     for(id in day){
       if(id==='_bonus')continue;
@@ -3859,11 +3929,12 @@ function ckShow(){
     +'<div class="ck-sum">完成 <b>'+done+'</b>/'+tasks.length+' 项 · 已得 <b>'+earned+'</b> 分'+(hasBonus?'<span class="ck-bn">（含全勤 +10）</span>':'')+'</div>';
   for(i=0;i<tasks.length;i++){
     var t=tasks[i],k=ckKeyFor(ckDate,t),st=(b[k]&&b[k][t.id])||{};
-    var zw=t.zw?ckZwText(ckDate):'';
-    html+='<div class="ck-item '+(st.d?'done':(st.c?'claim':''))+'">'
-      +'<div class="ck-i-l"><div class="ck-nm">'+escHtml(t.name)+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'</div>'
-      +(zw?'<div class="ck-zw">'+escHtml(zw)+'</div>':'')
-      +(t.sub?'<div class="ck-zw">'+escHtml(t.sub)+'</div>':'')
+    var sm=CK_SUBJ[t.subj]||CK_SUBJ.other;
+    var note=t.zw?ckZwText(ckDate):(t.note||'');
+    var bd=st.d?'#B9DDB2':(st.c?'#E8D49A':sm.bd); // 已完成绿描边 / 待确认黄描边 / 学科本色
+    html+='<div class="ck-item" style="background:'+sm.bg+';border-color:'+bd+'">'
+      +'<div class="ck-i-l"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'</div>'
+      +(note?'<div class="ck-zw">'+escHtml(note)+'</div>':'')
       +'</div>';
     if(st.d){
       html+='<div class="ck-st done">已完成<span>+'+(t.pt||CK_PT)+' 分</span></div>';
@@ -3878,9 +3949,113 @@ function ckShow(){
     html+='</div>';
   }
   host.innerHTML=html;
-  document.getElementById('ckTip').textContent=sessionRole==='kid'
+  var tipTxt=sessionRole==='kid'
     ?'点「我已完成」后请等家长确认，确认后才会加分哦'
     :'孩子申请后需家长确认；也可直接点「确认完成」。完成任务得分（作文训练工作日 10 分/周末 20 分，其余每项 5 分），当日全部完成额外 +10 分，加分不可删除。';
+  document.getElementById('ckTip').innerHTML='<span>'+tipTxt+'</span>'
+    +(sessionRole==='parent'?'<button class="ck-cfg-btn" onclick="ckCfgOpen()">管理任务</button>':'');
+}
+// —— 打卡任务配置（家长端）：列表 / 新增 / 编辑 / 删除 ——
+function ckCfgOpen(){
+  if(sessionRole!=='parent')return;
+  var b=ckBucket();
+  if(!(b._cfg&&b._cfg.tasks)){ // 首次使用：默认任务写入配置（id 不变，历史记录延续）
+    b._cfg={tasks:JSON.parse(JSON.stringify(CK_DEFAULT_TASKS)),t:Date.now()};
+    ckSaveBucket(b);
+  }
+  ckCfgRender();
+  document.getElementById('mCkCfg').classList.add('show');
+}
+function ckCfgClose(){document.getElementById('mCkCfg').classList.remove('show')}
+function ckCfgRender(){
+  var tasks=ckCfg().tasks,html='<button class="ck-cfg-add" onclick="ckCfgEdit(-1)">＋ 新增任务</button>';
+  for(var i=0;i<tasks.length;i++){
+    var t=tasks[i],sm=CK_SUBJ[t.subj]||CK_SUBJ.other;
+    var note=t.zw?'备注：按作文三阶段计划自动显示':(t.note||'');
+    html+='<div class="ck-cfg-row">'
+      +'<div class="ck-cfg-i"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'<span class="ck-min">+'+(t.pt||CK_PT)+'分</span></div>'
+      +'<div class="ck-zw">'+escHtml(ckRecurDesc(t))+(note?' · '+escHtml(note):'')+'</div></div>'
+      +'<div class="ck-cfg-btns"><button class="ck-b" onclick="ckCfgEdit('+i+')">编辑</button><button class="ck-b d" onclick="ckCfgDel('+i+')">删除</button></div>'
+      +'</div>';
+  }
+  html+='<div class="ck-cfg-tip">循环说明：每天=每日出现；每周=勾选星期几；每月=勾选几号；每日轮流=与其它轮流任务按 3 天一循环依次出现。任务配置会同步到所有设备。</div>';
+  document.getElementById('ckCfgBody').innerHTML=html;
+}
+function ckCfgEdit(idx){
+  var tasks=ckCfg().tasks;
+  var t=idx>=0?tasks[idx]:{id:'t'+Date.now(),name:'',subj:'other',min:10,pt:CK_PT,note:'',recur:{type:'daily'}};
+  var h='<div class="fg"><label class="fl">任务名称</label><input class="fi" id="ckfName" maxlength="20" value="'+escHtml(t.name)+'" placeholder="如：语文天天练"></div>'
+    +'<div class="fg"><label class="fl">学科</label><select class="fi" id="ckfSubj">';
+  for(var s in CK_SUBJ)h+='<option value="'+s+'"'+(t.subj===s?' selected':'')+'>'+CK_SUBJ[s].n+'</option>';
+  h+='</select></div>'
+    +'<div class="fg"><label class="fl">循环方式</label><select class="fi" id="ckfType" onchange="ckCfgTypePick()">';
+  var types=[['daily','每天'],['weekly','每周（选星期）'],['monthly','每月（选几号）'],['rotate','每日轮流（3 天一轮）']];
+  for(var k=0;k<types.length;k++)h+='<option value="'+types[k][0]+'"'+((t.recur||{}).type===types[k][0]?' selected':'')+'>'+types[k][1]+'</option>';
+  h+='</select><div id="ckfPick"></div></div>'
+    +'<div class="fg" style="display:flex;gap:10px"><div style="flex:1"><label class="fl">预计时长（分钟，0=不显示）</label><input class="fi" id="ckfMin" type="number" min="0" max="600" value="'+(t.min||0)+'"></div>'
+    +'<div style="flex:1"><label class="fl">分值</label><input class="fi" id="ckfPt" type="number" min="1" max="100" value="'+(t.pt||CK_PT)+'"></div></div>'
+    +'<div class="fg"><label class="fl">备注（展示在任务下方的灰色文字）</label><input class="fi" id="ckfNote" maxlength="60" value="'+escHtml(t.note||'')+'" placeholder="'+(t.zw?'留空则按作文三阶段计划自动显示当日内容':'选填')+'"></div>'
+    +'<div class="ck-cfg-btns" style="margin-top:14px"><button class="ck-b p" style="flex:1" onclick="ckCfgSubmit('+idx+')">保存</button><button class="ck-b" style="flex:1" onclick="ckCfgRender()">取消</button></div>';
+  document.getElementById('ckCfgBody').innerHTML=h;
+  ckCfgTypePick(t.recur);
+}
+function ckCfgTypePick(recur){ // 按循环方式渲染选择器（星期多选 / 日期多选 / 轮换位）
+  recur=recur||{};
+  var type=document.getElementById('ckfType').value;
+  var el=document.getElementById('ckfPick');
+  if(type==='daily'){el.innerHTML='<div class="ck-cfg-tip">每天都会出现在打卡列表</div>';return}
+  if(type==='weekly'){
+    var days=(recur.days)||[],nm=['日','一','二','三','四','五','六'],vals=[0,1,2,3,4,5,6],h='<div class="ck-days">';
+    for(var i=0;i<7;i++)h+='<label class="ck-day'+(days.indexOf(vals[i])>=0?' on':'')+'"><input type="checkbox" value="'+vals[i]+'"'+(days.indexOf(vals[i])>=0?' checked':'')+' onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+nm[i]+'</label>';
+    el.innerHTML=h+'</div>';return;
+  }
+  if(type==='monthly'){
+    var md=(recur.days)||[],h2='<div class="ck-days">';
+    for(var d=1;d<=31;d++)h2+='<label class="ck-day'+(md.indexOf(d)>=0?' on':'')+'"><input type="checkbox" value="'+d+'"'+(md.indexOf(d)>=0?' checked':'')+' onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+d+'</label>';
+    el.innerHTML=h2+'</div>';return;
+  }
+  var rot=(recur.rot)||0,h3='<select class="fi" id="ckfRot">';
+  for(var r=0;r<3;r++)h3+='<option value="'+r+'"'+(rot===r?' selected':'')+'>轮换第 '+(r+1)+' 位</option>';
+  el.innerHTML=h3+'</select><div class="ck-cfg-tip">轮换任务与其它「每日轮流」任务共用 3 天循环序列，按基准日依次出现</div>';
+}
+function ckCfgSubmit(idx){
+  var name=document.getElementById('ckfName').value.trim();
+  if(!name){toast('请填写任务名称','err');return}
+  var subj=document.getElementById('ckfSubj').value;
+  var type=document.getElementById('ckfType').value,recur={type:type};
+  if(type==='weekly'){
+    var cbs=document.querySelectorAll('#ckfPick input:checked'),days=[];
+    for(var i=0;i<cbs.length;i++)days.push(parseInt(cbs[i].value,10));
+    if(!days.length){toast('每周循环请至少选择一个星期','err');return}
+    days.sort(function(a,b){return ((a+6)%7)-((b+6)%7)}); // 周一~周日排序
+    recur.days=days;
+  }else if(type==='monthly'){
+    var cbs2=document.querySelectorAll('#ckfPick input:checked'),md=[];
+    for(var j=0;j<cbs2.length;j++)md.push(parseInt(cbs2[j].value,10));
+    if(!md.length){toast('每月循环请至少选择一个日期','err');return}
+    md.sort(function(a,b){return a-b});recur.days=md;
+  }else if(type==='rotate'){
+    recur.rot=parseInt(document.getElementById('ckfRot').value,10)||0;
+  }
+  var min=parseInt(document.getElementById('ckfMin').value,10)||0;
+  var pt=parseInt(document.getElementById('ckfPt').value,10)||CK_PT;
+  var note=document.getElementById('ckfNote').value.trim();
+  var tasks=ckCfg().tasks;
+  var t=idx>=0?tasks[idx]:{id:'t'+Date.now()};
+  t.name=name;t.subj=subj;t.recur=recur;t.min=min;t.pt=pt;t.note=note;
+  delete t.sub;delete t.type;delete t.rot;delete t.zw; // 统一为新结构
+  if(!note&&idx>=0&&tasks[idx].zw)t.zw=1; // 原动态作文任务且备注留空 → 保留按计划自动显示
+  if(idx>=0)tasks[idx]=t;else tasks.push(t);
+  ckCfgSave(tasks);
+  ckCfgRender();ckShow();
+  toast('已保存，「'+name+'」已更新','ok');
+}
+function ckCfgDel(idx){
+  var tasks=ckCfg().tasks;
+  var name=tasks[idx]?tasks[idx].name:'';
+  sc2('删除打卡任务','删除「'+name+'」？已完成记录和已得积分将保留。',function(){
+    tasks.splice(idx,1);ckCfgSave(tasks);ckCfgRender();ckShow();
+  });
 }
 // 初始化：检查登录状态（孩子会话优先，其次家长会话）
 (function init(){
