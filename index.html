@@ -3948,10 +3948,13 @@ function ckShow(){
   if(ckDate>ckAddDays(today(),7))ckDate=ckAddDays(today(),7);
   if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull()} // 30 秒节流拉云端申请/完成状态
   var tasks=ckTasksFor(ckDate),b=ckBucket();
-  var syncHtml=!getSyncToken()?'<span class="ck-sync err" onclick="ckTokOpen()" title="点击配置同步令牌">同步未开启，点击配置令牌</span>'
-    :(ckSyncBusy?'<span class="ck-sync">同步中…</span>'
-    :(ckSyncErr?'<span class="ck-sync err" onclick="ckSyncPush()" title="点击立即重试">同步异常：'+escHtml(ckSyncErr)+'</span>'
-    :(hasCkPending()?'<span class="ck-sync">待同步…</span>':'<span class="ck-sync">已同步 ✓</span>')));
+  var stTxt=!getSyncToken()?'同步未开启，点击配置令牌'
+    :(ckSyncBusy?'同步中…'
+    :(ckSyncErr?('同步异常：'+ckSyncErr)
+    :(hasCkPending()?'待同步…':'已同步 ✓')));
+  var stCls=(!getSyncToken()||ckSyncErr)?'ck-sync err':'ck-sync';
+  var stClick=(!getSyncToken())?' onclick="ckTokOpen()"':(ckSyncErr?' onclick="ckSyncPush()"':'');
+  var syncHtml='<span class="'+stCls+'"'+stClick+'>'+stTxt+' · 账号 '+escHtml(currentUser||'')+'</span>';
   var maxD=ckAddDays(today(),7);
   var html='<div class="ck-nav">'
     +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
