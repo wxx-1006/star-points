@@ -685,6 +685,22 @@ body.kid-mode{padding-bottom:72px}
   </div>
 </div>
 
+<!-- 打卡同步令牌配置：孩子端无设置页签，未配置令牌的设备可直接在此填写 -->
+<div class="mo" id="mCkTok">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">打卡同步设置</div>
+      <button class="ml-close" onclick="ckTokClose()">✕</button>
+    </div>
+    <div class="ml-body">
+      <div class="fg"><label class="fl">GitHub Token（仅授权 star-points-data 仓库）</label><input type="password" class="fi" id="ckTokInput" placeholder="github_pat_ 开头" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      <div class="ck-cfg-tip">多设备 / 孩子端需填写同一令牌才能互相同步打卡状态；令牌仅存本机。家长端也可以在「设置」页填写。</div>
+      <div class="ck-cfg-btns" style="margin-top:12px"><button class="ck-b p" style="flex:1" onclick="ckTokSave()">保存并同步</button><button class="ck-b" style="flex:1" onclick="ckTokClose()">取消</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- 电子宠物（孩子端专属）：结构由 pet.js 构建注入；状态按账号存本机 sp_pet__<phone>，云同步 sync-pet.json -->
 <div class="pg" id="p-pet"></div>
 
@@ -3932,7 +3948,7 @@ function ckShow(){
   if(ckDate>ckAddDays(today(),7))ckDate=ckAddDays(today(),7);
   if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull()} // 30 秒节流拉云端申请/完成状态
   var tasks=ckTasksFor(ckDate),b=ckBucket();
-  var syncHtml=!getSyncToken()?'<span class="ck-sync">同步未开启（本机未配置令牌）</span>'
+  var syncHtml=!getSyncToken()?'<span class="ck-sync err" onclick="ckTokOpen()" title="点击配置同步令牌">同步未开启，点击配置令牌</span>'
     :(ckSyncBusy?'<span class="ck-sync">同步中…</span>'
     :(ckSyncErr?'<span class="ck-sync err" onclick="ckSyncPush()" title="点击立即重试">同步异常：'+escHtml(ckSyncErr)+'</span>'
     :(hasCkPending()?'<span class="ck-sync">待同步…</span>':'<span class="ck-sync">已同步 ✓</span>')));
@@ -4088,6 +4104,20 @@ function ckCfgDel(idx){
   sc2('删除打卡任务','删除「'+name+'」？已完成记录和已得积分将保留。',function(){
     tasks.splice(idx,1);ckCfgSave(tasks);ckCfgRender();ckShow();
   });
+}
+// —— 打卡同步令牌（孩子端无设置页签，可在打卡页直接配置）——
+function ckTokOpen(){
+  document.getElementById('ckTokInput').value=getSyncToken();
+  document.getElementById('mCkTok').classList.add('show');
+  setTimeout(function(){var i=document.getElementById('ckTokInput');i.focus();i.select()},120);
+}
+function ckTokClose(){document.getElementById('mCkTok').classList.remove('show')}
+function ckTokSave(){
+  var v=document.getElementById('ckTokInput').value.trim();
+  if(!v){toast('请填写令牌','err');return}
+  try{localStorage.setItem(TOKEN_KEY,v)}catch(e){}
+  ckTokClose();ckPullAt=0;ckShow();
+  toast('令牌已保存，正在同步打卡状态…','ok');
 }
 // 初始化：检查登录状态（孩子会话优先，其次家长会话）
 (function init(){
