@@ -614,7 +614,9 @@ body.kid-mode{padding-bottom:72px}
 <style>
 /* ===== 每日打卡 ===== */
 .ck-tip{margin:14px 16px 0;padding:9px 12px;border-radius:12px;background:#FFF7E6;border:1px solid #F4E3C0;font:500 11px/1.6 var(--ff);color:#8F6210;display:flex;align-items:center;gap:10px}
-.ck-cfg-btn{border:0;background:#4A3F35;color:#FFF7E6;border-radius:8px;padding:5px 10px;font:700 11px/1.3 var(--ff);cursor:pointer;white-space:nowrap;margin-left:auto;flex:none}
+.ck-cfg-btn{border:0;background:#4A3F35;color:#FFF7E6;border-radius:8px;padding:5px 10px;font:700 11px/1.3 var(--ff);cursor:pointer;white-space:nowrap;flex:none}
+.ck-sync{margin-left:auto;font:600 10.5px/1.5 var(--ff);color:#A99F90;white-space:nowrap}
+.ck-sync.err{color:#B5544E;cursor:pointer}
 .ck-subj{display:inline-block;font:700 9.5px/1 var(--ff);color:#fff;border-radius:5px;padding:2.5px 5px;margin-right:5px;vertical-align:1px}
 .ck-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 16px 0}
 .ck-navb{width:40px;height:34px;border-radius:10px;border:1.5px solid #E8E0D2;background:#fff;font:700 17px/1 var(--ff);color:#6B5E4F;cursor:pointer}
@@ -656,6 +658,15 @@ body.kid-mode{padding-bottom:72px}
 .ck-day input{display:none}
 #mCkCfg .fg{margin:10px 0}
 #mCkCfg .fi{width:100%;box-sizing:border-box}
+/* 记分弹窗多选项目 */
+.scat-g{margin:8px 0}
+.scat-t{font:700 11.5px/1.4 var(--ff);color:#6B5E4F;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.scat-items{display:flex;flex-wrap:wrap;gap:6px}
+.schip{cursor:pointer;user-select:none;display:inline-block}
+.schip input{display:none}
+.schip span{display:inline-block;border:1.5px solid #E8E0D2;background:#fff;border-radius:9px;padding:6px 10px;font:600 12px/1.2 var(--ff);color:#4A3F35}
+.schip input:checked+span{background:#4A3F35;border-color:#4A3F35;color:#FFF7E6}
+.schip span b{font:700 10px/1 var(--ff);opacity:.75;margin-left:4px}
 </style>
 <div class="pg" id="p-checkin">
   <div class="ck-tip" id="ckTip"></div>
@@ -773,11 +784,10 @@ body.kid-mode{padding-bottom:72px}
           <button type="button" class="seg-b" id="segDown" onclick="setScoreType('down')">扣分</button>
         </div>
       </div>
-      <div class="fg"><label class="fl">分类</label><select class="fs" id="scat" onchange="selectCat(this.value)"></select></div>
-      <div class="fg"><label class="fl">具体项目</label><select class="fs" id="sis"></select></div>
+      <div class="fg"><label class="fl">勾选项目（可多选）</label><div id="sitems" style="max-height:38vh;overflow:auto"></div></div>
       <div class="fg"><label class="fl">日期（可补录最近7天）</label><input type="date" class="fi" id="sdate"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">分值</label><input type="number" class="fi" id="sv" value="5" min="1"></div>
+        <div class="fg"><label class="fl">统一分值（留空按预设）</label><input type="number" class="fi" id="sv" min="1" placeholder="按预设"></div>
         <div class="fg"><label class="fl">备注</label><input type="text" class="fi" id="sn" placeholder="可选"></div>
       </div>
       <button class="bn bn-p" onclick="ss()">确认</button>
@@ -2634,6 +2644,7 @@ function openScore(){
   dateInput.max=today();
   populateCats();
   document.getElementById('sn').value='';
+  document.getElementById('sv').value=''; // 统一分值留空=按各项预设分
   document.getElementById('ms').classList.add('show');
 }
 
@@ -2655,65 +2666,55 @@ function minRecordDate(){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
-function populateCats(){
+function populateCats(){ // 渲染按分类分组的可多选项目列表（一次勾选多项，无需逐级选择）
   var items=scoreType==='up'?ad.upItems:ad.downItems;
-  var cats=[];var catSet={};
+  var cats=[],catSet={},groups={};
   for(var i=0;i<items.length;i++){
-    if(!catSet[items[i].category]){catSet[items[i].category]=true;cats.push(items[i].category)}
+    var c=items[i].category||'其他';
+    if(!catSet[c]){catSet[c]=true;cats.push(c);groups[c]=[]}
+    groups[c].push(items[i]);
   }
-  var catHtml='';
-  for(var i=0;i<cats.length;i++){
-    catHtml+='<option value="'+cats[i]+'">'+cats[i]+'</option>';
+  var h='';
+  for(var k=0;k<cats.length;k++){
+    h+='<div class="scat-g"><div class="scat-t"><span class="cat-dot" style="background:'+catColor(cats[k])+'"></span>'+escHtml(cats[k])+'</div><div class="scat-items">';
+    var g=groups[cats[k]];
+    for(var j=0;j<g.length;j++){
+      var it=g[j],unitStr=it.unit?('/'+it.unit):'';
+      h+='<label class="schip"><input type="checkbox" value="'+escHtml(it.id)+'" onchange="this.parentNode.classList.toggle(\'on\',this.checked)"><span>'+escHtml(it.name)+'<b>'+(scoreType==='up'?'+':'-')+it.score+'分'+escHtml(unitStr)+'</b></span></label>';
+    }
+    h+='</div></div>';
   }
-  document.getElementById('scat').innerHTML=catHtml;
-  if(cats.length>0) selectCat(cats[0]);
-  else{document.getElementById('scat').innerHTML='';document.getElementById('sis').innerHTML=''}
+  document.getElementById('sitems').innerHTML=h||'<div class="ck-cfg-tip">暂无可选项</div>';
 }
 
-function selectCat(cat){
-  document.getElementById('scat').value=cat;
-  var items=scoreType==='up'?ad.upItems:ad.downItems;
-  var html='';
-  for(var i=0;i<items.length;i++){
-    if(items[i].category===cat){
-      var unitStr=(items[i].unit)?('/'+items[i].unit):'';
-      html+='<option value="'+items[i].id+'" data-score="'+items[i].score+'">'+escHtml(items[i].name)+' ('+items[i].score+'分'+unitStr+')</option>';
-    }
-  }
-  document.getElementById('sis').innerHTML=html;
-  if(html){
-    for(var i=0;i<items.length;i++){
-      if(items[i].category===cat){document.getElementById('sv').value=items[i].score;break}
-    }
-  }
-}
-
-document.addEventListener('change',function(e){
-  if(e.target.id==='sis'){
-    var o=e.target.options[e.target.selectedIndex];
-    if(o) document.getElementById('sv').value=o.dataset.score||5;
-  }
-});
-
-function ss(){
-  var sis=document.getElementById('sis');
-  var items=scoreType==='up'?ad.upItems:ad.downItems;
-  var it=null;
-  for(var i=0;i<items.length;i++){if(items[i].id===sis.value){it=items[i];break}}
-  if(!it){toast('请选择项目','err');return}
-  var sv=parseInt(document.getElementById('sv').value)||0;
+function ss(){ // 批量记录：每个勾选项各记一笔（统一分值留空则按各项预设分），展示与单条记录完全一致
+  var cbs=document.querySelectorAll('#sitems input:checked');
+  if(!cbs.length){toast('请先勾选要记录的项目','err');return}
+  var svRaw=document.getElementById('sv').value.trim();
+  var svOverride=svRaw===''?0:(parseInt(svRaw,10)||0);
+  if(svOverride<0){toast('分值不能为负','err');return}
   var sn=document.getElementById('sn').value.trim();
-  if(sv<=0){toast('分值必须大于0','err');return}
   var dateInput=document.getElementById('sdate');
   var recDate=dateInput.value||today();
   if(recDate>today()){toast('日期不能晚于今天','err');return}
   if(recDate<minRecordDate()){toast('只能补录最近7天内的记录','err');return}
-  var rec={id:'r_'+Date.now(),date:recDate,timestamp:Date.now(),type:scoreType,itemId:it.id,name:it.name,category:it.category,score:scoreType==='up'?sv:-sv,note:sn};
-  ad.records.push(rec);
-  ad.totalPoints+=rec.score;
+  var items=scoreType==='up'?ad.upItems:ad.downItems;
+  var n=0,total=0,ts=Date.now();
+  for(var i=0;i<cbs.length;i++){
+    var it=null;
+    for(var j=0;j<items.length;j++){if(items[j].id===cbs[i].value){it=items[j];break}}
+    if(!it)continue;
+    var sv=svOverride>0?svOverride:it.score;
+    if(!(sv>0))continue;
+    var sc=scoreType==='up'?sv:-sv;
+    ad.records.push({id:'r_'+ts+'_'+i,date:recDate,timestamp:ts+i,type:scoreType,itemId:it.id,name:it.name,category:it.category,score:sc,note:sn});
+    ad.totalPoints+=sc;
+    n++;total+=sv;
+  }
+  if(!n){toast('没有可记录的项目','err');return}
   sd(ad);
   document.getElementById('ms').classList.remove('show');
-  toast(scoreType==='up'?('+'+sv+' 分'):('-'+sv+' 分'),scoreType==='up'?'ok':'err');
+  toast((scoreType==='up'?'加分':'扣分')+' '+n+' 项，共 '+(scoreType==='up'?'+':'-')+total+' 分',scoreType==='up'?'ok':'err');
   render();
 }
 
@@ -3781,7 +3782,7 @@ function ckSweepStale(){ // 孩子申请（待家长确认）超过 24 小时未
 // —— 云同步（sync-checkin.json，双端可推；未配置 token 时静默跳过）——
 var GH_CK_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-checkin.json';
 var CK_PENDING_KEY='sp_ck_sync_pending';
-var ckSyncSHA='',ckSyncTimer=null;
+var ckSyncSHA='',ckSyncTimer=null,ckSyncBusy=false,ckSyncErr='';
 function markCkPending(){try{localStorage.setItem(CK_PENDING_KEY,'1')}catch(e){}}
 function clearCkPending(){try{localStorage.removeItem(CK_PENDING_KEY)}catch(e){}}
 function hasCkPending(){try{return localStorage.getItem(CK_PENDING_KEY)==='1'}catch(e){return false}}
@@ -3793,16 +3794,18 @@ function ckQueue(){ // 状态变更防抖上云（4 秒）
 }
 function ckSyncPush(){
   if(ckSyncTimer){clearTimeout(ckSyncTimer);ckSyncTimer=null}
-  if(!hasCkPending()||!currentUser||!getSyncToken())return;
+  if(ckSyncBusy||!hasCkPending()||!currentUser||!getSyncToken())return;
   var local=ckBucket();
+  ckSyncBusy=true;ckSyncErr='';
+  if(curTab==='checkin')ckShow();
   fetch(GH_CK_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
       if(r.status===404){ckSyncSHA='';return {sha:'',content:null}}
-      if(!r.ok){markCkPending();return null}
+      if(!r.ok){markCkPending();ckSyncErr='同步失败（HTTP '+r.status+'）';return null}
       return r.json();
     })
     .then(function(meta){
-      if(!meta)return;
+      if(!meta){ckSyncBusy=false;if(curTab==='checkin')ckShow();return}
       ckSyncSHA=meta.sha||'';
       var all={};
       if(meta.content){try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
@@ -3810,28 +3813,39 @@ function ckSyncPush(){
       ckSaveBucket(merged);
       all[currentUser]=merged;
       return fetch(GH_CK_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'ck-sync:'+currentUser,content:utf8ToB64(JSON.stringify(all)),sha:ckSyncSHA})})
-        .then(function(r){if(r.ok)clearCkPending();else markCkPending();if(curTab==='checkin')ckShow();});
+        .then(function(r){
+          ckSyncBusy=false;
+          if(r.ok){ckSyncErr='';clearCkPending()}else{markCkPending();ckSyncErr='同步失败（HTTP '+r.status+'）'}
+          if(curTab==='checkin')ckShow();
+        });
     })
-    .catch(function(){markCkPending()});
+    .catch(function(){ckSyncBusy=false;ckSyncErr='网络异常，稍后自动重试';markCkPending();if(curTab==='checkin')ckShow()});
 }
 function ckSyncPull(){ // 进打卡页拉取：合并云端申请/完成状态后刷新
   if(!currentUser||!getSyncToken())return;
   fetch(GH_CK_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
-      if(!r.ok){if(hasCkPending())ckSyncPush();return}
+      if(!r.ok){ckSyncErr='拉取失败（HTTP '+r.status+'）';if(hasCkPending())ckSyncPush();else if(curTab==='checkin')ckShow();return}
       return r.json().then(function(meta){
         ckSyncSHA=meta.sha||'';
         if(!meta.content){if(hasCkPending())ckSyncPush();return}
         var all={};try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
         var merged=ckMergeAll(ckBucket(),all[currentUser]||{});
         ckSaveBucket(merged);
+        ckSyncErr='';
         if(hasCkPending())ckSyncPush();
         if(curTab==='checkin')ckShow();
       });
     })
-    .catch(function(){});
+    .catch(function(){ckSyncErr='网络异常，稍后自动重试';if(curTab==='checkin')ckShow()});
 }
 window.addEventListener('online',function(){if(hasCkPending())ckSyncPush()});
+setInterval(function(){if(hasCkPending()&&!ckSyncBusy)ckSyncPush()},60000); // 网络不稳：待同步内容每分钟自动补推
+document.addEventListener('visibilitychange',function(){ // 切回页面/切换设备查看时立即对齐最新状态
+  if(document.hidden)return;
+  if(hasCkPending()&&!ckSyncBusy)ckSyncPush();
+  if(curTab==='checkin'){ckPullAt=0;ckShow()}
+});
 // —— 操作 ——
 function ckClaim(ds,id){ // 孩子端：我已完成（=申请，不计完成，待家长确认）
   if(sessionRole!=='kid')return;
@@ -3918,6 +3932,10 @@ function ckShow(){
   if(ckDate>ckAddDays(today(),7))ckDate=ckAddDays(today(),7);
   if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull()} // 30 秒节流拉云端申请/完成状态
   var tasks=ckTasksFor(ckDate),b=ckBucket();
+  var syncHtml=!getSyncToken()?'<span class="ck-sync">同步未开启（本机未配置令牌）</span>'
+    :(ckSyncBusy?'<span class="ck-sync">同步中…</span>'
+    :(ckSyncErr?'<span class="ck-sync err" onclick="ckSyncPush()" title="点击立即重试">同步异常：'+escHtml(ckSyncErr)+'</span>'
+    :(hasCkPending()?'<span class="ck-sync">待同步…</span>':'<span class="ck-sync">已同步 ✓</span>')));
   var maxD=ckAddDays(today(),7);
   var html='<div class="ck-nav">'
     +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
@@ -3927,7 +3945,7 @@ function ckShow(){
   if(!tasks.length){ // 全新账号：无任务，引导家长自行创建
     html+='<div class="es" style="padding:40px 16px">'+esBricks()+'<div class="et">'+(sessionRole==='parent'?'还没有打卡任务，点右上角「管理任务」创建':'家长还没有创建打卡任务哦')+'</div></div>';
     host.innerHTML=html;
-    document.getElementById('ckTip').innerHTML='<span>'+(sessionRole==='kid'?'打卡任务由家长在「管理任务」中创建后，这里就会显示':'打卡任务由你自行创建：支持每天/每周/每月/轮流循环，可设学科、时长、分值与备注')+'</span>'
+    document.getElementById('ckTip').innerHTML='<span>'+(sessionRole==='kid'?'打卡任务由家长在「管理任务」中创建后，这里就会显示':'打卡任务由你自行创建：支持每天/每周/每月/轮流循环，可设学科、时长、分值与备注')+'</span>'+syncHtml
       +(sessionRole==='parent'?'<button class="ck-cfg-btn" onclick="ckCfgOpen()">管理任务</button>':'');
     return;
   }
@@ -3966,7 +3984,7 @@ function ckShow(){
   var tipTxt=sessionRole==='kid'
     ?'点「我已完成」后请等家长确认，确认后才会加分哦'
     :'孩子申请后需家长确认；也可直接点「确认完成」。完成任务得分（作文训练工作日 10 分/周末 20 分，其余每项 5 分），当日全部完成额外 +10 分，加分不可删除。';
-  document.getElementById('ckTip').innerHTML='<span>'+tipTxt+'</span>'
+  document.getElementById('ckTip').innerHTML='<span>'+tipTxt+'</span>'+syncHtml
     +(sessionRole==='parent'?'<button class="ck-cfg-btn" onclick="ckCfgOpen()">管理任务</button>':'');
 }
 // —— 打卡任务配置（家长端）：列表 / 新增 / 编辑 / 删除 ——
