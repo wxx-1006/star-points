@@ -1151,7 +1151,10 @@ function saveUsers(u){try{localStorage.setItem(USER_KEY,JSON.stringify(u))}catch
 function getCurrentPhone(){try{return localStorage.getItem(CURR_KEY)||null}catch(e){}return null}
 function setCurrentPhone(p){try{localStorage.setItem(CURR_KEY,p)}catch(e){}}
 function userKey(phone){return SK+'_'+phone}
-function ld(){var phone=currentUser;if(!phone)return gd();try{var r=localStorage.getItem(userKey(phone));if(r)return JSON.parse(r)}catch(e){}return gd()}
+function ld(){var phone=currentUser;if(!phone)return gd();try{var r=localStorage.getItem(userKey(phone));if(r){var b=JSON.parse(r);if(b&&b.del){ // 载入时按删除墓碑过滤，清理由旧版本同步复活的流水
+  b.records=(b.records||[]).filter(function(x){return !(x&&x.id&&b.del['r:'+x.id])});
+  b.exchanges=(b.exchanges||[]).filter(function(x){return !(x&&x.id&&b.del['e:'+x.id])});
+}return b}}catch(e){}return gd()}
 function sd(d){if(sessionRole==='kid')return;var phone=currentUser;if(!phone)return;dataVersion++;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
 function migrateOldData(phone){try{var old=localStorage.getItem(SK);if(old&&phone){var parsed=JSON.parse(old);if(parsed.records&&parsed.records.length>0){localStorage.setItem(userKey(phone),JSON.stringify(parsed));toast('已迁移历史数据')}}}catch(e){}}
 
@@ -1301,18 +1304,31 @@ function mergeAccountData(loc,rem){
   try{m=JSON.parse(JSON.stringify(loc))}catch(e){return {data:loc,changed:false}}
   if(!rem||typeof rem!=='object'||isArr(rem))return {data:m,changed:false};
   var changed=false,i,ids={};
-  // —— records 并集（同 id 本地为准）——
+  // —— 删除墓碑并集：被删除的流水 id 不再因另一设备的旧副本而「复活」——
+  var del={},tombChange=false,dk;
+  var ld0=(m.del&&typeof m.del==='object')?m.del:{},rd0=(rem.del&&typeof rem.del==='object')?rem.del:{};
+  for(dk in ld0)del[dk]=ld0[dk];
+  for(dk in rd0){if(del[dk]===undefined){del[dk]=rd0[dk];tombChange=true}}
+  m.del=del;
+  // —— records 并集（同 id 本地为准；墓碑中的 id 不参与合并）——
   m.records=isArr(m.records)?m.records:[];
+  var beforeLen=m.records.length;
+  m.records=m.records.filter(function(r){return !(r&&r.id&&del['r:'+r.id])});
+  if(m.records.length!==beforeLen)changed=true;
   ids={};
-  for(i=0;i<m.records.length;i++)ids[m.records[i]&&m.records[i].id]=1;
+  for(i=0;i<m.records.length;i++)ids[m.records[i].id]=1;
   var rr=isArr(rem.records)?rem.records:[];
-  for(i=0;i<rr.length;i++){var r0=rr[i];if(r0&&r0.id&&!ids[r0.id]){m.records.push(r0);ids[r0.id]=1;changed=true}}
-  // —— exchanges 并集 ——
+  for(i=0;i<rr.length;i++){var r0=rr[i];if(r0&&r0.id&&!ids[r0.id]&&!del['r:'+r0.id]){m.records.push(r0);ids[r0.id]=1;changed=true}}
+  // —— exchanges 并集（同样尊重墓碑）——
   m.exchanges=isArr(m.exchanges)?m.exchanges:[];
+  var beforeLen2=m.exchanges.length;
+  m.exchanges=m.exchanges.filter(function(e){return !(e&&e.id&&del['e:'+e.id])});
+  if(m.exchanges.length!==beforeLen2)changed=true;
   ids={};
-  for(i=0;i<m.exchanges.length;i++)ids[m.exchanges[i]&&m.exchanges[i].id]=1;
+  for(i=0;i<m.exchanges.length;i++)ids[m.exchanges[i].id]=1;
   var re0=isArr(rem.exchanges)?rem.exchanges:[];
-  for(i=0;i<re0.length;i++){var e0=re0[i];if(e0&&e0.id&&!ids[e0.id]){m.exchanges.push(e0);ids[e0.id]=1;changed=true}}
+  for(i=0;i<re0.length;i++){var e0=re0[i];if(e0&&e0.id&&!ids[e0.id]&&!del['e:'+e0.id]){m.exchanges.push(e0);ids[e0.id]=1;changed=true}}
+  if(tombChange)changed=true;
   // —— 流水排序 + 总分重算（totalPoints 恒 = Σrecords.score − Σexchanges.cost）——
   var byTime=function(a,b){if(a.date!==b.date)return a.date<b.date?-1:1;return (a.timestamp||0)-(b.timestamp||0)};
   m.records.sort(byTime);m.exchanges.sort(byTime);
@@ -2499,6 +2515,8 @@ function deleteExchange(id){
     var doLocal=function(){
       ad.totalPoints+=ex.cost; // 退分
       ad.exchanges=ad.exchanges.filter(function(x){return x.id!==id});
+      if(!ad.del)ad.del={};
+      ad.del['e:'+id]=Date.now(); // 删除墓碑：防止云端旧副本复活
       sd(ad);
       toast('已删除，退还 '+ex.cost+' 分','ok');
       render();
@@ -2799,6 +2817,8 @@ function deleteRecord(id){
   sc2('删除记录','删除「'+r.name+'」('+sign+r.score+'分)？总分将'+action+Math.abs(r.score)+'分。',function(){
     ad.totalPoints-=r.score;
     ad.records=ad.records.filter(function(x){return x.id!==id});
+    if(!ad.del)ad.del={};
+    ad.del['r:'+id]=Date.now(); // 删除墓碑：防止云端旧副本在下次合并时复活
     sd(ad);
     toast('已删除');
     render();
@@ -3951,14 +3971,11 @@ function ckShow(){
   if(ckDate>ckAddDays(today(),7))ckDate=ckAddDays(today(),7);
   if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull()} // 30 秒节流拉云端申请/完成状态
   var tasks=ckTasksFor(ckDate),b=ckBucket();
-  var stTxt=!getSyncToken()?'同步未开启，点击配置令牌'
-    :(ckSyncBusy?'同步中…'
-    :(ckSyncErr?('同步异常：'+ckSyncErr)
-    :(hasCkPending()?'待同步…':'已同步 ✓')));
-  var stCls=(!getSyncToken()||ckSyncErr)?'ck-sync err':'ck-sync';
-  var stClick=(!getSyncToken())?' onclick="ckTokOpen()"':(ckSyncErr?' onclick="ckSyncPush()"':' onclick="ckPullAt=0;ckShow()" title="点击立即刷新"');
-  var cntTxt=(ckCloudCnt>=0)?'（云端 '+ckCloudCnt+' 天 / 本机 '+ckDateKeys(ckBucket())+' 天）':'';
-  var syncHtml='<span class="'+stCls+'"'+stClick+'>'+stTxt+cntTxt+' · 账号 '+escHtml(currentUser||'')+'</span>';
+  var syncHtml='';
+  if(!getSyncToken())syncHtml='<span class="ck-sync err" onclick="ckTokOpen()" title="点击配置同步令牌">同步未开启，点击配置令牌</span>';
+  else if(ckSyncBusy)syncHtml='<span class="ck-sync">同步中…</span>';
+  else if(ckSyncErr)syncHtml='<span class="ck-sync err" onclick="ckSyncPush()" title="点击立即重试">同步异常：'+escHtml(ckSyncErr)+'</span>';
+  else if(hasCkPending())syncHtml='<span class="ck-sync">待同步…</span>'; // 已同步时不显示任何状态文字
   var maxD=ckAddDays(today(),7);
   var html='<div class="ck-nav">'
     +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
