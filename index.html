@@ -3833,7 +3833,7 @@ function ckSyncPush(){
       return fetch(GH_CK_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'ck-sync:'+currentUser,content:utf8ToB64(JSON.stringify(all)),sha:ckSyncSHA})})
         .then(function(r){
           ckSyncBusy=false;
-          if(r.ok){ckSyncErr='';clearCkPending()}else{markCkPending();ckSyncErr='同步失败（HTTP '+r.status+'）'}
+          if(r.ok){ckSyncErr='';clearCkPending();ckCloudCnt=ckDateKeys(merged)}else{markCkPending();ckSyncErr='同步失败（HTTP '+r.status+'）'}
           if(curTab==='checkin')ckShow();
         });
     })
@@ -3956,7 +3956,7 @@ function ckShow(){
     :(ckSyncErr?('同步异常：'+ckSyncErr)
     :(hasCkPending()?'待同步…':'已同步 ✓')));
   var stCls=(!getSyncToken()||ckSyncErr)?'ck-sync err':'ck-sync';
-  var stClick=(!getSyncToken())?' onclick="ckTokOpen()"':(ckSyncErr?' onclick="ckSyncPush()"':'');
+  var stClick=(!getSyncToken())?' onclick="ckTokOpen()"':(ckSyncErr?' onclick="ckSyncPush()"':' onclick="ckPullAt=0;ckShow()" title="点击立即刷新"');
   var cntTxt=(ckCloudCnt>=0)?'（云端 '+ckCloudCnt+' 天 / 本机 '+ckDateKeys(ckBucket())+' 天）':'';
   var syncHtml='<span class="'+stCls+'"'+stClick+'>'+stTxt+cntTxt+' · 账号 '+escHtml(currentUser||'')+'</span>';
   var maxD=ckAddDays(today(),7);
