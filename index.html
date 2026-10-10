@@ -3798,7 +3798,8 @@ function ckSweepStale(){ // 孩子申请（待家长确认）超过 24 小时未
 // —— 云同步（sync-checkin.json，双端可推；未配置 token 时静默跳过）——
 var GH_CK_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-checkin.json';
 var CK_PENDING_KEY='sp_ck_sync_pending';
-var ckSyncSHA='',ckSyncTimer=null,ckSyncBusy=false,ckSyncErr='';
+var ckSyncSHA='',ckSyncTimer=null,ckSyncBusy=false,ckSyncErr='',ckCloudCnt=-1;
+function ckDateKeys(o){var n=0,k;if(!o||typeof o!=='object')return 0;for(k in o)if(k!=='_cfg')n++;return n}
 function markCkPending(){try{localStorage.setItem(CK_PENDING_KEY,'1')}catch(e){}}
 function clearCkPending(){try{localStorage.removeItem(CK_PENDING_KEY)}catch(e){}}
 function hasCkPending(){try{return localStorage.getItem(CK_PENDING_KEY)==='1'}catch(e){return false}}
@@ -3816,7 +3817,7 @@ function ckSyncPush(){
   if(curTab==='checkin')ckShow();
   fetch(GH_CK_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
-      if(r.status===404){ckSyncSHA='';return {sha:'',content:null}}
+      if(r.status===404){ckSyncSHA='';ckCloudCnt=0;return {sha:'',content:null}}
       if(!r.ok){markCkPending();ckSyncErr='同步失败（HTTP '+r.status+'）';return null}
       return r.json();
     })
@@ -3825,6 +3826,7 @@ function ckSyncPush(){
       ckSyncSHA=meta.sha||'';
       var all={};
       if(meta.content){try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
+      ckCloudCnt=ckDateKeys(all[currentUser]);
       var merged=ckMergeAll(local,all[currentUser]||{});
       ckSaveBucket(merged);
       all[currentUser]=merged;
@@ -3844,8 +3846,9 @@ function ckSyncPull(){ // 进打卡页拉取：合并云端申请/完成状态�
       if(!r.ok){ckSyncErr='拉取失败（HTTP '+r.status+'）';if(hasCkPending())ckSyncPush();else if(curTab==='checkin')ckShow();return}
       return r.json().then(function(meta){
         ckSyncSHA=meta.sha||'';
-        if(!meta.content){if(hasCkPending())ckSyncPush();return}
+        if(!meta.content){ckCloudCnt=0;if(hasCkPending())ckSyncPush();return}
         var all={};try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
+        ckCloudCnt=ckDateKeys(all[currentUser]);
         var merged=ckMergeAll(ckBucket(),all[currentUser]||{});
         ckSaveBucket(merged);
         ckSyncErr='';
@@ -3954,7 +3957,8 @@ function ckShow(){
     :(hasCkPending()?'待同步…':'已同步 ✓')));
   var stCls=(!getSyncToken()||ckSyncErr)?'ck-sync err':'ck-sync';
   var stClick=(!getSyncToken())?' onclick="ckTokOpen()"':(ckSyncErr?' onclick="ckSyncPush()"':'');
-  var syncHtml='<span class="'+stCls+'"'+stClick+'>'+stTxt+' · 账号 '+escHtml(currentUser||'')+'</span>';
+  var cntTxt=(ckCloudCnt>=0)?'（云端 '+ckCloudCnt+' 天 / 本机 '+ckDateKeys(ckBucket())+' 天）':'';
+  var syncHtml='<span class="'+stCls+'"'+stClick+'>'+stTxt+cntTxt+' · 账号 '+escHtml(currentUser||'')+'</span>';
   var maxD=ckAddDays(today(),7);
   var html='<div class="ck-nav">'
     +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
