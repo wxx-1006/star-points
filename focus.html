@@ -195,6 +195,32 @@
     font-size:22px; font-weight:800; color:#1f8f5f; animation:cxpop .25s ease;
   }
   @keyframes cxpop{ 0%{ transform:scale(.3); opacity:0; } 70%{ transform:scale(1.2); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+
+  /* ===== 嵌入赚星账本主题（fx-embedded）：与主应用暖色积木风保持一致 ===== */
+  body.fx-embedded{
+    --bg:#FBF7EF; --card:#FFFFFF; --card2:#F6F1E7; --line:#F0EADC;
+    --txt:#4A4238; --dim:#8F8578;
+    --accent:#EE6F5F; --accent-deep:#C9503F;
+    background:#FBF7EF;
+  }
+  body.fx-embedded .tabs{ background:#F6F1E7; }
+  body.fx-embedded .tab.on{ box-shadow:0 3px 12px rgba(201,80,63,.28); }
+  body.fx-embedded .seg button.on{ box-shadow:inset 0 0 0 1.5px #eab3a6; }
+  body.fx-embedded .btn.primary{ box-shadow:0 6px 16px rgba(238,111,95,.30); }
+  body.fx-embedded .cell,
+  body.fx-embedded .mcard,
+  body.fx-embedded .cx-cell,
+  body.fx-embedded .cx-head .cx-sample,
+  body.fx-embedded .p24-nums button,
+  body.fx-embedded .p24-keys button,
+  body.fx-embedded .sw-answers button{ border-color:#F0EADC; box-shadow:0 2px 6px rgba(74,66,56,.08); }
+  body.fx-embedded .mcard.down{ background:#F6F1E7; border-color:#E5DBC8; }
+  body.fx-embedded .hole{ background:#F6F1E7; border-color:#E5DBC8; }
+  body.fx-embedded .sw-stage{ border-color:#E0D5C0; }
+  body.fx-embedded .sw-stage.parity{ border-color:#d9a94e; background:#FCF3DC; }
+  body.fx-embedded .sw-stage.size{ border-color:#63BD87; background:#E8F5EC; }
+  body.fx-embedded .result .line2{ color:#8F8578; }
+  body.fx-embedded .stat.best .v{ color:#C9503F; }
   .cx-cell.wrong{ background:#fde9e7; border-color:var(--bad); animation:shake .28s; }
 </style>
 </head>
