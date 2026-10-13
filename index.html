@@ -4051,12 +4051,13 @@ window.addEventListener('message',function(e){
     if(f){
       var h=Math.max(420,parseInt(e.data.h,10)||0);
       if(f.style.height!==h+'px')f.style.height=h+'px';
-      fxFit(); /* iframe 高度变化后实测整页是否溢出，统一由主应用缩小 */
+      fitOneScreenBody(); /* iframe 高度变化后整页等比缩放适配 */
     }
   }
 });
 document.addEventListener('visibilitychange',function(){ // 切回页面立即对齐（换设备查看场景）
   if(document.hidden)return;
+  fitOneScreenBody();
   if(hasFxPending()&&!fxSyncBusy)fxSyncPush();
   if(curTab==='focus')fxShow();
 });
@@ -4104,23 +4105,35 @@ function fxVisSave(){
   fxVisClose();
   toast(tabs.length?('已开放 '+tabs.length+' 个练习给孩子端'):'已对孩子端隐藏全部练习','ok');
 }
-function fxFit(){ // iframe 高度由 focus.html 高度上报决定；此处仅实测整页溢出并回缩，保证全站缩放一致
-  var f=document.getElementById('focusFrame');
-  if(!f)return;
-  requestAnimationFrame(function(){
-    try{
-      var over=document.body.scrollHeight-window.innerHeight;
-      if(over>0){
-        var cur=parseInt(f.style.height,10)||420;
-        var nh=Math.max(420,cur-over-4);
-        if(nh!==cur)f.style.height=nh+'px';
-      }
-    }catch(e){}
-  });
+/* ===== 全局一屏适配：页眉/页签/页面内容/iframe 全部等比缩放 =====
+   iframe 高度由 focus.html 高度上报决定（内容永不裁切）；body zoom 收敛式计算：
+   needed 为当前 zoom 下的视觉高度 → 一步比例修正即精确适配，值不变不写（无循环抖动）。
+   下限 0.55：超过后停止缩小、允许页面滚动（列表类页面内容很长时不至于字太小）。 */
+function fitOneScreenBody(){
+  var b=document.body;
+  if(!b)return;
+  var cur=parseFloat(b.style.zoom)||1;
+  var needed=b.scrollHeight,avail=window.innerHeight;
+  if(!needed||!avail)return;
+  var z=cur;
+  if(needed>avail){
+    z=cur*(avail/needed);
+  }else if(needed<avail-8&&cur<0.999){ /* 大幅有余量才回填，防振荡 */
+    z=cur*(avail/needed);
+    if(z>=1)z=1;
+  }
+  z=Math.max(0.55,Math.min(1,z));
+  z=Math.floor(z*1000)/1000;
+  if(Math.abs(z-cur)>=0.001)b.style.zoom=z;
 }
-window.addEventListener('resize',function(){
-  if(curTab==='focus')fxFit();
-});
+if(window.ResizeObserver){
+  try{
+    var _fxRO=new ResizeObserver(function(){fitOneScreenBody()});
+    _fxRO.observe(document.body);
+  }catch(e){}
+}
+window.addEventListener('resize',fitOneScreenBody);
+window.addEventListener('orientationchange',fitOneScreenBody);
 // —— 操作 ——
 function ckClaim(ds,id){ // 孩子端：我已完成（=申请，不计完成，待家长确认）
   if(sessionRole!=='kid')return;
