@@ -3995,14 +3995,13 @@ function fxSyncPull(){
     })
     .catch(function(){fxSyncErr='网络异常，稍后自动重试';fxUpdateSyncUI();if(hasFxPending())fxSyncPush();return false;});
 }
-function fxUpdateSyncUI(){ // 专注页同步状态行：配置缺失/失败一眼可见
+function fxUpdateSyncUI(){ // 专注页同步状态行：仅异常时提示（未配置令牌/失败），已同步为正常态不打扰
   var el=document.getElementById('fxSyncBar');
   if(!el)return;
   var txt='';
   if(fxSyncBusy){txt='专注成绩同步中…';}
   else if(!getSyncToken()){txt='专注成绩仅存本机：本机未配置同步令牌，多设备无法互通';}
   else if(fxSyncErr){txt='专注成绩同步异常：'+fxSyncErr;}
-  else if(fxSyncSHA){txt='专注成绩已同步至云端 ✓';}
   el.textContent=txt;
   el.style.display=txt?'':'none';
 }
