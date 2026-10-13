@@ -1410,7 +1410,8 @@ const p24St = {
   t0: 0,
   timerId: null,
   tokens: [],
-  used: []
+  used: [],
+  slotStack: []    /* 数字按钮位置栈：与算式中的数字按顺序对应（重复数字各算各的） */
 };
 
 function p24StopTimer(){
@@ -1438,14 +1439,13 @@ function p24SetPlayEnabled(on){
   $('btnP24Answer').disabled = !on;
 }
 
-/* 数字按钮的可用状态由 tokens 推导（同值等价，某值配额用完则整组置灰） */
+/* 数字按钮按"位置"消耗：点哪个灰哪个（重复数字互不影响）；
+   slotStack 与 tokens 中的数字按顺序一一对应，退格/清空时精确恢复 */
 function p24SyncUsed(){
-  const usedCount = {}, total = {};
-  p24St.tokens.forEach((t) => {
-    if (/^\d+$/.test(t)) usedCount[t] = (usedCount[t] || 0) + 1;
+  p24St.used = p24St.nums.map(function(){ return false; });
+  p24St.slotStack.forEach(function(i){
+    if (i >= 0 && i < p24St.used.length) p24St.used[i] = true;
   });
-  p24St.nums.forEach((n) => { total[n] = (total[n] || 0) + 1; });
-  p24St.used = p24St.nums.map((n) => (usedCount[n] || 0) >= total[n]);
 }
 
 function p24RenderNums(){
@@ -1460,6 +1460,7 @@ function p24RenderNums(){
     btn.addEventListener('click', () => {
       if (p24St.finished || p24St.used[i]) return;
       p24St.tokens.push(String(n));
+      p24St.slotStack.push(i);
       p24SyncUsed();
       p24RenderNums();
       p24RenderTokens();
@@ -1488,6 +1489,7 @@ function renderP24(){
   p24St.finished = false;
   p24St.nums = [];
   p24St.tokens = [];
+  p24St.slotStack = [];
   p24St.used = [];
   p24St.errors = 0;
   p24StopTimer();
@@ -1518,6 +1520,7 @@ function dealP24(){
   p24St.errors = 0;
   p24St.nums = makeP24Nums();
   p24St.tokens = [];
+  p24St.slotStack = [];
   p24SyncUsed();
   p24RenderNums();
   p24RenderTokens();
@@ -1566,6 +1569,7 @@ function p24Skip(){
   p24StopTimer();
   p24St.nums = makeP24Nums();
   p24St.tokens = [];
+  p24St.slotStack = [];
   p24St.errors = 0;
   p24SyncUsed();
   p24RenderNums();
@@ -1592,7 +1596,10 @@ $('p24Keys').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-k]');
   if (!btn || p24St.finished || !p24St.started) return;
   const k = btn.dataset.k;
-  if (k === 'del'){ p24St.tokens.pop(); }
+  if (k === 'del'){
+    const t = p24St.tokens.pop();
+    if (t && /^\d+$/.test(t)) p24St.slotStack.pop(); /* 数字 token 出栈 → 恢复对应按钮 */
+  }
   else { p24St.tokens.push(k); }
   p24SyncUsed();
   p24RenderNums();
@@ -1603,6 +1610,7 @@ $('p24Keys').addEventListener('click', (e) => {
 $('btnP24Clear').addEventListener('click', () => {
   if (!p24St.started || p24St.finished) return;
   p24St.tokens = [];
+  p24St.slotStack = [];
   p24SyncUsed();
   p24RenderNums();
   p24RenderTokens();
@@ -1627,6 +1635,7 @@ $('btnP24Submit').addEventListener('click', () => {
     void box.offsetWidth;
     box.classList.add('wrong');
     p24St.tokens = [];
+    p24St.slotStack = [];
     p24SyncUsed();
     p24RenderNums();
     p24RenderTokens();
@@ -2143,7 +2152,7 @@ window.__FT = {
   schulte: { state, render, onCell, board, comboStr, migrate: () => migrateLegacyAdvKeys(store) },
   track: { st: trackSt, start: startTrack, click: onTrackCell },
   stroop: { st: stroopSt, start: startStroop, answer: onStroopAnswer, finish: finishStroop },
-  p24: { st: p24St, start: dealP24, submit: () => $('btnP24Submit').click(), skip: p24Skip, showAnswer: p24ShowAnswer },
+  p24: { st: p24St, start: dealP24, submit: () => $('btnP24Submit').click(), skip: p24Skip, showAnswer: p24ShowAnswer, renderNums: p24RenderNums },
   memory: { st: memSt, render: renderMemory, click: onMemCard, finish: finishMemory },
   corsi: { st: corsiSt, start: startCorsi, click: onCorsiCell, over: corsiOver },
   sw: { st: swSt, start: startSwitch, answer: onSwitchAnswer, finish: finishSwitch },
