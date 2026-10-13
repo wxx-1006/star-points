@@ -572,8 +572,21 @@ body.kid-mode{padding-bottom:72px}
 <!-- 专注力训练（iframe 同源嵌入 focus.html）：最佳成绩按账号分键（sp_fx__<phone>:*），
      云同步 sync-focus.json（双端可推，逐游戏更快纪录者胜）；iframe 内破纪录 postMessage → 主应用防抖上云 -->
 <div class="pg" id="p-focus">
-  <div class="sync-hint" id="fxSyncBar" style="display:none;text-align:center;margin-bottom:6px"></div>
+  <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:6px">
+    <div class="sync-hint" id="fxSyncBar" style="flex:1;text-align:right;margin-bottom:0"></div>
+    <button class="ck-cfg-btn" id="fxVisBtn" onclick="fxVisOpen()" style="display:none">孩子端可见设置</button>
+  </div>
   <iframe id="focusFrame" title="专注力训练" style="width:100%;border:0;display:block" src="about:blank"></iframe>
+</div>
+
+<!-- 孩子端可见练习配置弹窗（家长端） -->
+<div class="mo" id="mFxVis">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header"><div class="ml-title">孩子端可见练习</div><button class="ml-close" onclick="fxVisClose()">✕</button></div>
+    <div class="ml-body" id="fxVisBody"></div>
+    <div class="ml-body" style="padding-top:0"><button class="bn bn-p" style="width:100%" onclick="fxVisSave()">保存</button></div>
+  </div>
 </div>
 
 <div class="pg" id="p-quiz">
@@ -4036,6 +4049,7 @@ document.addEventListener('visibilitychange',function(){ // 切回页面立即�
   if(curTab==='focus')fxShow();
 });
 // —— 专注页：拉云端合并成绩 → 重载 iframe（focus.html 按账号前缀读成绩） ——
+var FX_GAMES=[['schulte','舒尔特方格'],['track','视觉追踪'],['stroop','色词干扰'],['p24','24点'],['memory','记忆翻牌'],['corsi','空间方块'],['switch','快速切换'],['cancel','符号划消']];
 function fxFrameHeight(){ // 按实际固定 UI（导航条）精确计算 iframe 高度，避免页面出现滚动条
   var tb=document.getElementById('tbMain'),kt=document.getElementById('kidTb');
   var bar=null;
@@ -4048,11 +4062,35 @@ function fxShow(){
   if(!currentUser)return;
   var f=document.getElementById('focusFrame');
   fxFit();
+  var vb=document.getElementById('fxVisBtn');
+  if(vb)vb.style.display=sessionRole==='parent'?'':'none';
   fxUpdateSyncUI();
   fxSyncPull().then(function(){
-    if(f)f.src='focus.html?acct='+encodeURIComponent(currentUser)+'&t='+Date.now();
+    if(f)f.src='focus.html?acct='+encodeURIComponent(currentUser)+'&role='+(sessionRole==='kid'?'kid':'parent')+'&t='+Date.now();
     fxUpdateSyncUI();
   });
+}
+function fxVisKey(){return 'sp_fx__'+currentUser+':visible.tabs'}
+function fxVisOpen(){ // 家长端：勾选孩子端可见的练习页签
+  if(sessionRole!=='parent')return;
+  var cur=null;
+  try{var raw=localStorage.getItem(fxVisKey());if(raw){var v=JSON.parse(raw);if(v&&v.tabs)cur=v.tabs}}catch(e){}
+  var h='<div class="ck-cfg-tip">勾选的练习会在孩子端「专注」页签显示；不勾=对孩子隐藏。家长端始终显示全部。配置会同步到所有设备。</div>';
+  for(var i=0;i<FX_GAMES.length;i++){
+    var gid=FX_GAMES[i][0],nm=FX_GAMES[i][1],on=!cur||cur.indexOf(gid)>=0; /* 未配置=默认全开 */
+    h+='<label class="ck-day'+(on?' on':'')+'" style="width:100%"><input type="checkbox" value="'+gid+'"'+(on?' checked':'')+' onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+nm+'</label>';
+  }
+  document.getElementById('fxVisBody').innerHTML=h;
+  document.getElementById('mFxVis').classList.add('show');
+}
+function fxVisClose(){document.getElementById('mFxVis').classList.remove('show')}
+function fxVisSave(){
+  var cbs=document.querySelectorAll('#fxVisBody input:checked'),tabs=[];
+  for(var i=0;i<cbs.length;i++)tabs.push(cbs[i].value);
+  try{localStorage.setItem(fxVisKey(),JSON.stringify({tabs:tabs,at:Date.now()}))}catch(e){}
+  fxQueue(); /* 配置随 sync-focus.json 云同步 */
+  fxVisClose();
+  toast(tabs.length?('已开放 '+tabs.length+' 个练习给孩子端'):'已对孩子端隐藏全部练习','ok');
 }
 function fxFit(){ // 设置高度后实测整页是否仍溢出（含头部等固定 UI），超出则回缩到恰好一屏
   var f=document.getElementById('focusFrame');

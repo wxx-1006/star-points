@@ -99,6 +99,8 @@
   #cxPreStart{ aspect-ratio:4/3; }
   #trackPreStart{ aspect-ratio:1/1; }
 
+  .fx-empty-tip{ padding:22px 0; text-align:center; font-size:13.5px; color:var(--dim); }
+
   /* 结果弹窗（不再内嵌页面，避免把开始按钮往下挤） */
   .modal-mask{ position:fixed; inset:0; background:rgba(23,42,60,.45); display:flex; align-items:center; justify-content:center; z-index:99; padding:20px; }
   .modal-mask[hidden]{ display:none; }
@@ -581,6 +583,13 @@ const FOCUS_ACCT = (function(){
   } catch (e){ return 'local'; }
 })();
 const FOCUS_PREFIX = 'sp_fx__' + FOCUS_ACCT + ':';
+/* 角色参数：parent=家长端（页签全量+可配置）；kid/缺省=按家长端勾选的可见页签过滤 */
+const FOCUS_ROLE = (function(){
+  try {
+    const q = new URLSearchParams(location.search).get('role');
+    return (q === 'parent' || q === 'kid') ? q : '';
+  } catch (e){ return ''; }
+})();
 /* 嵌入赚星账本时隐藏大标题（页签已表明身份，省一行高度） */
 if (FOCUS_ACCT !== 'local'){
   document.addEventListener('DOMContentLoaded', function(){
@@ -878,6 +887,33 @@ try {
   store = makeStore(window.localStorage, FOCUS_PREFIX);
 } catch (e){
   store = makeStore(null, FOCUS_PREFIX);
+}
+
+/* 孩子端可见页签（家长端在主应用勾选，随 sync-focus.json 同步）：null=未配置/家长端=全量 */
+const FOCUS_VISIBLE = (function(){
+  if (FOCUS_ROLE === 'parent') return null;
+  try {
+    const raw = store.get('visible.tabs');
+    if (raw){
+      const v = JSON.parse(raw);
+      if (v && Array.isArray(v.tabs)) return v.tabs;
+    }
+  } catch (e){}
+  return null;
+})();
+function applyFocusVisibility(){ /* 移除孩子端不可见的页签；全部隐藏时显示占位提示 */
+  if (!FOCUS_VISIBLE || FOCUS_ROLE === 'parent') return;
+  const tabsBox = $('tabs');
+  tabsBox.querySelectorAll('.tab').forEach((b) => {
+    if (FOCUS_VISIBLE.indexOf(b.dataset.tab) < 0) b.remove();
+  });
+  const left = tabsBox.querySelectorAll('.tab');
+  if (!left.length){
+    tabsBox.innerHTML = '<div class="fx-empty-tip">家长暂未开放练习内容</div>';
+    document.querySelectorAll('.panel').forEach((p) => p.classList.remove('on'));
+    return;
+  }
+  if (!tabsBox.querySelector('.tab.on')) left[0].click(); /* 默认页签被隐藏时切到第一个可见页签 */
 }
 migrateLegacyAdvKeys(store);
 
@@ -2143,6 +2179,7 @@ function finishCancel(){
 
 $('btnCxRestart').addEventListener('click', () => { renderCancel(); cxDeal(); });
 renderCancel();
+applyFocusVisibility(); /* 孩子端按家长配置过滤可见页签 */
 fitOneScreen(); /* 打开页面即做一屏适配 */
 
 /* ---------- 测试钩子（生产无副作用） ---------- */
