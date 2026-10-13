@@ -3813,8 +3813,8 @@ function ckMergeAll(a,b){ // 双端合并：d/r 逐字段取大（完成/加分�
     for(tid in b[ds]){
       var x=out[ds][tid],y=b[ds][tid];
       if(!x){out[ds][tid]=y;continue}
-      var nb=((y.t||0)>=(x.t||0))?y:x; // c 取较新操作的一侧；d/r 仍取大，防止旧申请覆盖已确认状态
-      out[ds][tid]={c:nb.c||0,d:Math.max(x.d||0,y.d||0),r:Math.max(x.r||0,y.r||0),t:Math.max(x.t||0,y.t||0)};
+      var nb=((y.t||0)>=(x.t||0))?y:x; // c 取较新操作的一侧；d/r/m 仍取大，防止旧申请覆盖已确认状态
+      out[ds][tid]={c:nb.c||0,d:Math.max(x.d||0,y.d||0),r:Math.max(x.r||0,y.r||0),m:Math.max(x.m||0,y.m||0),t:Math.max(x.t||0,y.t||0)};
     }
   }
   var ca=a?a._cfg:null,cb=b?b._cfg:null;
@@ -3831,7 +3831,7 @@ function ckSweepStale(){ // 孩子申请（待家长确认）超过 24 小时未
       if(id==='_bonus')continue;
       var st=day[id];
       if(st&&st.c&&!st.d&&(now-(st.t||0))>=86400000){
-        day[id]={c:0,d:0,r:st.r||0,t:now};changed=true;
+        day[id]={c:0,d:0,r:st.r||0,m:st.m||0,t:now};changed=true;
       }
     }
   }
@@ -4152,9 +4152,45 @@ function ckShift(n){ // 日视图 ±1 天；最多查看今天起 7 天内
   if(ds>ckAddDays(today(),7))return;
   ckDate=ds;ckShow();
 }
+function ckMustSweep(now){ // 必打卡结算：当日22点后（及历史遗漏日期）未完成且未申请 → 标记 m 并扣任务分值；now 供测试注入
+  now=now||new Date();
+  if(!currentUser)return;
+  var tds=ckFmtD(now),after22=now.getHours()>=22;
+  var tasks=ckCfg().tasks,musts=[];
+  for(var i=0;i<tasks.length;i++){if(tasks[i].must)musts.push(tasks[i])}
+  if(!musts.length)return;
+  var b=ckBucket(),changed=false,anyPenalty=false;
+  var scan=function(ds){
+    var day=ckTasksFor(ds),ids={},ti;
+    for(ti=0;ti<day.length;ti++)ids[day[ti].id]=day[ti];
+    for(var m=0;m<musts.length;m++){
+      var t=musts[m];
+      if(!ids[t.id])continue;
+      var k=ckKeyFor(ds,t),st=(b[k]&&b[k][t.id])||{};
+      if(st.d||st.c||st.m)continue;
+      b[k]=b[k]||{};
+      b[k][t.id]={c:st.c||0,d:0,r:st.r||0,m:1,t:Date.now()};
+      changed=true;
+      if(sessionRole==='parent'&&ad&&ad.records){
+        var rid='ckm_'+ds+'_'+t.id,has=false;
+        for(var j=0;j<ad.records.length;j++){if(ad.records[j].id===rid){has=true;break}}
+        if(!has){
+          ad.records.push({id:rid,date:ds,timestamp:Date.now(),type:'down',itemId:'ck_must',name:t.name+'（必打卡未完成）',category:'打卡',score:-(t.pt||CK_PT),note:'必打卡当日22点前未完成自动扣分'});
+          ad.totalPoints-=(t.pt||CK_PT);
+          anyPenalty=true;
+        }
+      }
+    }
+  };
+  if(after22)scan(tds);
+  for(var k2 in b){if(k2!=='_cfg'&&k2<tds)scan(k2)}
+  if(changed){ckSaveBucket(b);ckQueue()}
+  if(anyPenalty){sd(ad);toast('必打卡任务有超时未完成，已自动扣分','err')}
+}
 function ckShow(){
   var host=document.getElementById('ckList');
   if(!host||!currentUser)return;
+  ckMustSweep(); // 必打卡结算（22点后未完成自动扣分；幂等）
   if(ckDate>ckAddDays(today(),7))ckDate=ckAddDays(today(),7);
   if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull()} // 30 秒节流拉云端申请/完成状态
   var tasks=ckTasksFor(ckDate),b=ckBucket();
@@ -4191,9 +4227,10 @@ function ckShow(){
     var sm=CK_SUBJ[t.subj]||CK_SUBJ.other;
     var note=t.zw?ckZwText(ckDate):(t.note||'');
     var bd=st.d?'#B9DDB2':(st.c?'#E8D49A':sm.bd); // 已完成绿描边 / 待确认黄描边 / 学科本色
-    var mustPending=t.must&&!st.d; // 每天必打卡且未完成：描边加重区分
+    if(t.must)note+=(note?' · ':'')+'必打卡，当日22点前未打卡扣除相应分值';
+    var mustPending=t.must&&!st.d&&!st.m; // 必打卡且未完成未扣分：描边加重区分
     html+='<div class="ck-item'+(mustPending?' must-pending':'')+'" style="background:'+sm.bg+';border-color:'+bd+'">'
-      +'<div class="ck-i-l"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.must?'<span class="ck-mustb">每天必打卡</span>':'')+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'</div>'
+      +'<div class="ck-i-l"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.must?'<span class="ck-mustb">必打卡</span>':'')+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+(st.m&&!st.d?'<span class="ck-min" style="color:var(--red-deep)">已扣'+(t.pt||CK_PT)+'分</span>':'')+'</div>'
       +(note?'<div class="ck-zw">'+escHtml(note)+'</div>':'')
       +'</div>';
     if(st.d){
@@ -4232,8 +4269,9 @@ function ckCfgRender(){
   for(var i=0;i<tasks.length;i++){
     var t=tasks[i],sm=CK_SUBJ[t.subj]||CK_SUBJ.other,oi=raw.indexOf(t); /* 原数组下标：编辑/删除按原始索引操作 */
     var note=t.zw?'备注：按作文三阶段计划自动显示':(t.note||'');
+    if(t.must)note+=(note?' · ':'')+'必打卡，当日22点前未打卡扣除相应分值';
     html+='<div class="ck-cfg-row">'
-      +'<div class="ck-cfg-i"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.must?'<span class="ck-mustb">每天必打卡</span>':'')+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'<span class="ck-min">+'+(t.pt||CK_PT)+'分</span></div>'
+      +'<div class="ck-cfg-i"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.must?'<span class="ck-mustb">必打卡</span>':'')+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'<span class="ck-min">+'+(t.pt||CK_PT)+'分</span></div>'
       +'<div class="ck-zw">'+escHtml(ckRecurDesc(t))+(note?' · '+escHtml(note):'')+'</div></div>'
       +'<div class="ck-cfg-btns"><button class="ck-b" onclick="ckCfgEdit('+oi+')">编辑</button><button class="ck-b d" onclick="ckCfgDel('+oi+')">删除</button></div>'
       +'</div>';
@@ -4248,7 +4286,7 @@ function ckCfgEdit(idx){
     +'<div class="fg"><label class="fl">学科</label><select class="fi" id="ckfSubj">';
   for(var s in CK_SUBJ)h+='<option value="'+s+'"'+(t.subj===s?' selected':'')+'>'+CK_SUBJ[s].n+'</option>';
   h+='</select></div>'
-    +'<div class="fg"><label class="fl">每天必打卡</label><select class="fi" id="ckfMust"><option value="0"'+(t.must?'':' selected')+'>否（普通任务）</option><option value="1"'+(t.must?' selected':'')+'>是（卡片显示「每天必打卡」标记，未完成时描边加重）</option></select></div>'
+    +'<div class="fg"><label class="fl">是否必打卡</label><select class="fi" id="ckfMust"><option value="0"'+(t.must?'':' selected')+'>否</option><option value="1"'+(t.must?' selected':'')+'>是</option></select></div>'
     +'<div class="fg"><label class="fl">循环方式</label><select class="fi" id="ckfType" onchange="ckCfgTypePick()">';
   var types=[['daily','每天'],['weekly','每周（选星期）'],['monthly','每月（选几号）'],['rotate','每日轮流（3 天一轮）']];
   for(var k=0;k<types.length;k++)h+='<option value="'+types[k][0]+'"'+((t.recur||{}).type===types[k][0]?' selected':'')+'>'+types[k][1]+'</option>';
