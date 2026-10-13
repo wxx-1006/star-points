@@ -659,6 +659,8 @@ body.kid-mode{padding-bottom:72px}
 .ck-cfg-btns{display:flex;gap:8px;flex:none}
 .ck-cfg-btns .ck-b.d{background:#FDEEEE;color:#B5544E}
 .ck-cfg-tip{font:500 10.5px/1.6 var(--ff);color:#A99F90;margin:6px 0}
+.ck-mustb{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--red-l);color:var(--red-deep);font:700 10px/1.6 var(--ff);vertical-align:1px;white-space:nowrap}
+.ck-item.must-pending{border-width:1.5px;border-style:solid}
 .ck-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ck-day{border:1.5px solid #E8E0D2;background:#fff;border-radius:8px;padding:5px 9px;font:700 11.5px/1 var(--ff);color:#8F8578;cursor:pointer;user-select:none}
 .ck-day.on{background:#4A3F35;border-color:#4A3F35;color:#FFF7E6}
@@ -3776,6 +3778,13 @@ function ckTasksFor(ds){ // 按日期 + 循环规则生成当日任务清单（�
     else if(rc.type==='rotate'){var df=Math.round((new Date(ds+'T00:00:00')-new Date(CK_EPOCH+'T00:00:00'))/86400000);ok=(((df%3)+3)%3===(rc.rot||0))} // 负数日期（查看历史）也正常轮换
     if(ok)list.push(t);
   }
+  /* 按学科排序：语→数→英→科→其他（同科内保持配置顺序，稳定排序） */
+  var sk=Object.keys(CK_SUBJ);
+  list.sort(function(a,b){
+    var xa=sk.indexOf(a.subj||'other');if(xa<0)xa=4;
+    var xb=sk.indexOf(b.subj||'other');if(xb<0)xb=4;
+    return xa-xb;
+  });
   return list;
 }
 function ckTaskById(id){var tasks=ckCfg().tasks;for(var i=0;i<tasks.length;i++){if(tasks[i].id===id)return tasks[i]}return null}
@@ -4180,8 +4189,9 @@ function ckShow(){
     var sm=CK_SUBJ[t.subj]||CK_SUBJ.other;
     var note=t.zw?ckZwText(ckDate):(t.note||'');
     var bd=st.d?'#B9DDB2':(st.c?'#E8D49A':sm.bd); // 已完成绿描边 / 待确认黄描边 / 学科本色
-    html+='<div class="ck-item" style="background:'+sm.bg+';border-color:'+bd+'">'
-      +'<div class="ck-i-l"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'</div>'
+    var mustPending=t.must&&!st.d; // 每天必打卡且未完成：描边加重区分
+    html+='<div class="ck-item'+(mustPending?' must-pending':'')+'" style="background:'+sm.bg+';border-color:'+bd+'">'
+      +'<div class="ck-i-l"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.must?'<span class="ck-mustb">每天必打卡</span>':'')+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'</div>'
       +(note?'<div class="ck-zw">'+escHtml(note)+'</div>':'')
       +'</div>';
     if(st.d){
@@ -4221,7 +4231,7 @@ function ckCfgRender(){
     var t=tasks[i],sm=CK_SUBJ[t.subj]||CK_SUBJ.other;
     var note=t.zw?'备注：按作文三阶段计划自动显示':(t.note||'');
     html+='<div class="ck-cfg-row">'
-      +'<div class="ck-cfg-i"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'<span class="ck-min">+'+(t.pt||CK_PT)+'分</span></div>'
+      +'<div class="ck-cfg-i"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.must?'<span class="ck-mustb">每天必打卡</span>':'')+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'<span class="ck-min">+'+(t.pt||CK_PT)+'分</span></div>'
       +'<div class="ck-zw">'+escHtml(ckRecurDesc(t))+(note?' · '+escHtml(note):'')+'</div></div>'
       +'<div class="ck-cfg-btns"><button class="ck-b" onclick="ckCfgEdit('+i+')">编辑</button><button class="ck-b d" onclick="ckCfgDel('+i+')">删除</button></div>'
       +'</div>';
@@ -4236,6 +4246,7 @@ function ckCfgEdit(idx){
     +'<div class="fg"><label class="fl">学科</label><select class="fi" id="ckfSubj">';
   for(var s in CK_SUBJ)h+='<option value="'+s+'"'+(t.subj===s?' selected':'')+'>'+CK_SUBJ[s].n+'</option>';
   h+='</select></div>'
+    +'<div class="fg"><label class="fl">每天必打卡</label><select class="fi" id="ckfMust"><option value="0"'+(t.must?'':' selected')+'>否（普通任务）</option><option value="1"'+(t.must?' selected':'')+'>是（卡片显示「每天必打卡」标记，未完成时描边加重）</option></select></div>'
     +'<div class="fg"><label class="fl">循环方式</label><select class="fi" id="ckfType" onchange="ckCfgTypePick()">';
   var types=[['daily','每天'],['weekly','每周（选星期）'],['monthly','每月（选几号）'],['rotate','每日轮流（3 天一轮）']];
   for(var k=0;k<types.length;k++)h+='<option value="'+types[k][0]+'"'+((t.recur||{}).type===types[k][0]?' selected':'')+'>'+types[k][1]+'</option>';
@@ -4288,9 +4299,10 @@ function ckCfgSubmit(idx){
   var min=parseInt(document.getElementById('ckfMin').value,10)||0;
   var pt=parseInt(document.getElementById('ckfPt').value,10)||CK_PT;
   var note=document.getElementById('ckfNote').value.trim();
+  var must=document.getElementById('ckfMust').value==='1'?1:0;
   var tasks=ckCfg().tasks;
   var t=idx>=0?tasks[idx]:{id:'t'+Date.now()};
-  t.name=name;t.subj=subj;t.recur=recur;t.min=min;t.pt=pt;t.note=note;
+  t.name=name;t.subj=subj;t.recur=recur;t.min=min;t.pt=pt;t.note=note;t.must=must;
   delete t.sub;delete t.type;delete t.rot;delete t.zw; // 统一为新结构
   if(!note&&idx>=0&&tasks[idx].zw)t.zw=1; // 原动态作文任务且备注留空 → 保留按计划自动显示
   if(idx>=0)tasks[idx]=t;else tasks.push(t);
