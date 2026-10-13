@@ -214,10 +214,15 @@
   body.fx-embedded .hint{ margin-bottom:6px; }
   body.fx-embedded .actions{ margin-top:9px; }
   body.fx-embedded .board-wrap,
-  body.fx-embedded .board-wrap:disabled{ width:100% !important; }
+  body.fx-embedded .board-wrap:disabled{ width:100%; }
   @media (max-width:540px){
     body.fx-embedded .board-wrap{ width:100%; margin:0 auto; }
   }
+  /* 舒尔特/视觉追踪/记忆翻牌：游戏区域收窄 14%（居中），内容字号/图形反向补偿保持原大小 */
+  body.fx-embedded #boardWrap,
+  body.fx-embedded #trackWrap,
+  body.fx-embedded #memWrap{ width:86%; margin-left:auto; margin-right:auto; }
+  body.fx-embedded #trackWrap .cell svg{ width:67%; height:67%; }
   body.fx-embedded .p24-nums button{ padding:21px 0; font-size:34px; }
   body.fx-embedded .p24-expr{ min-height:60px; font-size:26px; }
   body.fx-embedded .tabs{ background:#F6F1E7; }
@@ -1008,7 +1013,9 @@ function fitBoard(boardEl, cols){
   if (!w) return;
   const gap = parseFloat(getComputedStyle(boardEl).gap) || 10;
   const cell = (w - gap * (cols - 1)) / cols;
-  boardEl.style.setProperty('--fs', Math.round(cell * 0.42) + 'px');
+  /* 嵌入模式棋盘缩 ~14%：字号系数反向补偿，保持数字/图形原视觉大小 */
+  const K = (FOCUS_ACCT !== 'local') ? 0.49 : 0.42;
+  boardEl.style.setProperty('--fs', Math.round(cell * K) + 'px');
 }
 
 /* 通用棋盘字体自适应：观察所有 board-wrap */
@@ -1748,7 +1755,9 @@ function fitMemFont(){
   if (!w) return;
   const gap = parseFloat(getComputedStyle(bEl).gap) || 10;
   const cell = (w - gap * (memSt.deck.cols - 1)) / memSt.deck.cols;
-  bEl.style.setProperty('--fs', Math.round(cell * 0.55) + 'px');
+  /* 嵌入模式棋盘缩 ~14%：字号系数反向补偿，保持 emoji 原视觉大小 */
+  const K = (FOCUS_ACCT !== 'local') ? 0.64 : 0.55;
+  bEl.style.setProperty('--fs', Math.round(cell * K) + 'px');
 }
 
 function renderMemory(){
