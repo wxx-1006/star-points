@@ -264,9 +264,6 @@ body.kid-mode{padding-bottom:72px}
 .ti .tl{font:var(--f-mini);color:var(--ink2)}
 .ti.on{color:var(--red)}
 .ti.on .tl{color:var(--red);font-weight:600}
-/* 专注/刷题/报告页签文字加深（用户反馈偏淡）；选中态仍为品牌红 */
-#tabFocus .tl,#tabQuiz .tl,#tabReport .tl,#kt-focus .tl,#kt-report .tl{color:var(--ink)}
-#tabFocus.on .tl,#tabQuiz.on .tl,#tabReport.on .tl,#kt-focus.on .tl,#kt-report.on .tl{color:var(--red)}
 .ti.on .t-ico::before{content:'';position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:var(--r-full);background:var(--red)}
 .tico-brick{position:relative;width:18px;height:13px;border-radius:var(--r-s);background:currentColor;box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
 .tico-brick::before,.tico-brick::after{content:'';position:absolute;top:2px;width:4px;height:4px;border-radius:var(--r-full);background:currentColor;box-shadow:inset 0 -1px 1px rgba(0,0,0,.25)}
@@ -575,6 +572,7 @@ body.kid-mode{padding-bottom:72px}
 <!-- 专注力训练（iframe 同源嵌入 focus.html）：最佳成绩按账号分键（sp_fx__<phone>:*），
      云同步 sync-focus.json（双端可推，逐游戏更快纪录者胜）；iframe 内破纪录 postMessage → 主应用防抖上云 -->
 <div class="pg" id="p-focus">
+  <div class="sync-hint" id="fxSyncBar" style="display:none;text-align:center;margin-bottom:6px"></div>
   <iframe id="focusFrame" title="专注力训练" style="width:100%;border:0;display:block" src="about:blank"></iframe>
 </div>
 
@@ -3952,17 +3950,17 @@ function fxQueue(){ // 破纪录防抖上云（2 秒）
 }
 function fxSyncPush(){
   if(fxSyncTimer){clearTimeout(fxSyncTimer);fxSyncTimer=null}
-  if(fxSyncBusy||!hasFxPending()||!currentUser||!getSyncToken())return;
+  if(fxSyncBusy||!hasFxPending()||!currentUser||!getSyncToken()){fxUpdateSyncUI();return}
   var local=fxBucket();
-  fxSyncBusy=true;
+  fxSyncBusy=true;fxUpdateSyncUI();
   fetch(GH_FX_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
       if(r.status===404){fxSyncSHA='';return {sha:'',content:null}}
-      if(!r.ok){markFxPending();fxSyncErr='同步失败（HTTP '+r.status+'）';return null}
+      if(!r.ok){markFxPending();fxSyncErr='同步失败（HTTP '+r.status+'）';fxUpdateSyncUI();return null}
       return r.json();
     })
     .then(function(meta){
-      if(!meta){fxSyncBusy=false;return}
+      if(!meta){fxSyncBusy=false;fxUpdateSyncUI();return}
       fxSyncSHA=meta.sha||'';
       var all={};
       if(meta.content){try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
@@ -3973,32 +3971,59 @@ function fxSyncPush(){
         .then(function(r){
           fxSyncBusy=false;
           if(r.ok){fxSyncErr='';clearFxPending()}else{markFxPending();fxSyncErr='同步失败（HTTP '+r.status+'）'}
+          fxUpdateSyncUI();
         });
     })
-    .catch(function(){fxSyncBusy=false;fxSyncErr='网络异常，稍后自动重试';markFxPending()});
+    .catch(function(){fxSyncBusy=false;fxSyncErr='网络异常，稍后自动重试';markFxPending();fxUpdateSyncUI()});
 }
 function fxSyncPull(){
-  if(!currentUser||!getSyncToken())return Promise.resolve();
+  if(!currentUser||!getSyncToken()){fxUpdateSyncUI();return Promise.resolve(false);}
   return fetch(GH_FX_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
-      if(!r.ok){if(hasFxPending())fxSyncPush();return}
+      if(!r.ok){fxSyncErr='拉取失败（HTTP '+r.status+'）';fxUpdateSyncUI();if(hasFxPending())fxSyncPush();return false;}
       return r.json().then(function(meta){
         fxSyncSHA=meta.sha||'';
-        if(!meta.content){if(hasFxPending())fxSyncPush();return}
+        if(!meta.content){fxUpdateSyncUI();if(hasFxPending())fxSyncPush();return false;}
         var all={};try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
         var merged=fxMergeAll(fxBucket(),all[currentUser]||{});
         fxSaveBucket(merged.data);
         fxSyncErr='';
+        fxUpdateSyncUI();
         if(hasFxPending())fxSyncPush();
+        return merged.changed; /* 云端吸收了新成绩 → 调用方重载 iframe 让用户立即看到 */
       });
     })
-    .catch(function(){if(hasFxPending())fxSyncPush()});
+    .catch(function(){fxSyncErr='网络异常，稍后自动重试';fxUpdateSyncUI();if(hasFxPending())fxSyncPush();return false;});
+}
+function fxUpdateSyncUI(){ // 专注页同步状态行：配置缺失/失败一眼可见
+  var el=document.getElementById('fxSyncBar');
+  if(!el)return;
+  var txt='';
+  if(fxSyncBusy){txt='专注成绩同步中…';}
+  else if(!getSyncToken()){txt='专注成绩仅存本机：本机未配置同步令牌，多设备无法互通';}
+  else if(fxSyncErr){txt='专注成绩同步异常：'+fxSyncErr;}
+  else if(fxSyncSHA){txt='专注成绩已同步至云端 ✓';}
+  el.textContent=txt;
+  el.style.display=txt?'':'none';
 }
 window.addEventListener('online',function(){if(hasFxPending())fxSyncPush()});
-setInterval(function(){if(hasFxPending()&&!fxSyncBusy)fxSyncPush()},60000);
+setInterval(function(){
+  if(hasFxPending()&&!fxSyncBusy){fxSyncPush();return}
+  if(curTab==='focus'&&currentUser&&getSyncToken()){ /* 停留在专注页时定期对齐云端成绩 */
+    fxSyncPull().then(function(changed){
+      var f=document.getElementById('focusFrame');
+      if(changed&&f)f.src='focus.html?acct='+encodeURIComponent(currentUser)+'&t='+Date.now();
+    });
+  }
+},60000);
 // 专注页 iframe 内破纪录 → 防抖上云
 window.addEventListener('message',function(e){
   if(e.data&&e.data.type==='focus-best-updated')fxQueue();
+});
+document.addEventListener('visibilitychange',function(){ // 切回页面立即对齐（换设备查看场景）
+  if(document.hidden)return;
+  if(hasFxPending()&&!fxSyncBusy)fxSyncPush();
+  if(curTab==='focus')fxShow();
 });
 // —— 专注页：拉云端合并成绩 → 重载 iframe（focus.html 按账号前缀读成绩） ——
 function fxFrameHeight(){ // 按实际固定 UI（导航条）精确计算 iframe 高度，避免页面出现滚动条
@@ -4013,8 +4038,10 @@ function fxShow(){
   if(!currentUser)return;
   var f=document.getElementById('focusFrame');
   fxFit();
+  fxUpdateSyncUI();
   fxSyncPull().then(function(){
     if(f)f.src='focus.html?acct='+encodeURIComponent(currentUser)+'&t='+Date.now();
+    fxUpdateSyncUI();
   });
 }
 function fxFit(){ // 设置高度后实测整页是否仍溢出（含头部等固定 UI），超出则回缩到恰好一屏
