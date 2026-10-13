@@ -264,6 +264,9 @@ body.kid-mode{padding-bottom:72px}
 .ti .tl{font:var(--f-mini);color:var(--ink2)}
 .ti.on{color:var(--red)}
 .ti.on .tl{color:var(--red);font-weight:600}
+/* 专注/刷题/报告页签文字加深（用户反馈偏淡）；选中态仍为品牌红 */
+#tabFocus .tl,#tabQuiz .tl,#tabReport .tl,#kt-focus .tl,#kt-report .tl{color:var(--ink)}
+#tabFocus.on .tl,#tabQuiz.on .tl,#tabReport.on .tl,#kt-focus.on .tl,#kt-report.on .tl{color:var(--red)}
 .ti.on .t-ico::before{content:'';position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:var(--r-full);background:var(--red)}
 .tico-brick{position:relative;width:18px;height:13px;border-radius:var(--r-s);background:currentColor;box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
 .tico-brick::before,.tico-brick::after{content:'';position:absolute;top:2px;width:4px;height:4px;border-radius:var(--r-full);background:currentColor;box-shadow:inset 0 -1px 1px rgba(0,0,0,.25)}
@@ -777,8 +780,8 @@ body.kid-mode{padding-bottom:72px}
   <div class="ti on" onclick="st('home')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">首页</span></div>
   <div class="ti" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
   <div class="ti" onclick="st('checkin')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">打卡</span></div>
-  <div class="ti" onclick="st('focus')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">专注</span></div>
-  <div class="ti" onclick="st('quiz')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">刷题</span></div>
+  <div class="ti" id="tabFocus" onclick="st('focus')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">专注</span></div>
+  <div class="ti" id="tabQuiz" onclick="st('quiz')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">刷题</span></div>
   <div class="ti" id="tabReport" onclick="st('report')"><span class="t-ico"><span class="tico-chart" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">报告</span></div>
   <div class="ti" id="tabSettings" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
 </div>
