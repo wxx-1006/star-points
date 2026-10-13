@@ -959,10 +959,14 @@ $('resultModal').addEventListener('click', (e) => {
   if (e.target === $('resultModal')) hideResult(); /* 点遮罩也可关闭 */
 });
 
-/* ---------- 一屏适配：内容超出视口时整体 zoom 缩放（按钮始终可见，无需滚动） ---------- */
+/* ---------- 一屏适配 ----------
+   独立打开：内容超出视口时整体 zoom 缩放。
+   嵌入赚星账本：不自缩（避免与主应用其他页签缩放比例不一致导致跳来跳去），
+   改为向父页面报告内容高度，由主应用统一缩放，全站视觉一致。 */
 function fitOneScreen(){
   const app = document.querySelector('.app');
   if (!app) return;
+  if (FOCUS_ACCT !== 'local'){ reportHeight(); return; }
   const prev = app.style.zoom;
   app.style.zoom = ''; /* 先还原，测自然高度 */
   const needed = app.scrollHeight;
@@ -974,8 +978,17 @@ function fitOneScreen(){
   if (z !== prev){ app.style.zoom = z; }
   else if (prev){ app.style.zoom = prev; } /* 值未变则原样恢复，避免布局抖动 */
 }
+function reportHeight(){
+  try {
+    const app = document.querySelector('.app');
+    if (app && window.parent && window.parent !== window){
+      window.parent.postMessage({ type: 'focus-height', h: app.scrollHeight }, '*');
+    }
+  } catch (e){}
+}
 window.addEventListener('resize', fitOneScreen);
 window.addEventListener('orientationchange', fitOneScreen);
+window.addEventListener('load', reportHeight);
 
 /* ---------- 页签 ---------- */
 $('tabs').addEventListener('click', (e) => {
@@ -1222,7 +1235,12 @@ function trackUpdateStats(){
 }
 
 function renderTrack(){
-  trackSt.puzzle = makeTrackingPuzzle(trackSt.level);
+  const prevIdx = trackSt.puzzle ? trackSt.puzzle.targetIndex : null;
+  let tries = 0;
+  do { /* 与上一题目标位置相同则重抽，避免连续同位置 */
+    trackSt.puzzle = makeTrackingPuzzle(trackSt.level);
+    tries++;
+  } while (prevIdx !== null && trackSt.puzzle.targetIndex === prevIdx && tries < 20);
   const bEl = $('trackBoard');
   bEl.style.setProperty('--cols', trackSt.puzzle.size);
   bEl.innerHTML = '';
@@ -1367,7 +1385,12 @@ function buildStroopChoices(){
 }
 
 function nextStroopTrial(){
-  stroopSt.cur = makeStroopTrial();
+  let tries = 0;
+  do { /* 与上一题的「字色+墨色」组合相同则重抽，避免连续重复题 */
+    stroopSt.cur = makeStroopTrial();
+    tries++;
+  } while (tries < 20 && stroopSt.last && stroopSt.last.wordHex === stroopSt.cur.wordHex && stroopSt.last.inkHex === stroopSt.cur.inkHex);
+  stroopSt.last = { wordHex: stroopSt.cur.wordHex, inkHex: stroopSt.cur.inkHex };
   const w = $('stroopWord');
   w.textContent = stroopSt.cur.wordName;
   /* 关键：文字显示「墨色」(inkHex)，判定也按墨色(inkName)——渲染与判定必须同源 */
@@ -1988,7 +2011,12 @@ function swUpdateStats(){
 }
 
 function swShowTrial(){
-  swSt.cur = makeSwitchTrial();
+  let tries = 0;
+  do { /* 与上一题的「规则+数字」相同则重抽，避免连续重复题 */
+    swSt.cur = makeSwitchTrial();
+    tries++;
+  } while (tries < 20 && swSt.last && swSt.last.rule === swSt.cur.rule && swSt.last.n === swSt.cur.n);
+  swSt.last = { rule: swSt.cur.rule, n: swSt.cur.n };
   const stage = $('swStage');
   stage.classList.toggle('parity', swSt.cur.rule === 'parity');
   stage.classList.toggle('size', swSt.cur.rule === 'size');

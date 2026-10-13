@@ -672,6 +672,9 @@ body.kid-mode{padding-bottom:72px}
 .ck-cfg-btns{display:flex;gap:8px;flex:none}
 .ck-cfg-btns .ck-b.d{background:#FDEEEE;color:#B5544E}
 .ck-cfg-tip{font:500 10.5px/1.6 var(--ff);color:#A99F90;margin:6px 0}
+.fx-vis-row{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;background:var(--fill);border:1.5px solid transparent;border-radius:12px;padding:11px 14px;margin-bottom:8px;font:600 14px/1.3 var(--ff);color:var(--ink);cursor:pointer;white-space:nowrap}
+.fx-vis-row.on{border-color:var(--red);background:var(--red-l)}
+.fx-vis-row input{width:18px;height:18px;flex:none;accent-color:var(--red)}
 .ck-mustb{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--red-l);color:var(--red-deep);font:700 10px/1.6 var(--ff);vertical-align:1px;white-space:nowrap}
 .ck-item.must-pending{border-width:1.5px;border-style:solid}
 .ck-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
@@ -4039,9 +4042,18 @@ setInterval(function(){
     });
   }
 },60000);
-// 专注页 iframe 内破纪录 → 防抖上云
+// 专注页 iframe 内破纪录 → 防抖上云；高度上报 → 主应用统一缩放（与其他页签视觉一致，不跳动）
 window.addEventListener('message',function(e){
-  if(e.data&&e.data.type==='focus-best-updated')fxQueue();
+  if(!e.data)return;
+  if(e.data.type==='focus-best-updated')fxQueue();
+  if(e.data.type==='focus-height'){
+    var f=document.getElementById('focusFrame');
+    if(f){
+      var h=Math.max(420,parseInt(e.data.h,10)||0);
+      if(f.style.height!==h+'px')f.style.height=h+'px';
+      fxFit(); /* iframe 高度变化后实测整页是否溢出，统一由主应用缩小 */
+    }
+  }
 });
 document.addEventListener('visibilitychange',function(){ // 切回页面立即对齐（换设备查看场景）
   if(document.hidden)return;
@@ -4061,7 +4073,7 @@ function fxFrameHeight(){ // 按实际固定 UI（导航条）精确计算 ifram
 function fxShow(){
   if(!currentUser)return;
   var f=document.getElementById('focusFrame');
-  fxFit();
+  if(f&&!f.style.height)f.style.height=fxFrameHeight()+'px'; /* 初始默认高度，加载后由 iframe 高度上报修正 */
   var vb=document.getElementById('fxVisBtn');
   if(vb)vb.style.display=sessionRole==='parent'?'':'none';
   fxUpdateSyncUI();
@@ -4078,7 +4090,7 @@ function fxVisOpen(){ // 家长端：勾选孩子端可见的练习页签
   var h='<div class="ck-cfg-tip">勾选的练习会在孩子端「专注」页签显示；不勾=对孩子隐藏。家长端始终显示全部。配置会同步到所有设备。</div>';
   for(var i=0;i<FX_GAMES.length;i++){
     var gid=FX_GAMES[i][0],nm=FX_GAMES[i][1],on=!cur||cur.indexOf(gid)>=0; /* 未配置=默认全开 */
-    h+='<label class="ck-day'+(on?' on':'')+'" style="width:100%"><input type="checkbox" value="'+gid+'"'+(on?' checked':'')+' onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+nm+'</label>';
+    h+='<label class="fx-vis-row'+(on?' on':'')+'"><input type="checkbox" value="'+gid+'"'+(on?' checked':'')+' onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+nm+'</label>';
   }
   document.getElementById('fxVisBody').innerHTML=h;
   document.getElementById('mFxVis').classList.add('show');
@@ -4092,17 +4104,16 @@ function fxVisSave(){
   fxVisClose();
   toast(tabs.length?('已开放 '+tabs.length+' 个练习给孩子端'):'已对孩子端隐藏全部练习','ok');
 }
-function fxFit(){ // 设置高度后实测整页是否仍溢出（含头部等固定 UI），超出则回缩到恰好一屏
+function fxFit(){ // iframe 高度由 focus.html 高度上报决定；此处仅实测整页溢出并回缩，保证全站缩放一致
   var f=document.getElementById('focusFrame');
   if(!f)return;
-  var h=fxFrameHeight();
-  f.style.height=h+'px';
   requestAnimationFrame(function(){
     try{
       var over=document.body.scrollHeight-window.innerHeight;
       if(over>0){
-        h=Math.max(420,h-over-4);
-        f.style.height=h+'px';
+        var cur=parseInt(f.style.height,10)||420;
+        var nh=Math.max(420,cur-over-4);
+        if(nh!==cur)f.style.height=nh+'px';
       }
     }catch(e){}
   });
