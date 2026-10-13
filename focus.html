@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#e6f1fa" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="专注力训练" />
+<title>专注力训练</title>
+<style>
+  *{ box-sizing:border-box; }
+  :root{
+    --bg:#e6f1fa; --card:#ffffff; --card2:#ddecf9; --line:#bfd6ea;
+    --txt:#101c28; --dim:#3d4f63;
+    --accent:#6aa5dc; --accent-deep:#3f7cbf; --ok:#58b287; --bad:#e06b65;
+    --gap:10px;
+  }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:radial-gradient(900px 520px at 50% -20%, #cfe4f7 0%, rgba(230,241,250,0) 65%),
+               radial-gradient(700px 420px at 90% 110%, #d5e9fa 0%, rgba(230,241,250,0) 60%),
+               var(--bg);
+    color:var(--txt); min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+  }
+  .app{ max-width:720px; margin:0 auto; padding:12px 14px 18px; }
+
+  .title{ display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:17px; font-weight:700; letter-spacing:.5px; }
+  .title i{ width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 14px var(--accent); }
+
+  /* 页签（9 个，窄屏横向滚动） */
+  .tabs{ display:flex; gap:6px; padding:5px; background:#d8e8f6; border:1px solid var(--line); border-radius:14px; margin-bottom:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .tabs::-webkit-scrollbar{ display:none; }
+  .tab{ flex:1 0 auto; padding:8px 12px; border:0; border-radius:10px; background:transparent; color:var(--dim);
+        font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; transition:background .18s,color .18s; }
+  .tab:hover{ color:var(--txt); }
+  .tab.on{ background:#fff; color:var(--accent-deep); box-shadow:0 3px 12px rgba(63,124,191,.35); }
+  @media (max-width:430px){ .tab{ padding:8px 9px; font-size:13px; } }
+
+  .panel{ display:none; }
+  .panel.on{ display:block; animation:fade .22s ease; }
+  @keyframes fade{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+
+  /* 工具条 */
+  .toolbar{ display:flex; flex-wrap:wrap; align-items:center; gap:7px 12px; margin-bottom:9px; }
+  .field{ display:flex; align-items:center; gap:7px; }
+  .field > span{ font-size:12.5px; color:var(--dim); }
+  .seg{ display:inline-flex; gap:3px; padding:3px; background:var(--card); border:1px solid var(--line); border-radius:10px; }
+  .seg button{ min-width:44px; padding:5px 9px; border:0; border-radius:8px; background:transparent; color:var(--dim);
+               font-size:13.5px; font-weight:600; font-family:inherit; cursor:pointer; transition:.16s; }
+  .seg button:hover{ color:var(--txt); background:var(--card2); }
+  .seg button.on{ background:#fff; color:var(--accent-deep); box-shadow:inset 0 0 0 1.5px #8bbbe4; }
+
+  /* 状态区 */
+  .stats{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:9px; }
+  .stat{ padding:6px 4px; background:var(--card); border:1px solid var(--line); border-radius:11px; text-align:center; }
+  .stat .k{ font-size:11.5px; color:var(--dim); }
+  .stat .v{ margin-top:1px; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .stat.best .v{ color:#d9823d; }
+
+  .hint{ margin:0 0 8px; font-size:12px; color:var(--dim); line-height:1.45; }
+
+  /* 棋盘 */
+  .board-wrap{ width:100%; }
+  /* 手机端：棋盘按视口高度限宽，保证整页一屏显示（dvh 优先，vh 兜底） */
+  @media (max-width:540px){
+    .board-wrap{ width:min(100%, max(220px, calc(100vh - 330px))); margin:0 auto; }
+    .board-wrap{ width:min(100%, max(220px, calc(100dvh - 330px))); margin:0 auto; }
+  }
+  .board{ display:grid; grid-template-columns:repeat(var(--cols,4),minmax(0,1fr)); gap:var(--gap); width:100%; }
+  .cell{
+    aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+    padding:0; border:1px solid #c6dbef; border-radius:14px;
+    background:#fff;
+    box-shadow:0 2px 6px rgba(100,145,190,.14);
+    color:var(--txt); font-family:inherit; font-weight:700; font-size:var(--fs,22px);
+    font-variant-numeric:tabular-nums; cursor:pointer;
+    transition:transform .09s ease, background .18s, border-color .18s, color .18s;
+  }
+  .cell:active{ transform:scale(.93); }
+  .cell.done{ background:#eaf6ef; border-color:#cbe8d8; color:#93c9ab; }
+  .cell.wrong{ background:#fde9e7; border-color:var(--bad); color:#d9706b; animation:shake .28s; }
+  .cell.gone{ visibility:hidden; }
+  @keyframes shake{ 0%,100%{ transform:translateX(0);} 20%{ transform:translateX(-5px);} 50%{ transform:translateX(5px);} 80%{ transform:translateX(-3px);} }
+  .board.done .cell{ background:#e3f4ea; border-color:#b8e2cc; color:#79bd97; animation:none; }
+  .board.locked{ pointer-events:none; }
+  .cell svg{ width:58%; height:58%; display:block; }
+
+  /* 开始前的占位（未点开始不展示题目内容） */
+  .pre-start{ display:flex; align-items:center; justify-content:center; width:100%;
+              border:2px dashed var(--line); border-radius:16px; background:var(--card);
+              color:var(--dim); font-size:14px; }
+  .pre-start[hidden]{ display:none; }
+  #preStart{ aspect-ratio:1/1; }
+  #cxPreStart{ aspect-ratio:4/3; }
+  #trackPreStart{ aspect-ratio:1/1; }
+
+  /* 结果弹窗（不再内嵌页面，避免把开始按钮往下挤） */
+  .modal-mask{ position:fixed; inset:0; background:rgba(23,42,60,.45); display:flex; align-items:center; justify-content:center; z-index:99; padding:20px; }
+  .modal-mask[hidden]{ display:none; }
+  .modal-card{ width:min(320px,86vw); background:var(--card); border-radius:16px; padding:22px 18px 16px; text-align:center;
+               box-shadow:0 12px 40px rgba(23,42,60,.28); animation:pop .22s ease; }
+  @keyframes pop{ from{ opacity:0; transform:scale(.92); } to{ opacity:1; transform:none; } }
+  .modal-card .line1{ font-size:17px; font-weight:700; }
+  .modal-card .line2{ margin-top:7px; font-size:13px; color:var(--dim); line-height:1.5; }
+  .modal-btns{ display:flex; gap:10px; margin-top:16px; }
+  .modal-btns .btn{ flex:1; padding:10px; }
+  .rec{ margin-left:8px; padding:2px 9px; border-radius:999px; background:rgba(224,150,90,.16); color:#d98d4a; font-size:12px; }
+
+  .actions{ display:flex; gap:10px; margin-top:12px; }
+  .btn{ flex:1; padding:10px; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--txt);
+        font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; transition:.16s; }
+  .btn:hover{ background:var(--card2); }
+  .btn.primary{ background:var(--accent-deep); border-color:var(--accent-deep); color:#fff; box-shadow:0 6px 16px rgba(90,143,198,.38); }
+  .btn.primary:hover{ filter:brightness(1.08); }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .btn:disabled:hover{ filter:none; }
+
+  /* ===== 视觉追踪 / 色词 / 广度 ===== */
+  .bigword{ height:104px; display:flex; align-items:center; justify-content:center; margin:4px 0 12px;
+            border:1px solid var(--line); border-radius:14px; background:var(--card);
+            font-size:48px; font-weight:800; letter-spacing:2px; }
+  .bigword.ok{ border-color:rgba(124,197,163,.55); }
+  .bigword.bad{ border-color:var(--bad); }
+  .choices{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+  .choices button{ aspect-ratio:1/1; max-height:84px; border:0; border-radius:14px; cursor:pointer; transition:transform .1s; }
+  .choices button:active{ transform:scale(.92); }
+
+  /* ===== 24 点 ===== */
+  .p24-nums{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+  .p24-nums button{ padding:16px 0; border:1px solid #c6dbef; border-radius:14px; background:#fff;
+                    font-size:30px; font-weight:800; color:var(--txt); font-family:inherit; cursor:pointer;
+                    box-shadow:0 2px 6px rgba(100,145,190,.14); transition:transform .08s, opacity .15s; }
+  .p24-nums button:active{ transform:scale(.93); }
+  .p24-nums button.used{ opacity:.3; }
+  .p24-expr{ min-height:54px; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; padding:8px 12px;
+             border:1px solid var(--line); border-radius:12px; background:var(--card2);
+             font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; margin-bottom:10px; }
+  .p24-expr .ph{ font-size:13px; color:var(--dim); font-weight:400; }
+  .p24-expr.wrong{ border-color:var(--bad); animation:shake .28s; }
+  .p24-keys{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:10px; }
+  .p24-keys button{ padding:12px 0; border:1px solid #c6dbef; border-radius:10px; background:#fff;
+                    font-size:20px; font-weight:700; color:var(--txt); font-family:inherit; cursor:pointer; }
+  .p24-keys button:active{ transform:scale(.92); }
+  .p24-actions{ display:flex; gap:10px; }
+  .p24-actions .btn{ flex:1; padding:11px; }
+  .p24-actions .btn.submit{ flex:1.6; }
+  .p24-msg{ min-height:18px; margin:8px 0 0; font-size:12.5px; color:var(--dim); text-align:center; }
+  .p24-msg.ok{ color:#4da87c; }
+  .p24-msg.bad{ color:#d96560; }
+  .mcard{ aspect-ratio:3/4; border:1px solid #c6dbef; border-radius:12px; background:#fff;
+          box-shadow:0 2px 6px rgba(100,145,190,.14); font-size:var(--fs,26px); line-height:1;
+          display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;
+          font-family:inherit; transition:transform .12s ease, background .18s, border-color .18s; }
+  .mcard:active{ transform:scale(.94); }
+  .mcard.down{ background:#c9def2; border-color:#9cc4e6; }
+  .mcard.open{ background:#fff; }
+  .mcard.matched{ background:#eaf6ef; border-color:#cbe8d8; opacity:.85; }
+
+  .cell.lit{ background:#fdecd9; border-color:#f4b98a; }
+  .hint.ok{ color:#4da87c; }
+  .hint.bad{ color:#d96560; }
+
+  .sw-stage{ height:108px; display:flex; align-items:center; justify-content:center; margin:4px 0 10px;
+             border:3px solid #a9c6e2; border-radius:16px; background:var(--card); transition:border-color .15s, background .15s; }
+  .sw-stage.parity{ border-color:#7dabdc; background:#e8f2fc; }
+  .sw-stage.size{ border-color:#63b59c; background:#e6f6ef; }
+  .sw-num{ font-size:52px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .sw-answers{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .sw-answers button{ padding:16px 0; border:1px solid #c6dbef; border-radius:14px; background:#fff; color:var(--txt);
+                      font-size:19px; font-weight:700; font-family:inherit; cursor:pointer;
+                      box-shadow:0 2px 6px rgba(120,160,200,.12); transition:transform .08s; }
+  .sw-answers button:active{ transform:scale(.95); }
+
+  .cx-head{ display:flex; align-items:center; gap:8px; margin:4px 0 10px; padding:8px 12px;
+            border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .cx-head .cx-label{ font-size:12.5px; color:var(--dim); }
+  .cx-head .cx-sample{ width:40px; height:40px; flex:0 0 40px; border:1px solid #c6dbef; border-radius:9px;
+                       background:#fff; display:flex; align-items:center; justify-content:center; }
+  .cx-head .cx-sample svg{ width:30px; height:30px; display:block; }
+  .cx-grid{ display:grid; grid-template-columns:repeat(var(--cols,6),minmax(0,1fr)); gap:6px; }
+  .cx-cell{ aspect-ratio:1/1; border:1px solid #c9ddef; border-radius:9px; background:#fff; padding:0;
+            cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative;
+            transition:transform .08s, background .15s, border-color .15s; }
+  .cx-cell svg{ width:74%; height:74%; display:block; }
+  .cx-cell:active{ transform:scale(.9); }
+  .cx-cell.found{ background:#d9f2e3; border:2px solid #5fb98a; }
+  .cx-cell.found svg{ opacity:.28; }
+  .cx-cell.found::after{
+    content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:22px; font-weight:800; color:#1f8f5f; animation:cxpop .25s ease;
+  }
+  @keyframes cxpop{ 0%{ transform:scale(.3); opacity:0; } 70%{ transform:scale(1.2); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+  .cx-cell.wrong{ background:#fde9e7; border-color:var(--bad); animation:shake .28s; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1 class="title"><i></i>专注力训练</h1>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab on" data-tab="schulte" type="button">舒尔特</button>
+    <button class="tab" data-tab="track" type="button">视觉追踪</button>
+    <button class="tab" data-tab="stroop" type="button">色词干扰</button>
+    <button class="tab" data-tab="p24" type="button">24点</button>
+    <button class="tab" data-tab="memory" type="button">记忆翻牌</button>
+    <button class="tab" data-tab="corsi" type="button">空间方块</button>
+    <button class="tab" data-tab="switch" type="button">快速切换</button>
+    <button class="tab" data-tab="cancel" type="button">符号划消</button>
+  </nav>
+
+  <!-- ========== 1 舒尔特方格 ========== -->
+  <section class="panel on" id="panel-schulte">
+    <div class="toolbar">
+      <div class="field">
+        <span>形式</span>
+        <div class="seg" id="segType">
+          <button type="button" class="on" data-type="num">数字</button>
+          <button type="button" data-type="alpha">字母</button>
+        </div>
+      </div>
+      <div class="field">
+        <span>规格</span>
+        <div class="seg" id="segSize">
+          <button type="button" class="on" data-size="4">4×4</button>
+          <button type="button" data-size="5">5×5</button>
+          <button type="button" data-size="6">6×6</button>
+        </div>
+      </div>
+      <div class="field">
+        <span>变体</span>
+        <div class="seg" id="segVar">
+          <button type="button" data-v="rev">倒序</button>
+          <button type="button" data-v="noise">双色干扰</button>
+          <button type="button" data-v="hide">点后隐藏</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">用时</div><div class="v" id="timer">0.0s</div></div>
+      <div class="stat"><div class="k">进度</div><div class="v" id="progress">0/16</div></div>
+      <div class="stat"><div class="k">错误</div><div class="v" id="errors">0</div></div>
+      <div class="stat best" id="statBest"><div class="k">最佳</div><div class="v" id="best">--</div></div>
+    </div>
+
+    <p class="hint" id="hint"></p>
+
+    <div class="board-wrap" id="boardWrap">
+      <div class="board" id="board"></div>
+      <div class="pre-start" id="preStart">点击「开始」显示方格</div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnRestart" type="button">开始</button>
+    </div>
+  </section>
+
+  <!-- ========== 2 视觉追踪 ========== -->
+  <section class="panel" id="panel-track">
+    <div class="toolbar">
+      <div class="field">
+        <span>难度</span>
+        <div class="seg" id="segTrackLevel">
+          <button type="button" class="on" data-level="1">简单</button>
+          <button type="button" data-level="2">中等</button>
+          <button type="button" data-level="3">困难</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">轮次</div><div class="v" id="trackRound">0/10</div></div>
+      <div class="stat"><div class="k">用时</div><div class="v" id="trackTimer">0.0s</div></div>
+      <div class="stat"><div class="k">错误</div><div class="v" id="trackErrors">0</div></div>
+      <div class="stat best"><div class="k">最佳</div><div class="v" id="trackBest">--</div></div>
+    </div>
+
+    <p class="hint" id="trackHint">每轮只有 1 个图形与众不同，点它。难度越高格子越多、差异越小。共 10 轮，计总用时。</p>
+
+    <div class="board-wrap" id="trackWrap">
+      <div class="board" id="trackBoard"></div>
+      <div class="pre-start" id="trackPreStart">点击「开始」显示图形</div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnTrackStart" type="button">开始</button>
+    </div>
+  </section>
+
+  <!-- ========== 3 色词干扰（斯特鲁普） ========== -->
+  <section class="panel" id="panel-stroop">
+    <div class="stats">
+      <div class="stat"><div class="k">剩余</div><div class="v" id="stroopTimer">60s</div></div>
+      <div class="stat"><div class="k">答对</div><div class="v" id="stroopOk">0</div></div>
+      <div class="stat"><div class="k">答错</div><div class="v" id="stroopErr">0</div></div>
+      <div class="stat best"><div class="k">最佳</div><div class="v" id="stroopBest">--</div></div>
+    </div>
+
+    <p class="hint" id="stroopHint">文字内容会骗人——只看<b>文字的颜色</b>，点对应的色块。共 60 秒，尽量多答对。</p>
+
+    <div class="bigword" id="stroopWord">点击开始</div>
+    <div class="choices" id="stroopChoices"></div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnStroopStart" type="button">开始</button>
+    </div>
+  </section>
+
+  <!-- ========== 4 24 点 ========== -->
+  <section class="panel" id="panel-p24">
+    <div class="stats">
+      <div class="stat"><div class="k">用时</div><div class="v" id="p24Timer">0.0s</div></div>
+      <div class="stat"><div class="k">错误</div><div class="v" id="p24Errors">0</div></div>
+      <div class="stat"><div class="k">已答对</div><div class="v" id="p24Solved">0</div></div>
+      <div class="stat best"><div class="k">最快纪录</div><div class="v" id="p24Best">--</div></div>
+    </div>
+
+    <p class="hint">用加减乘除和括号把 4 个数算成 24，每个数恰好用一次。一题一题来：答对弹出成绩，计时归零；5 分钟做不出来可查看答案。</p>
+
+    <div class="board-wrap" id="p24Wrap">
+      <div id="p24Play">
+        <div class="p24-nums" id="p24Nums"></div>
+        <div class="p24-expr" id="p24Expr"></div>
+        <div class="p24-keys" id="p24Keys">
+          <button type="button" data-k="+" disabled>+</button>
+          <button type="button" data-k="-" disabled>−</button>
+          <button type="button" data-k="*" disabled>×</button>
+          <button type="button" data-k="/" disabled>÷</button>
+          <button type="button" data-k="(" disabled>(</button>
+          <button type="button" data-k=")" disabled>)</button>
+          <button type="button" data-k="del" disabled>⌫</button>
+        </div>
+        <div class="p24-actions">
+          <button class="btn" id="btnP24Clear" type="button" disabled>清空</button>
+          <button class="btn" id="btnP24Skip" type="button" disabled>换一题</button>
+          <button class="btn" id="btnP24Answer" type="button" disabled>查看答案</button>
+          <button class="btn primary submit" id="btnP24Submit" type="button" disabled>提交</button>
+        </div>
+        <p class="p24-msg" id="p24Msg"></p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnP24Start" type="button">开始</button>
+    </div>
+  </section>
+
+  <!-- ========== 5 记忆翻牌 ========== -->
+  <section class="panel" id="panel-memory">
+    <div class="toolbar">
+      <div class="field">
+        <span>难度</span>
+        <div class="seg" id="segMemLevel">
+          <button type="button" class="on" data-level="1">4×3</button>
+          <button type="button" data-level="2">5×4</button>
+          <button type="button" data-level="3">6×5</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">用时</div><div class="v" id="memTimer">0.0s</div></div>
+      <div class="stat"><div class="k">步数</div><div class="v" id="memMoves">0</div></div>
+      <div class="stat"><div class="k">配对</div><div class="v" id="memPairs">0/6</div></div>
+      <div class="stat best"><div class="k">最佳</div><div class="v" id="memBest">--</div></div>
+    </div>
+
+    <p class="hint">翻两张牌找相同，配对成功会保留，配错会盖回去。全部配完用时越短越好。</p>
+
+    <div class="board-wrap" id="memWrap">
+      <div class="board" id="memBoard"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnMemRestart" type="button">开始</button>
+    </div>
+  </section>
+
+  <!-- ========== 6 空间方块（Corsi） ========== -->
+  <section class="panel" id="panel-corsi">
+    <div class="stats">
+      <div class="stat"><div class="k">当前格数</div><div class="v" id="corsiLen">3</div></div>
+      <div class="stat"><div class="k">已通过最高</div><div class="v" id="corsiMax">0</div></div>
+      <div class="stat"><div class="k">剩余机会</div><div class="v" id="corsiLife">2</div></div>
+      <div class="stat best"><div class="k">最佳</div><div class="v" id="corsiBest">--</div></div>
+    </div>
+
+    <p class="hint" id="corsiHint">方块按顺序亮起，看完按原顺序点回。答对加 1 格，同一长度错 2 次结束。</p>
+
+    <div class="board-wrap" id="corWrap">
+      <div class="board" id="corsiBoard"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnCorsiStart" type="button">开始</button>
+    </div>
+  </section>
+
+  <!-- ========== 8 快速切换 ========== -->
+  <section class="panel" id="panel-switch">
+    <div class="stats">
+      <div class="stat"><div class="k">剩余</div><div class="v" id="swTimer">60s</div></div>
+      <div class="stat"><div class="k">答对</div><div class="v" id="swOk">0</div></div>
+      <div class="stat"><div class="k">答错</div><div class="v" id="swErr">0</div></div>
+      <div class="stat best"><div class="k">最佳</div><div class="v" id="swBest">--</div></div>
+    </div>
+
+    <p class="hint"><b>蓝框</b> → 判断数字的奇偶；<b>绿框</b> → 判断比 5 大还是小。框的颜色随时变，60 秒答对越多越好。</p>
+
+    <div class="sw-stage" id="swStage"><div class="sw-num" id="swNum">–</div></div>
+    <div class="sw-answers" id="swAnswers">
+      <button type="button" data-side="a" id="swBtnA">奇数</button>
+      <button type="button" data-side="b" id="swBtnB">偶数</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnSwStart" type="button">开始</button>
+    </div>
+  </section>
+
+  <!-- ========== 9 符号划消 ========== -->
+  <section class="panel" id="panel-cancel">
+    <div class="stats">
+      <div class="stat"><div class="k">用时</div><div class="v" id="cxTimer">0.0s</div></div>
+      <div class="stat"><div class="k">已找到</div><div class="v" id="cxFound">0/10</div></div>
+      <div class="stat"><div class="k">误点</div><div class="v" id="cxWrong">0</div></div>
+      <div class="stat best"><div class="k">最佳</div><div class="v" id="cxBest">--</div></div>
+    </div>
+
+    <div class="cx-head" id="cxHead" hidden>
+      <span class="cx-label">找出全部</span>
+      <span class="cx-sample" id="cxSample"></span>
+      <span class="cx-label">的图形（形状、颜色都要相同）</span>
+    </div>
+
+    <div class="cx-grid" id="cxBoard"></div>
+    <div class="pre-start" id="cxPreStart">点击「开始」显示图形</div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnCxRestart" type="button">开始</button>
+    </div>
+  </section>
+</div>
+
+<!-- 结果弹窗（全局唯一，替代页面内结果条） -->
+<div class="modal-mask" id="resultModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-label="游戏结果">
+    <div class="line1" id="modalMain"></div>
+    <div class="line2" id="modalSub"></div>
+    <div class="modal-btns">
+      <button class="btn" id="modalOk" type="button">确定</button>
+      <button class="btn primary" id="modalReplay" type="button">再来一局</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== CORE:BEGIN 纯逻辑，不依赖 DOM（供自动化测试） ===== */
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const DIGITS = '0123456789';
+
+function charPool(type, total){
+  if (type === 'num'){
+    const a = [];
+    for (let i = 1; i <= total; i++) a.push(String(i));
+    return a;
+  }
+  const pool = total <= 26 ? LETTERS : LETTERS + DIGITS;
+  return pool.slice(0, total).split('');
+}
+
+function shuffle(arr, rnd){
+  rnd = rnd || Math.random;
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(rnd() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function formatTime(ms){
+  if (ms === null || ms === undefined) return '--';
+  const s = ms / 1000;
+  if (s < 60) return s.toFixed(1) + 's';
+  const m = Math.floor(s / 60);
+  const r = s - m * 60;
+  return m + ':' + (r < 10 ? '0' : '') + r.toFixed(1);
+}
+
+/* ---------- 存储 key ---------- */
+function bestKey(type, size){ return 'focus.schulte.best.' + type + '.' + size; }
+function trackKey(level){ return 'focus.track.best.l' + level; }
+function stroopKey(){ return 'focus.stroop.best'; }
+function schulteXKey(variants, type, size){ return 'focus.schultex.best.' + variants + '.' + type + '.' + size; }
+
+/* 旧版进阶成绩 key 迁移：无形式段 → 补 num（进阶原本只有数字模式） */
+function migrateLegacyAdvKeys(st){
+  const combos = ['rev', 'noise', 'hide', 'rev-noise', 'rev-hide', 'noise-hide', 'rev-noise-hide'];
+  [4, 5, 6].forEach((sz) => {
+    combos.forEach((v) => {
+      const oldKey = 'focus.schultex.best.' + v + '.' + sz;
+      const raw = st.get(oldKey);
+      if (!raw) return;
+      const newKey = schulteXKey(v, 'num', sz);
+      if (!st.get(newKey)) st.set(newKey, raw);
+      st.del(oldKey);
+    });
+  });
+}
+
+/* 双层存储：内存兜底 + localStorage 尽力持久化。
+   嵌入赚星账本时按账号前缀分键（sp_fx__<acct>:<key>），
+   同一账号家长端/孩子端读写同一前缀 → 本地天然互通，云端由主应用 sync-focus.json 同步。 */
+function makeStore(ls, prefix){
+  const mem = new Map();
+  const pk = prefix || '';
+  const K = (k) => pk + k;
+  let ok = false;
+  if (ls){
+    try { ls.setItem('__probe__', '1'); ls.removeItem('__probe__'); ok = true; } catch (e){}
+  }
+  return {
+    persistent: ok,
+    raw: ls,
+    prefix: pk,
+    get(k){
+      if (mem.has(k)) return mem.get(k);
+      if (ok){ try { return ls.getItem(K(k)); } catch (e){} }
+      return null;
+    },
+    set(k, v){
+      mem.set(k, v);
+      if (ok){ try { ls.setItem(K(k), v); } catch (e){} }
+    },
+    del(k){
+      mem.delete(k);
+      if (ok){ try { ls.removeItem(K(k)); } catch (e){} }
+    }
+  };
+}
+
+/* 嵌入模式账号（URL 参数 acct，缺省 local 独立运行）+ 旧键一次性迁移 */
+const FOCUS_ACCT = (function(){
+  try {
+    const q = new URLSearchParams(location.search).get('acct');
+    return (q && /^[0-9a-zA-Z_-]{1,32}$/.test(q)) ? q : 'local';
+  } catch (e){ return 'local'; }
+})();
+const FOCUS_PREFIX = 'sp_fx__' + FOCUS_ACCT + ':';
+/* 老版本无前缀键（focus.*）一次性迁移到当前前缀下，避免独立打开丢历史成绩 */
+(function migrateLegacyFocusKeys(){
+  if (!FOCUS_PREFIX) return;
+  try {
+    const ls = window.localStorage;
+    if (!ls) return;
+    const legacy = [];
+    for (let i = 0; i < ls.length; i++){
+      const k = ls.key(i);
+      if (k && k.indexOf('focus.') === 0) legacy.push(k);
+    }
+    legacy.forEach((k) => {
+      const nk = FOCUS_PREFIX + k;
+      if (ls.getItem(nk) === null) ls.setItem(nk, ls.getItem(k));
+    });
+  } catch (e){}
+})();
+/* 嵌入模式下破纪录通知父页面（主应用防抖上云 sync-focus.json） */
+function notifyBestUpdated(key){
+  try {
+    if (window.parent && window.parent !== window){
+      window.parent.postMessage({ type: 'focus-best-updated', key: key, acct: FOCUS_ACCT }, '*');
+    }
+  } catch (e){}
+}
+
+/* ---------- 视觉追踪：生成一轮谜图 ---------- */
+/* 不变量：除目标格外所有格子完全相同（base）；目标与 base 至少有一处不同，
+   且目标组合全盘唯一。难度递进：格子更多 + 差异更细微（相似对内替换）。 */
+const TRACK_SHAPE_PAIRS = [['circle', 'ring'], ['square', 'diamond'], ['tri-up', 'tri-down']];
+const TRACK_COLOR_PAIRS = [
+  ['#f0949e', '#f4b98a'], /* 蜜桃粉 ↔ 蜜桃橙 */
+  ['#93cfb0', '#c4d98e'], /* 薄荷 ↔ 嫩草 */
+  ['#94bde6', '#8fd0d8'], /* 雾蓝 ↔ 天青 */
+  ['#c1a6dd', '#eda4c4']  /* 香芋紫 ↔ 玫瑰粉 */
+];
+function makeTrackingPuzzle(level, rnd){
+  rnd = rnd || Math.random;
+  const size = { 1: 4, 2: 5, 3: 6 }[level] || 4;
+  const count = size * size;
+  const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+  const sp = pick(TRACK_SHAPE_PAIRS);
+  const cp = pick(TRACK_COLOR_PAIRS);
+  const baseShape = sp[0], baseColor = cp[0];
+  let tShape, tColor;
+  if (level === 1){
+    /* 简单：形状、颜色都换成完全不同的一对，差异明显 */
+    let sp2 = pick(TRACK_SHAPE_PAIRS);
+    while (sp2 === sp) sp2 = pick(TRACK_SHAPE_PAIRS);
+    let cp2 = pick(TRACK_COLOR_PAIRS);
+    while (cp2 === cp) cp2 = pick(TRACK_COLOR_PAIRS);
+    tShape = pick(sp2);
+    tColor = pick(cp2);
+  } else if (level === 2){
+    /* 中等：同一对内的近似形状 + 近似颜色 */
+    tShape = sp[1];
+    tColor = cp[1];
+  } else {
+    /* 困难：只换一个属性，且是近似对内的细微替换 */
+    if (rnd() < 0.5){ tShape = sp[1]; tColor = baseColor; }
+    else { tShape = baseShape; tColor = cp[1]; }
+  }
+  const cells = [];
+  for (let i = 0; i < count; i++) cells.push({ shape: baseShape, color: baseColor });
+  const targetIndex = Math.floor(rnd() * count);
+  cells[targetIndex] = { shape: tShape, color: tColor };
+  return { size, cells, targetIndex, target: cells[targetIndex], base: { shape: baseShape, color: baseColor } };
+}
+
+function shapeSVG(shape, color){
+  if (shape === 'circle') return '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15" fill="' + color + '"></circle></svg>';
+  if (shape === 'ring') return '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="12" fill="none" stroke="' + color + '" stroke-width="8"></circle></svg>';
+  if (shape === 'square') return '<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="6" y="6" width="28" height="28" rx="4" fill="' + color + '"></rect></svg>';
+  if (shape === 'diamond') return '<svg viewBox="0 0 40 40" aria-hidden="true"><polygon points="20,4 36,20 20,36 4,20" fill="' + color + '"></polygon></svg>';
+  if (shape === 'tri-up') return '<svg viewBox="0 0 40 40" aria-hidden="true"><polygon points="20,5 36,34 4,34" fill="' + color + '"></polygon></svg>';
+  if (shape === 'star') return '<svg viewBox="0 0 40 40" aria-hidden="true"><polygon points="20,4 24,14.5 35.2,15.1 26.5,22.1 29.4,32.9 20,26.8 10.6,32.9 13.5,22.1 4.8,15.1 16,14.5" fill="' + color + '"></polygon></svg>';
+  if (shape === 'heart') return '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 33 C 11 25.5 4.5 18.5 6.8 11.8 C 8.8 6.4 15.6 5.2 19.2 9.6 L20 10.8 L20.8 9.6 C 24.4 5.2 31.2 6.4 33.2 11.8 C 35.5 18.5 29 25.5 20 33 Z" fill="' + color + '"></path></svg>';
+  if (shape === 'cross') return '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M15 6 H25 V15 H34 V25 H25 V34 H15 V25 H6 V15 H15 Z" fill="' + color + '"></path></svg>';
+  if (shape === 'hex') return '<svg viewBox="0 0 40 40" aria-hidden="true"><polygon points="11,5 29,5 37,20 29,35 11,35 3,20" fill="' + color + '"></polygon></svg>';
+  return '<svg viewBox="0 0 40 40" aria-hidden="true"><polygon points="4,6 36,6 20,35" fill="' + color + '"></polygon></svg>';
+}
+
+/* ---------- 色词干扰：生成一轮 ---------- */
+const STROOP_COLORS = [
+  { name: '红', hex: '#e07a7a' },
+  { name: '绿', hex: '#5fb98a' },
+  { name: '蓝', hex: '#6b9fd4' },
+  { name: '黄', hex: '#d9a94e' }
+];
+function makeStroopTrial(rnd){
+  rnd = rnd || Math.random;
+  const byName = {};
+  STROOP_COLORS.forEach((c) => { byName[c.name] = c.hex; });
+  const ink = STROOP_COLORS[Math.floor(rnd() * STROOP_COLORS.length)];
+  let word = ink;
+  if (rnd() >= 0.25){
+    do { word = STROOP_COLORS[Math.floor(rnd() * STROOP_COLORS.length)]; } while (word.name === ink.name);
+  }
+  return { wordName: word.name, wordHex: byName[word.name], inkName: ink.name, inkHex: byName[ink.name], congruent: word.name === ink.name };
+}
+
+/* ---------- 24 点 ---------- */
+function p24Key(){ return 'focus.p24.best.single'; } /* 单题最快（旧 5 题制 key 已废弃） */
+/* 递归下降求值：token 数组（数字字符串 / + - * / / 括号），不合法或除零返回 NaN */
+function p24EvalTokens(tokens){
+  let pos = 0;
+  function expr(){
+    let v = term();
+    while (pos < tokens.length && (tokens[pos] === '+' || tokens[pos] === '-')){
+      const op = tokens[pos++];
+      const r = term();
+      v = op === '+' ? v + r : v - r;
+    }
+    return v;
+  }
+  function term(){
+    let v = factor();
+    while (pos < tokens.length && (tokens[pos] === '*' || tokens[pos] === '/')){
+      const op = tokens[pos++];
+      const r = factor();
+      if (op === '*'){ v = v * r; }
+      else {
+        if (Math.abs(r) < 1e-9) throw 0;
+        v = v / r;
+      }
+    }
+    return v;
+  }
+  function factor(){
+    if (pos >= tokens.length) throw 0;
+    const t = tokens[pos];
+    if (t === '('){
+      pos++;
+      const v = expr();
+      if (pos >= tokens.length || tokens[pos] !== ')') throw 0;
+      pos++;
+      return v;
+    }
+    if (/^\d+$/.test(t)){ pos++; return parseInt(t, 10); }
+    throw 0;
+  }
+  try {
+    if (!tokens.length) return NaN;
+    const v = expr();
+    if (pos !== tokens.length) return NaN; /* 有未消费 token（如多余右括号） */
+    return v;
+  } catch (e){ return NaN; }
+}
+/* 判定：数字必须恰好各用一次；表达式合法；结果 = 24（浮点容差）。返回 'ok' | 'wrong' | 'invalid' */
+function p24Check(nums, tokens){
+  const used = tokens.filter(function(t){ return /^\d+$/.test(t); }).map(Number).sort(function(a, b){ return a - b; });
+  const want = nums.slice().sort(function(a, b){ return a - b; });
+  if (used.length !== want.length || used.some(function(v, i){ return v !== want[i]; })) return 'invalid';
+  const v = p24EvalTokens(tokens);
+  if (isNaN(v)) return 'invalid';
+  return Math.abs(v - 24) < 1e-6 ? 'ok' : 'wrong';
+}
+/* 自动解题：返回 token 数组（全程括号保证语义）或 null（无解）。也用于出题时验证有解 */
+function p24FindSolution(nums){
+  const EPS = 1e-6;
+  let result = null;
+  function dfs(list, exprs){
+    if (result) return;
+    if (list.length === 1){
+      if (Math.abs(list[0] - 24) < EPS) result = exprs[0];
+      return;
+    }
+    for (let i = 0; i < list.length && !result; i++){
+      for (let j = 0; j < list.length && !result; j++){
+        if (i === j) continue;
+        const rest = [], restE = [];
+        for (let k = 0; k < list.length; k++){
+          if (k !== i && k !== j){ rest.push(list[k]); restE.push(exprs[k]); }
+        }
+        const a = list[i], b = list[j];
+        const ops = [['+', a + b], ['-', a - b], ['*', a * b]];
+        if (Math.abs(b) > EPS) ops.push(['/', a / b]);
+        for (let o = 0; o < ops.length && !result; o++){
+          rest.push(ops[o][1]);
+          restE.push(['('].concat(exprs[i], [ops[o][0]], exprs[j], [')']));
+          dfs(rest, restE);
+          rest.pop(); restE.pop();
+        }
+      }
+    }
+  }
+  dfs(nums.map(Number), nums.map(String));
+  return result;
+}
+/* 出题：4 个 1~10 的数，保证有解 */
+function makeP24Nums(rnd){
+  rnd = rnd || Math.random;
+  for (let i = 0; i < 500; i++){
+    const nums = [];
+    for (let j = 0; j < 4; j++) nums.push(1 + Math.floor(rnd() * 10));
+    if (p24FindSolution(nums)) return nums;
+  }
+  return [3, 3, 8, 8]; /* 兜底：必有解 */
+}
+
+/* ---------- 记忆翻牌 ---------- */
+const MEM_EMOJIS = ['🍎','🍊','🍋','🍉','🍇','🍓','🥝','🍍','🥕','🌽','🍄','🐱','🐶','🐰','🐼'];
+function memKey(level){ return 'focus.memory.best.l' + level; }
+/* 每张牌出现恰好 2 次，牌面来自 MEM_EMOJIS 前pairs个洗牌抽样 */
+function makeMemoryDeck(level, rnd){
+  rnd = rnd || Math.random;
+  const conf = { 1: { cols: 4, rows: 3 }, 2: { cols: 5, rows: 4 }, 3: { cols: 6, rows: 5 } }[level] || { cols: 4, rows: 3 };
+  const pairs = conf.cols * conf.rows / 2;
+  const picks = shuffle(MEM_EMOJIS, rnd).slice(0, pairs);
+  const deck = shuffle(picks.concat(picks), rnd).map((e, i) => ({ i: i, emo: e }));
+  return { cols: conf.cols, rows: conf.rows, pairs: pairs, deck: deck };
+}
+
+/* ---------- 空间方块（Corsi） ---------- */
+function corsiKey(){ return 'focus.corsi.best'; }
+/* 序列内不重复 */
+function makeCorsiSeq(len, total, rnd){
+  rnd = rnd || Math.random;
+  const out = [];
+  while (out.length < len){
+    const c = Math.floor(rnd() * total);
+    if (out.indexOf(c) < 0) out.push(c);
+  }
+  return out;
+}
+
+/* ---------- 快速切换 ---------- */
+function switchKey(){ return 'focus.switch.best'; }
+/* size 规则下排除 5（无歧义） */
+function makeSwitchTrial(rnd){
+  rnd = rnd || Math.random;
+  const rule = rnd() < 0.5 ? 'parity' : 'size';
+  let n;
+  do { n = 1 + Math.floor(rnd() * 9); } while (rule === 'size' && n === 5);
+  return { rule: rule, n: n };
+}
+function switchAnswer(trial){
+  if (trial.rule === 'parity') return trial.n % 2 === 1 ? 'odd' : 'even';
+  return trial.n > 5 ? 'big' : 'small';
+}
+
+/* ---------- 符号划消 ---------- */
+/* 10 种几何图形：圆/方/菱形/正三角/倒三角/五角星/心形/十字/六边形/圆环 */
+const CANCEL_SHAPES = ['circle', 'square', 'diamond', 'tri-up', 'tri-down', 'star', 'heart', 'cross', 'hex', 'ring'];
+const CANCEL_COLORS = ['#e8899b', '#8fc7a8', '#8db4dd', '#e3b269', '#b79ad6'];
+function cancelKey(level){ return 'focus.cancel.best.l' + level; }
+/* 不变量：目标恰好 targets 个；其余格子组合 != 目标；近似干扰比例随难度递增 */
+function makeCancelPuzzle(level, rnd){
+  rnd = rnd || Math.random;
+  const conf = { 1: { cols: 6, rows: 5, targets: 6, near: 0.25 },
+                 2: { cols: 7, rows: 6, targets: 9, near: 0.50 },
+                 3: { cols: 8, rows: 6, targets: 10, near: 0.75 } }[level] ||
+                { cols: 6, rows: 5, targets: 6, near: 0.25 };
+  const total = conf.cols * conf.rows;
+  const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+  const tShape = pick(CANCEL_SHAPES);
+  const tColor = pick(CANCEL_COLORS);
+  const cells = [];
+  for (let i = 0; i < total - conf.targets; i++){
+    let s, c;
+    if (rnd() < conf.near){
+      /* 近似干扰：同形状换色 或 同色变形状 */
+      if (rnd() < 0.5){
+        s = tShape;
+        do { c = pick(CANCEL_COLORS); } while (c === tColor);
+      } else {
+        c = tColor;
+        do { s = pick(CANCEL_SHAPES); } while (s === tShape);
+      }
+    } else {
+      /* 远干扰：形状、颜色都不同 */
+      do { s = pick(CANCEL_SHAPES); c = pick(CANCEL_COLORS); } while (s === tShape || c === tColor);
+    }
+    cells.push({ shape: s, color: c });
+  }
+  for (let i = 0; i < conf.targets; i++) cells.push({ shape: tShape, color: tColor });
+  const deck = shuffle(cells, rnd);
+  const targetIndexes = [];
+  deck.forEach((cell, i) => {
+    if (cell.shape === tShape && cell.color === tColor) targetIndexes.push(i);
+  });
+  return { cols: conf.cols, rows: conf.rows, cells: deck, target: { shape: tShape, color: tColor }, targetIndexes: targetIndexes };
+}
+/* ===== CORE:END ===== */
+
+let store;
+try {
+  store = makeStore(window.localStorage, FOCUS_PREFIX);
+} catch (e){
+  store = makeStore(null, FOCUS_PREFIX);
+}
+migrateLegacyAdvKeys(store);
+
+const $ = (id) => document.getElementById(id);
+
+function loadJSON(key){
+  const raw = store.get(key);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e){ return null; }
+}
+function saveJSON(key, v){
+  store.set(key, JSON.stringify(v));
+  notifyBestUpdated(key);
+}
+
+/* ---------- 结果弹窗 ---------- */
+let resultReplay = null; /* 「再来一局」回调：由弹结果的游戏传入自己的开局逻辑 */
+function showResult(mainText, subText, showRec, replay){
+  resultReplay = replay || null;
+  $('modalReplay').hidden = !resultReplay;
+  $('modalMain').textContent = mainText;
+  const sub = $('modalSub');
+  sub.textContent = subText;
+  if (showRec){
+    const tag = document.createElement('span');
+    tag.className = 'rec';
+    tag.textContent = '新纪录';
+    sub.appendChild(tag);
+  }
+  $('resultModal').hidden = false;
+}
+function hideResult(){ $('resultModal').hidden = true; }
+$('modalOk').addEventListener('click', hideResult);
+$('modalReplay').addEventListener('click', () => {
+  hideResult();
+  if (resultReplay){
+    const fn = resultReplay;
+    resultReplay = null;
+    fn();
+  }
+});
+$('resultModal').addEventListener('click', (e) => {
+  if (e.target === $('resultModal')) hideResult(); /* 点遮罩也可关闭 */
+});
+
+/* ---------- 一屏适配：内容超出视口时整体 zoom 缩放（按钮始终可见，无需滚动） ---------- */
+function fitOneScreen(){
+  const app = document.querySelector('.app');
+  if (!app) return;
+  const prev = app.style.zoom;
+  app.style.zoom = ''; /* 先还原，测自然高度 */
+  const needed = app.scrollHeight;
+  const avail = window.innerHeight;
+  let z = '';
+  if (needed > avail && needed > 0){
+    z = Math.max(0.55, avail / needed).toFixed(3); /* 下限 0.55，过小宁可滚动 */
+  }
+  if (z !== prev){ app.style.zoom = z; }
+  else if (prev){ app.style.zoom = prev; } /* 值未变则原样恢复，避免布局抖动 */
+}
+window.addEventListener('resize', fitOneScreen);
+window.addEventListener('orientationchange', fitOneScreen);
+
+/* ---------- 页签 ---------- */
+$('tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  const tabs = $('tabs').querySelectorAll('.tab');
+  for (let i = 0; i < tabs.length; i++) tabs[i].classList.toggle('on', tabs[i] === btn);
+  document.querySelectorAll('.panel').forEach((p) => {
+    p.classList.toggle('on', p.id === 'panel-' + btn.dataset.tab);
+  });
+  if (btn.dataset.tab === 'schulte') fitFont();
+  fitOneScreen();
+});
+
+function fitBoard(boardEl, cols){
+  const w = boardEl.getBoundingClientRect().width;
+  if (!w) return;
+  const gap = parseFloat(getComputedStyle(boardEl).gap) || 10;
+  const cell = (w - gap * (cols - 1)) / cols;
+  boardEl.style.setProperty('--fs', Math.round(cell * 0.42) + 'px');
+}
+
+/* 通用棋盘字体自适应：观察所有 board-wrap */
+if (window.ResizeObserver){
+  const ro = new ResizeObserver(() => {
+    fitFont();
+    fitBoard($('trackBoard'), trackSt.puzzle ? trackSt.puzzle.size : 4);
+    fitMemFont();
+  });
+  ['boardWrap', 'trackWrap', 'memWrap'].forEach((id) => ro.observe($(id)));
+} else {
+  window.addEventListener('resize', () => {
+    fitFont();
+    fitBoard($('trackBoard'), trackSt.puzzle ? trackSt.puzzle.size : 4);
+    fitMemFont();
+  });
+}
+
+/* ================================================================
+   1. 舒尔特方格（含进阶变体）
+   ================================================================ */
+const board = $('board');
+const wrap = $('boardWrap');
+
+const ADV_VAR_LABEL = { rev: '倒序', noise: '双色干扰', hide: '点后隐藏' };
+const NOISE_COLORS = ['#e07a7a', '#6b9fd4', '#5c5266'];
+
+const state = {
+  type: 'num',
+  size: 4,
+  variants: { rev: false, noise: false, hide: false },
+  expected: [],
+  next: 0,
+  errors: 0,
+  started: false,
+  finished: false,
+  t0: 0,
+  timerId: null
+};
+
+function comboStr(){
+  const parts = [];
+  ['rev', 'noise', 'hide'].forEach((k) => { if (state.variants[k]) parts.push(k); });
+  return parts.length ? parts.join('-') : 'none';
+}
+function comboLabel(){
+  const parts = [];
+  ['rev', 'noise', 'hide'].forEach((k) => { if (state.variants[k]) parts.push(ADV_VAR_LABEL[k]); });
+  return parts.length ? parts.join(' + ') : '标准';
+}
+/* 当前变体组合下的成绩 key：无变体沿用旧 key，已有成绩无缝保留 */
+function keyFor(type, size){
+  const vs = comboStr();
+  return vs === 'none' ? bestKey(type, size) : schulteXKey(vs, type, size);
+}
+
+function render(){
+  const total = state.size * state.size;
+  state.expected = charPool(state.type, total);
+  if (state.variants.rev) state.expected = state.expected.slice().reverse();
+  state.next = 0;
+  state.errors = 0;
+  state.started = false;
+  state.finished = false;
+  state.t0 = 0;
+  stopTimer();
+
+  board.classList.remove('done');
+  board.style.setProperty('--cols', state.size);
+  board.innerHTML = '';
+  $('preStart').hidden = false;
+  $('btnRestart').textContent = '开始';
+  $('btnRestart').disabled = false;
+
+  $('timer').textContent = '0.0s';
+  updateStats();
+  updateHint();
+}
+
+/* 点「开始」：发牌显示方格，同时立即开始计时 */
+function startTimer(){
+  stopTimer();
+  state.started = true;
+  state.t0 = performance.now();
+  state.timerId = setInterval(() => {
+    $('timer').textContent = formatTime(performance.now() - state.t0);
+  }, 100);
+}
+
+function deal(){
+  $('preStart').hidden = true;
+  board.innerHTML = '';
+  shuffle(state.expected).forEach((v) => {
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'cell';
+    cell.dataset.v = v;
+    cell.textContent = v;
+    if (state.variants.noise){
+      cell.style.color = NOISE_COLORS[Math.floor(Math.random() * NOISE_COLORS.length)];
+    }
+    cell.addEventListener('click', () => onCell(cell));
+    board.appendChild(cell);
+  });
+  fitFont();
+  startTimer();
+  $('btnRestart').disabled = true; /* 进行中禁止重开，结束后恢复 */
+  fitOneScreen();
+}
+
+function fitFont(){ fitBoard(board, state.size); }
+
+function updateStats(){
+  const total = state.size * state.size;
+  $('progress').textContent = state.next + '/' + total;
+  $('errors').textContent = state.errors;
+  const b = loadJSON(keyFor(state.type, state.size));
+  $('best').textContent = b ? formatTime(b.ms) : '--';
+}
+
+function updateHint(){
+  const pool = charPool(state.type, state.size * state.size);
+  let t = state.variants.rev
+    ? '点「开始」出现方格后，从 ' + pool[pool.length - 1] + ' 倒着点到 ' + pool[0]
+    : '点「开始」出现方格后，从 ' + pool[0] + ' 依次点到 ' + pool[pool.length - 1];
+  if (state.variants.noise) t += '；文字颜色随机变化是干扰，别被带偏';
+  if (state.variants.hide) t += '；点对的格子会消失，靠位置记忆继续';
+  t += '。点「开始」即开始计时，点错会闪红。';
+  $('hint').textContent = t;
+}
+
+function onCell(cell){
+  if (state.finished) return;
+
+  const v = cell.dataset.v;
+  if (v === state.expected[state.next]){
+    cell.classList.add('done');
+    state.next += 1;
+    updateStats();
+    if (state.variants.hide) setTimeout(() => cell.classList.add('gone'), 160);
+    if (state.next === state.expected.length) finish();
+  } else {
+    state.errors += 1;
+    updateStats();
+    cell.classList.remove('wrong');
+    void cell.offsetWidth;
+    cell.classList.add('wrong');
+    setTimeout(() => cell.classList.remove('wrong'), 300);
+  }
+}
+
+function stopTimer(){
+  if (state.timerId){ clearInterval(state.timerId); state.timerId = null; }
+}
+
+function finish(){
+  state.finished = true;
+  stopTimer();
+  const cost = performance.now() - state.t0;
+  $('timer').textContent = formatTime(cost);
+  board.classList.add('done');
+  $('btnRestart').disabled = false; /* 结束后允许再来一局 */
+
+  const key = keyFor(state.type, state.size);
+  const prev = loadJSON(key);
+  const isNew = !prev || cost < prev.ms;
+  if (isNew) saveJSON(key, { ms: cost, errors: state.errors, at: Date.now() });
+  updateStats();
+
+  showResult('完成！用时 ' + formatTime(cost),
+    (comboStr() === 'none' ? '' : comboLabel() + ' · ') + '错误 ' + state.errors + ' 次 · 本局 ' + state.size + '×' + state.size + ' ' + (state.type === 'num' ? '数字' : '字母'),
+    isNew,
+    () => { render(); deal(); });
+}
+
+$('segType').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-type]');
+  if (!btn) return;
+  state.type = btn.dataset.type;
+  $('segType').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
+  render();
+});
+
+$('segSize').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-size]');
+  if (!btn) return;
+  state.size = parseInt(btn.dataset.size, 10);
+  $('segSize').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
+  render();
+});
+
+$('segVar').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-v]');
+  if (!btn) return;
+  const k = btn.dataset.v;
+  state.variants[k] = !state.variants[k];
+  btn.classList.toggle('on', state.variants[k]);
+  render();
+});
+
+$('btnRestart').addEventListener('click', () => { render(); deal(); });
+
+/* ================================================================
+   2. 视觉追踪
+   ================================================================ */
+const trackSt = {
+  level: 1,
+  round: 0,
+  running: false,
+  finished: false,
+  errors: 0,
+  t0: 0,
+  timerId: null,
+  puzzle: null,
+  lock: false,
+  ROUNDS: 10
+};
+
+function trackUpdateStats(){
+  $('trackRound').textContent = trackSt.round + '/' + trackSt.ROUNDS;
+  $('trackErrors').textContent = trackSt.errors;
+  const b = loadJSON(trackKey(trackSt.level));
+  $('trackBest').textContent = b ? formatTime(b.ms) : '--';
+}
+
+function renderTrack(){
+  trackSt.puzzle = makeTrackingPuzzle(trackSt.level);
+  const bEl = $('trackBoard');
+  bEl.style.setProperty('--cols', trackSt.puzzle.size);
+  bEl.innerHTML = '';
+  trackSt.puzzle.cells.forEach((c, i) => {
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'cell';
+    cell.dataset.i = i;
+    cell.innerHTML = shapeSVG(c.shape, c.color);
+    cell.addEventListener('click', () => onTrackCell(cell));
+    bEl.appendChild(cell);
+  });
+  fitBoard(bEl, trackSt.puzzle.size);
+}
+
+/* 未开始态：清场 + 显示占位（与舒尔特/划消一致，按钮位置稳定不跳动） */
+function resetTrack(){
+  trackSt.running = false;
+  trackSt.finished = false;
+  trackSt.round = 0;
+  trackSt.errors = 0;
+  trackSt.puzzle = null;
+  trackSt.lock = false;
+  if (trackSt.timerId){ clearInterval(trackSt.timerId); trackSt.timerId = null; }
+  $('trackBoard').innerHTML = '';
+  $('trackPreStart').hidden = false;
+  $('btnTrackStart').disabled = false;
+  $('btnTrackStart').textContent = '开始';
+  $('trackTimer').textContent = '0.0s';
+  trackUpdateStats();
+}
+
+function startTrack(){
+  $('trackPreStart').hidden = true;
+  trackSt.running = true;
+  trackSt.finished = false;
+  trackSt.round = 0;
+  trackSt.errors = 0;
+  trackSt.t0 = performance.now();
+  $('btnTrackStart').disabled = true;
+  $('trackTimer').textContent = '0.0s';
+  if (trackSt.timerId) clearInterval(trackSt.timerId);
+  trackSt.timerId = setInterval(() => {
+    $('trackTimer').textContent = formatTime(performance.now() - trackSt.t0);
+  }, 100);
+  nextTrackRound();
+  fitOneScreen();
+}
+
+function nextTrackRound(){
+  trackSt.round += 1;
+  trackSt.lock = false;
+  trackUpdateStats();
+  renderTrack();
+}
+
+function onTrackCell(cell){
+  if (!trackSt.running || trackSt.lock || trackSt.finished) return;
+  const i = parseInt(cell.dataset.i, 10);
+  if (i === trackSt.puzzle.targetIndex){
+    trackSt.lock = true;
+    cell.classList.add('done');
+    if (trackSt.round >= trackSt.ROUNDS){
+      setTimeout(finishTrack, 220);
+    } else {
+      setTimeout(() => { if (trackSt.running && !trackSt.finished) nextTrackRound(); }, 220);
+    }
+  } else {
+    trackSt.errors += 1;
+    trackUpdateStats();
+    cell.classList.remove('wrong');
+    void cell.offsetWidth;
+    cell.classList.add('wrong');
+    setTimeout(() => cell.classList.remove('wrong'), 300);
+  }
+}
+
+function finishTrack(){
+  trackSt.finished = true;
+  trackSt.running = false;
+  if (trackSt.timerId){ clearInterval(trackSt.timerId); trackSt.timerId = null; }
+  const cost = performance.now() - trackSt.t0;
+  $('trackTimer').textContent = formatTime(cost);
+  $('trackBoard').classList.add('done');
+
+  const key = trackKey(trackSt.level);
+  const prev = loadJSON(key);
+  const isNew = !prev || cost < prev.ms;
+  if (isNew) saveJSON(key, { ms: cost, errors: trackSt.errors, at: Date.now() });
+  trackUpdateStats();
+
+  showResult('完成！总用时 ' + formatTime(cost),
+    '10 轮 · 错误 ' + trackSt.errors + ' 次 · ' + (trackSt.level === 1 ? '简单' : trackSt.level === 2 ? '中等' : '困难'),
+    isNew,
+    startTrack);
+  $('btnTrackStart').disabled = false;
+  $('trackBoard').classList.remove('done');
+}
+
+$('segTrackLevel').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-level]');
+  if (!btn) return;
+  trackSt.level = parseInt(btn.dataset.level, 10);
+  $('segTrackLevel').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
+  resetTrack();
+});
+
+$('btnTrackStart').addEventListener('click', startTrack);
+resetTrack();
+
+/* ================================================================
+   3. 色词干扰（斯特鲁普）
+   ================================================================ */
+const stroopSt = {
+  running: false,
+  ok: 0,
+  err: 0,
+  deadline: 0,
+  timerId: null,
+  cur: null
+};
+
+function stroopUpdateStats(){
+  $('stroopOk').textContent = stroopSt.ok;
+  $('stroopErr').textContent = stroopSt.err;
+  const b = loadJSON(stroopKey());
+  $('stroopBest').textContent = b ? b.score + ' 题' : '--';
+}
+
+function buildStroopChoices(){
+  const box = $('stroopChoices');
+  box.innerHTML = '';
+  STROOP_COLORS.forEach((c) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.name = c.name;
+    btn.setAttribute('aria-label', c.name);
+    btn.style.background = c.hex;
+    btn.addEventListener('click', () => onStroopAnswer(c.name));
+    box.appendChild(btn);
+  });
+}
+
+function nextStroopTrial(){
+  stroopSt.cur = makeStroopTrial();
+  const w = $('stroopWord');
+  w.textContent = stroopSt.cur.wordName;
+  /* 关键：文字显示「墨色」(inkHex)，判定也按墨色(inkName)——渲染与判定必须同源 */
+  w.style.color = stroopSt.cur.inkHex;
+  w.classList.remove('ok', 'bad');
+}
+
+function startStroop(){
+  stroopSt.running = true;
+  stroopSt.ok = 0;
+  stroopSt.err = 0;
+  stroopSt.deadline = performance.now() + 60000;
+  $('btnStroopStart').disabled = true;
+  buildStroopChoices();
+  if (stroopSt.timerId) clearInterval(stroopSt.timerId);
+  stroopSt.timerId = setInterval(() => {
+    const left = Math.max(0, stroopSt.deadline - performance.now());
+    $('stroopTimer').textContent = Math.ceil(left / 1000) + 's';
+    if (left <= 0) finishStroop();
+  }, 100);
+  nextStroopTrial();
+  stroopUpdateStats();
+  fitOneScreen();
+}
+
+function onStroopAnswer(name){
+  if (!stroopSt.running) return;
+  const w = $('stroopWord');
+  if (stroopSt.cur && name === stroopSt.cur.inkName){
+    stroopSt.ok += 1;
+    w.classList.add('ok');
+  } else {
+    stroopSt.err += 1;
+    w.classList.add('bad');
+  }
+  stroopUpdateStats();
+  nextStroopTrial();
+}
+
+function finishStroop(){
+  if (!stroopSt.running && stroopSt.ok === 0 && stroopSt.err === 0) return;
+  stroopSt.running = false;
+  if (stroopSt.timerId){ clearInterval(stroopSt.timerId); stroopSt.timerId = null; }
+  $('stroopTimer').textContent = '0s';
+  $('stroopWord').textContent = '时间到';
+  $('stroopWord').style.color = '';
+
+  const key = stroopKey();
+  const prev = loadJSON(key);
+  const isNew = stroopSt.ok > 0 && (!prev || stroopSt.ok > prev.score);
+  if (isNew) saveJSON(key, { score: stroopSt.ok, at: Date.now() });
+  stroopUpdateStats();
+
+  showResult('答对 ' + stroopSt.ok + ' 题',
+    '答错 ' + stroopSt.err + ' 次 · 正确率 ' + (stroopSt.ok + stroopSt.err > 0 ? Math.round(stroopSt.ok * 100 / (stroopSt.ok + stroopSt.err)) : 0) + '%',
+    isNew,
+    startStroop);
+  $('btnStroopStart').disabled = false;
+}
+
+$('btnStroopStart').addEventListener('click', startStroop);
+buildStroopChoices();
+stroopUpdateStats();
+
+/* ================================================================
+   4. 24 点（单题模式：答对弹成绩回开始态；换一题计时归零；5 分钟可看答案）
+   ================================================================ */
+const P24_ANSWER_AFTER = 5 * 60 * 1000; /* 5 分钟后可查看答案 */
+const p24St = {
+  qn: 0,           /* 第几题（跨局累计） */
+  totalSolved: 0,  /* 累计答对 */
+  nums: [],
+  errors: 0,       /* 本题错误 */
+  started: false,
+  finished: false,
+  t0: 0,
+  timerId: null,
+  tokens: [],
+  used: []
+};
+
+function p24StopTimer(){
+  if (p24St.timerId){ clearInterval(p24St.timerId); p24St.timerId = null; }
+}
+
+function p24UpdateStats(){
+  $('p24Errors').textContent = p24St.errors;
+  $('p24Solved').textContent = p24St.totalSolved;
+  const b = loadJSON(p24Key());
+  $('p24Best').textContent = b ? formatTime(b.ms) : '--';
+}
+
+function p24Msg(text, cls){
+  const el = $('p24Msg');
+  el.textContent = text;
+  el.classList.remove('ok', 'bad');
+  if (cls) el.classList.add(cls);
+}
+
+/* 题面控件可用性统一开关（未开始 = 骨架禁用态，高度恒定按钮不跳动） */
+function p24SetPlayEnabled(on){
+  document.querySelectorAll('#p24Keys button').forEach((b) => { b.disabled = !on; });
+  ['btnP24Clear', 'btnP24Skip', 'btnP24Submit'].forEach((id) => { $(id).disabled = !on; });
+  $('btnP24Answer').disabled = !on;
+}
+
+/* 数字按钮的可用状态由 tokens 推导（同值等价，某值配额用完则整组置灰） */
+function p24SyncUsed(){
+  const usedCount = {}, total = {};
+  p24St.tokens.forEach((t) => {
+    if (/^\d+$/.test(t)) usedCount[t] = (usedCount[t] || 0) + 1;
+  });
+  p24St.nums.forEach((n) => { total[n] = (total[n] || 0) + 1; });
+  p24St.used = p24St.nums.map((n) => (usedCount[n] || 0) >= total[n]);
+}
+
+function p24RenderNums(){
+  const box = $('p24Nums');
+  box.innerHTML = '';
+  p24St.nums.forEach((n, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = n;
+    btn.dataset.i = i;
+    if (p24St.used[i]) btn.classList.add('used');
+    btn.addEventListener('click', () => {
+      if (p24St.finished || p24St.used[i]) return;
+      p24St.tokens.push(String(n));
+      p24SyncUsed();
+      p24RenderNums();
+      p24RenderTokens();
+      p24Msg('');
+    });
+    box.appendChild(btn);
+  });
+}
+
+function p24RenderTokens(){
+  const box = $('p24Expr');
+  if (!p24St.tokens.length){
+    box.innerHTML = '<span class="ph">点击数字和运算符构建算式</span>';
+    return;
+  }
+  box.textContent = p24St.tokens.map((t) => (t === '*' ? '×' : t === '/' ? '÷' : t)).join(' ');
+}
+
+function p24FormatSolution(sol){
+  return sol.map((t) => (t === '*' ? '×' : t === '/' ? '÷' : t)).join('') + ' = 24';
+}
+
+/* 未开始骨架：4 个问号占位 + 键盘禁用（与出题后等高，按钮位置稳定） */
+function renderP24(){
+  p24St.started = false;
+  p24St.finished = false;
+  p24St.nums = [];
+  p24St.tokens = [];
+  p24St.used = [];
+  p24St.errors = 0;
+  p24StopTimer();
+  p24SetPlayEnabled(false);
+
+  const box = $('p24Nums');
+  box.innerHTML = '';
+  for (let i = 0; i < 4; i++){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '?';
+    btn.disabled = true;
+    box.appendChild(btn);
+  }
+  $('p24Expr').innerHTML = '<span class="ph">点击「开始」出题</span>';
+  $('p24Timer').textContent = '0.0s';
+  $('btnP24Start').disabled = false;
+  $('btnP24Start').textContent = '开始';
+  p24Msg('');
+  p24UpdateStats();
+}
+
+/* 点「开始」：出新一题并立即计时 */
+function dealP24(){
+  p24St.started = true;
+  p24St.finished = false;
+  p24St.qn += 1;
+  p24St.errors = 0;
+  p24St.nums = makeP24Nums();
+  p24St.tokens = [];
+  p24SyncUsed();
+  p24RenderNums();
+  p24RenderTokens();
+  p24SetPlayEnabled(true);
+  $('btnP24Answer').disabled = true; /* 5 分钟后解锁 */
+  p24St.t0 = performance.now();
+  p24StopTimer();
+  p24St.timerId = setInterval(() => {
+    const el = performance.now() - p24St.t0;
+    $('p24Timer').textContent = formatTime(el);
+    if (el >= P24_ANSWER_AFTER && $('btnP24Answer').disabled){
+      $('btnP24Answer').disabled = false;
+      p24Msg('已经 5 分钟啦，可以点「查看答案」', 'bad');
+    }
+  }, 100);
+  p24UpdateStats();
+  $('btnP24Start').disabled = true;
+  fitOneScreen();
+}
+
+/* 答对：单题成绩入库（最快纪录），弹窗后回开始态 */
+function finishP24(){
+  p24St.finished = true;
+  p24StopTimer();
+  p24SetPlayEnabled(false);
+  p24St.totalSolved += 1;
+  $('btnP24Start').disabled = false;
+  const cost = performance.now() - p24St.t0;
+  $('p24Timer').textContent = formatTime(cost);
+
+  const key = p24Key();
+  const prev = loadJSON(key);
+  const isNew = !prev || cost < prev.ms;
+  if (isNew) saveJSON(key, { ms: cost, errors: p24St.errors, at: Date.now() });
+  p24UpdateStats();
+
+  showResult('答对了！用时 ' + formatTime(cost),
+    '第 ' + p24St.qn + ' 题 · 错误 ' + p24St.errors + ' 次 · 点开始继续下一题',
+    isNew,
+    dealP24);
+}
+
+/* 换一题：放弃当前题，计时归零重新计（不计错误） */
+function p24Skip(){
+  if (!p24St.started || p24St.finished) return;
+  p24StopTimer();
+  p24St.nums = makeP24Nums();
+  p24St.tokens = [];
+  p24St.errors = 0;
+  p24SyncUsed();
+  p24RenderNums();
+  p24RenderTokens();
+  p24St.t0 = performance.now();
+  $('btnP24Answer').disabled = true;
+  p24Msg('已换一题，计时已归零');
+}
+
+/* 查看答案（5 分钟后解锁）：显示解法并回到开始态 */
+function p24ShowAnswer(){
+  if (!p24St.started || p24St.finished) return;
+  const sol = p24FindSolution(p24St.nums);
+  p24StopTimer();
+  renderP24();
+  if (sol){
+    showResult('本题解法', p24FormatSolution(sol), false, dealP24);
+  } else {
+    showResult('抱歉', '这题没能找到解法，已为你换题', false, dealP24);
+  }
+}
+
+$('p24Keys').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-k]');
+  if (!btn || p24St.finished || !p24St.started) return;
+  const k = btn.dataset.k;
+  if (k === 'del'){ p24St.tokens.pop(); }
+  else { p24St.tokens.push(k); }
+  p24SyncUsed();
+  p24RenderNums();
+  p24RenderTokens();
+  p24Msg('');
+});
+
+$('btnP24Clear').addEventListener('click', () => {
+  if (!p24St.started || p24St.finished) return;
+  p24St.tokens = [];
+  p24SyncUsed();
+  p24RenderNums();
+  p24RenderTokens();
+  p24Msg('');
+});
+
+$('btnP24Skip').addEventListener('click', p24Skip);
+$('btnP24Answer').addEventListener('click', p24ShowAnswer);
+
+$('btnP24Submit').addEventListener('click', () => {
+  if (!p24St.started || p24St.finished) return;
+  if (!p24St.tokens.length){ p24Msg('先构建算式再提交', 'bad'); return; }
+  const verdict = p24Check(p24St.nums, p24St.tokens);
+  if (verdict === 'ok'){
+    finishP24();
+  } else {
+    p24St.errors += 1;
+    p24UpdateStats();
+    p24Msg(verdict === 'wrong' ? '结果不是 24，再想想' : '算式不完整，或数字没有恰好各用一次', 'bad');
+    const box = $('p24Expr');
+    box.classList.remove('wrong');
+    void box.offsetWidth;
+    box.classList.add('wrong');
+    p24St.tokens = [];
+    p24SyncUsed();
+    p24RenderNums();
+    p24RenderTokens();
+  }
+});
+
+$('btnP24Start').addEventListener('click', dealP24);
+renderP24();
+
+/* ================================================================
+   5. 记忆翻牌
+   ================================================================ */
+const memSt = {
+  level: 1,
+  deck: null,
+  open: [],
+  matched: 0,
+  moves: 0,
+  started: false,
+  finished: false,
+  t0: 0,
+  timerId: null,
+  lock: false
+};
+
+function memStopTimer(){
+  if (memSt.timerId){ clearInterval(memSt.timerId); memSt.timerId = null; }
+}
+
+/* 点「开始」：立即开始计时（不等首次翻牌） */
+function startMemTimer(){
+  memStopTimer();
+  memSt.started = true;
+  memSt.t0 = performance.now();
+  memSt.timerId = setInterval(() => {
+    $('memTimer').textContent = formatTime(performance.now() - memSt.t0);
+  }, 100);
+}
+
+function memUpdateStats(){
+  $('memMoves').textContent = memSt.moves;
+  $('memPairs').textContent = memSt.matched + '/' + (memSt.deck ? memSt.deck.pairs : 0);
+  const b = loadJSON(memKey(memSt.level));
+  $('memBest').textContent = b ? formatTime(b.ms) : '--';
+}
+
+function fitMemFont(){
+  if (!memSt.deck) return;
+  const bEl = $('memBoard');
+  const w = bEl.getBoundingClientRect().width;
+  if (!w) return;
+  const gap = parseFloat(getComputedStyle(bEl).gap) || 10;
+  const cell = (w - gap * (memSt.deck.cols - 1)) / memSt.deck.cols;
+  bEl.style.setProperty('--fs', Math.round(cell * 0.55) + 'px');
+}
+
+function renderMemory(){
+  memSt.deck = makeMemoryDeck(memSt.level);
+  memSt.open = [];
+  memSt.matched = 0;
+  memSt.moves = 0;
+  memSt.started = false;
+  memSt.finished = false;
+  memSt.lock = false;
+  memStopTimer();
+
+  const bEl = $('memBoard');
+  bEl.classList.remove('done');
+  bEl.style.setProperty('--cols', memSt.deck.cols);
+  bEl.innerHTML = '';
+  memSt.deck.deck.forEach((card, i) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'mcard down';
+    el.dataset.emo = card.emo;
+    el.dataset.i = i;
+    el.addEventListener('click', () => onMemCard(el));
+    bEl.appendChild(el);
+  });
+
+  $('memTimer').textContent = '0.0s';
+  $('btnMemRestart').disabled = false;
+  memUpdateStats();
+  fitMemFont();
+  fitOneScreen();
+}
+
+function onMemCard(el){
+  if (memSt.finished || memSt.lock) return;
+  if (el.classList.contains('matched') || el.classList.contains('open')) return;
+
+  memSt.open.push(el);
+  el.classList.remove('down');
+  el.classList.add('open');
+  el.textContent = el.dataset.emo;
+
+  if (memSt.open.length === 2){
+    memSt.moves += 1;
+    const a = memSt.open[0], b2 = memSt.open[1];
+    if (a.dataset.emo === b2.dataset.emo){
+      memSt.open = [];
+      a.classList.add('matched');
+      b2.classList.add('matched');
+      memSt.matched += 1;
+      memUpdateStats();
+      if (memSt.matched === memSt.deck.pairs) finishMemory();
+    } else {
+      memSt.lock = true;
+      memUpdateStats();
+      setTimeout(() => {
+        [a, b2].forEach((x) => { x.classList.remove('open'); x.classList.add('down'); x.textContent = ''; });
+        memSt.open = [];
+        memSt.lock = false;
+      }, 650);
+    }
+  }
+}
+
+function finishMemory(){
+  memSt.finished = true;
+  memStopTimer();
+  $('btnMemRestart').disabled = false; /* 结束后允许再来一局 */
+  const cost = performance.now() - memSt.t0;
+  $('memTimer').textContent = formatTime(cost);
+  $('memBoard').classList.add('done');
+
+  const key = memKey(memSt.level);
+  const prev = loadJSON(key);
+  const isNew = !prev || cost < prev.ms;
+  if (isNew) saveJSON(key, { ms: cost, moves: memSt.moves, at: Date.now() });
+  memUpdateStats();
+
+  showResult('全部配对！用时 ' + formatTime(cost),
+    memSt.moves + ' 步 · ' + (memSt.level === 1 ? '4×3 · 6 对' : memSt.level === 2 ? '5×4 · 10 对' : '6×5 · 15 对'),
+    isNew,
+    startMemGame);
+}
+
+/* 点「开始」/「再来一局」：重发牌 + 立即计时 */
+function startMemGame(){
+  renderMemory();
+  startMemTimer();
+  $('btnMemRestart').disabled = true; /* 进行中禁止重开，结束后恢复 */
+}
+
+$('segMemLevel').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-level]');
+  if (!btn) return;
+  memSt.level = parseInt(btn.dataset.level, 10);
+  $('segMemLevel').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
+  renderMemory();
+});
+$('btnMemRestart').addEventListener('click', startMemGame);
+renderMemory();
+
+/* ================================================================
+   6. 空间方块（Corsi）
+   ================================================================ */
+const CORSI_TOTAL = 12;
+const CORSI_LIT = 450;
+const CORSI_GAP = 150;
+const corsiSt = {
+  phase: 'idle', /* idle / showing / recall / over */
+  len: 3,
+  lives: 2,
+  maxPassed: 0,
+  seq: [],
+  pos: 0,
+  timers: []
+};
+
+function corsiClearTimers(){ corsiSt.timers.forEach(clearTimeout); corsiSt.timers = []; }
+
+function corsiBuild(){
+  const bEl = $('corsiBoard');
+  bEl.style.setProperty('--cols', 4);
+  bEl.innerHTML = '';
+  for (let i = 0; i < CORSI_TOTAL; i++){
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'cell';
+    cell.dataset.i = i;
+    cell.addEventListener('click', () => onCorsiCell(i));
+    bEl.appendChild(cell);
+  }
+}
+
+function corsiUpdateStats(){
+  $('corsiLen').textContent = corsiSt.len;
+  $('corsiMax').textContent = corsiSt.maxPassed;
+  $('corsiLife').textContent = corsiSt.lives;
+  const b = loadJSON(corsiKey());
+  $('corsiBest').textContent = b ? b.span : '--';
+}
+
+function corsiMsg(text, cls){
+  const el = $('corsiHint');
+  el.textContent = text;
+  el.classList.remove('ok', 'bad');
+  if (cls) el.classList.add(cls);
+}
+
+function startCorsi(){
+  corsiClearTimers();
+  corsiSt.phase = 'showing';
+  corsiSt.len = 3;
+  corsiSt.lives = 2;
+  corsiSt.maxPassed = 0;
+  $('btnCorsiStart').disabled = true;
+  corsiUpdateStats();
+  corsiMsg('看方块亮起的顺序…');
+  corsiSt.timers.push(setTimeout(corsiShow, 700));
+  fitOneScreen();
+}
+
+function corsiShow(){
+  if (corsiSt.phase !== 'showing') return;
+  corsiSt.seq = makeCorsiSeq(corsiSt.len, CORSI_TOTAL);
+  corsiSt.pos = 0;
+  const cells = $('corsiBoard').children;
+  let t = 0;
+  corsiSt.seq.forEach((c) => {
+    corsiSt.timers.push(setTimeout(() => {
+      if (corsiSt.phase !== 'showing') return;
+      cells[c].classList.add('lit');
+      corsiSt.timers.push(setTimeout(() => { cells[c].classList.remove('lit'); }, CORSI_LIT));
+    }, t));
+    t += CORSI_LIT + CORSI_GAP;
+  });
+  corsiSt.timers.push(setTimeout(corsiToRecall, t + 120));
+}
+
+function corsiToRecall(){
+  if (corsiSt.phase !== 'showing') return;
+  corsiSt.phase = 'recall';
+  corsiMsg('按刚才的顺序点方块');
+}
+
+function onCorsiCell(i){
+  if (corsiSt.phase !== 'recall') return;
+  const cells = $('corsiBoard').children;
+  if (i === corsiSt.seq[corsiSt.pos]){
+    corsiSt.pos += 1;
+    cells[i].classList.add('lit');
+    corsiSt.timers.push(setTimeout(() => { cells[i].classList.remove('lit'); }, 260));
+    if (corsiSt.pos === corsiSt.seq.length) corsiPassed();
+  } else {
+    corsiSt.lives -= 1;
+    corsiUpdateStats();
+    const el = cells[i];
+    el.classList.remove('wrong');
+    void el.offsetWidth;
+    el.classList.add('wrong');
+    setTimeout(() => el.classList.remove('wrong'), 300);
+    if (corsiSt.lives <= 0){
+      corsiOver();
+    } else {
+      corsiSt.phase = 'showing';
+      corsiMsg('不对，再看一遍（' + corsiSt.len + ' 格）', 'bad');
+      corsiSt.timers.push(setTimeout(corsiShow, 900));
+    }
+  }
+}
+
+function corsiPassed(){
+  corsiSt.maxPassed = corsiSt.len;
+  corsiSt.len += 1;
+  corsiSt.phase = 'showing';
+  corsiUpdateStats();
+  corsiMsg('正确 ✓ 下一组 ' + corsiSt.len + ' 格', 'ok');
+  corsiSt.timers.push(setTimeout(corsiShow, 900));
+}
+
+function corsiOver(){
+  corsiSt.phase = 'over';
+  corsiClearTimers();
+  const span = corsiSt.maxPassed;
+  const key = corsiKey();
+  const prev = loadJSON(key);
+  const isNew = !prev || span > prev.span;
+  if (isNew && span > 0) saveJSON(key, { span: span, at: Date.now() });
+  corsiUpdateStats();
+
+  showResult(span > 0 ? '空间广度：' + span + ' 格' : '挑战结束',
+    '本次最高通过 ' + span + ' 格',
+    isNew && span > 0,
+    startCorsi);
+  $('btnCorsiStart').disabled = false;
+  corsiMsg('点击下方开始');
+}
+
+$('btnCorsiStart').addEventListener('click', startCorsi);
+corsiBuild();
+corsiUpdateStats();
+
+/* ================================================================
+   7. 快速切换
+   ================================================================ */
+const SWITCH_TIME = 60;
+const swSt = {
+  running: false,
+  ok: 0,
+  err: 0,
+  deadline: 0,
+  timerId: null,
+  cur: null
+};
+
+function swUpdateStats(){
+  $('swOk').textContent = swSt.ok;
+  $('swErr').textContent = swSt.err;
+  const b = loadJSON(switchKey());
+  $('swBest').textContent = b ? b.score + ' 题' : '--';
+}
+
+function swShowTrial(){
+  swSt.cur = makeSwitchTrial();
+  const stage = $('swStage');
+  stage.classList.toggle('parity', swSt.cur.rule === 'parity');
+  stage.classList.toggle('size', swSt.cur.rule === 'size');
+  $('swNum').textContent = swSt.cur.n;
+  if (swSt.cur.rule === 'parity'){
+    $('swBtnA').textContent = '奇数';
+    $('swBtnB').textContent = '偶数';
+  } else {
+    $('swBtnA').textContent = '比 5 大';
+    $('swBtnB').textContent = '比 5 小';
+  }
+}
+
+function startSwitch(){
+  swSt.running = true;
+  swSt.ok = 0;
+  swSt.err = 0;
+  swSt.deadline = performance.now() + SWITCH_TIME * 1000;
+  $('btnSwStart').disabled = true;
+  if (swSt.timerId) clearInterval(swSt.timerId);
+  swSt.timerId = setInterval(() => {
+    const left = Math.max(0, swSt.deadline - performance.now());
+    $('swTimer').textContent = Math.ceil(left / 1000) + 's';
+    if (left <= 0) finishSwitch();
+  }, 200);
+  swShowTrial();
+  swUpdateStats();
+  fitOneScreen();
+}
+
+function onSwitchAnswer(side){
+  if (!swSt.running || !swSt.cur) return;
+  const correct = (swSt.cur.rule === 'parity')
+    ? (swSt.cur.n % 2 === 1 ? 'odd' : 'even')
+    : (swSt.cur.n > 5 ? 'big' : 'small');
+  const got = (swSt.cur.rule === 'parity')
+    ? (side === 'a' ? 'odd' : 'even')
+    : (side === 'a' ? 'big' : 'small');
+  if (correct === got) swSt.ok += 1;
+  else swSt.err += 1;
+  swUpdateStats();
+  swShowTrial();
+}
+
+function finishSwitch(){
+  if (!swSt.running && swSt.ok === 0 && swSt.err === 0) return;
+  swSt.running = false;
+  if (swSt.timerId){ clearInterval(swSt.timerId); swSt.timerId = null; }
+  $('swTimer').textContent = '0s';
+  $('swNum').textContent = '–';
+  $('swStage').classList.remove('parity', 'size');
+
+  const key = switchKey();
+  const prev = loadJSON(key);
+  const isNew = swSt.ok > 0 && (!prev || swSt.ok > prev.score);
+  if (isNew) saveJSON(key, { score: swSt.ok, at: Date.now() });
+  swUpdateStats();
+
+  showResult('答对 ' + swSt.ok + ' 题',
+    '答错 ' + swSt.err + ' 次 · 正确率 ' + (swSt.ok + swSt.err > 0 ? Math.round(swSt.ok * 100 / (swSt.ok + swSt.err)) : 0) + '%',
+    isNew,
+    startSwitch);
+  $('btnSwStart').disabled = false;
+}
+
+$('swAnswers').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-side]');
+  if (btn) onSwitchAnswer(btn.dataset.side);
+});
+$('btnSwStart').addEventListener('click', startSwitch);
+swUpdateStats();
+
+/* ================================================================
+   8. 符号划消
+   ================================================================ */
+const cxSt = {
+  level: 3, /* 固定挑战级 */
+  puzzle: null,
+  found: 0,
+  wrong: 0,
+  started: false,
+  finished: false,
+  t0: 0,
+  timerId: null
+};
+
+function cxStopTimer(){
+  if (cxSt.timerId){ clearInterval(cxSt.timerId); cxSt.timerId = null; }
+}
+
+function cxUpdateStats(){
+  $('cxFound').textContent = cxSt.found + '/' + (cxSt.puzzle ? cxSt.puzzle.targetIndexes.length : 10);
+  $('cxWrong').textContent = cxSt.wrong;
+  const b = loadJSON(cancelKey(cxSt.level));
+  $('cxBest').textContent = b ? formatTime(b.ms) : '--';
+}
+
+function renderCancel(){
+  cxSt.puzzle = null;
+  cxSt.found = 0;
+  cxSt.wrong = 0;
+  cxSt.started = false;
+  cxSt.finished = false;
+  cxStopTimer();
+
+  $('cxBoard').innerHTML = '';
+  $('cxSample').innerHTML = '';
+  $('cxHead').hidden = true;
+  $('cxPreStart').hidden = false;
+  $('btnCxRestart').textContent = '开始';
+  $('btnCxRestart').disabled = false;
+
+  $('cxTimer').textContent = '0.0s';
+  cxUpdateStats();
+}
+
+/* 点「开始」：生成谜面并立即开始计时 */
+function cxStartTimer(){
+  cxStopTimer();
+  cxSt.started = true;
+  cxSt.t0 = performance.now();
+  cxSt.timerId = setInterval(() => {
+    $('cxTimer').textContent = formatTime(performance.now() - cxSt.t0);
+  }, 100);
+}
+
+function cxDeal(){
+  $('cxPreStart').hidden = true;
+  $('cxHead').hidden = false;
+  cxSt.puzzle = makeCancelPuzzle(cxSt.level);
+
+  const g = $('cxBoard');
+  g.style.setProperty('--cols', cxSt.puzzle.cols);
+  g.innerHTML = '';
+  cxSt.puzzle.cells.forEach((c, i) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'cx-cell';
+    el.dataset.i = i;
+    el.innerHTML = shapeSVG(c.shape, c.color);
+    el.addEventListener('click', () => onCxCell(el));
+    g.appendChild(el);
+  });
+  $('cxSample').innerHTML = shapeSVG(cxSt.puzzle.target.shape, cxSt.puzzle.target.color);
+  cxUpdateStats();
+  cxStartTimer();
+  $('btnCxRestart').disabled = true; /* 进行中禁止重开，结束后恢复 */
+  fitOneScreen();
+}
+
+function onCxCell(el){
+  if (cxSt.finished || el.classList.contains('found')) return;
+
+  const i = parseInt(el.dataset.i, 10);
+  if (cxSt.puzzle.targetIndexes.indexOf(i) >= 0){
+    el.classList.add('found');
+    cxSt.found += 1;
+    cxUpdateStats();
+    if (cxSt.found === cxSt.puzzle.targetIndexes.length) finishCancel();
+  } else {
+    cxSt.wrong += 1;
+    cxUpdateStats();
+    el.classList.remove('wrong');
+    void el.offsetWidth;
+    el.classList.add('wrong');
+    setTimeout(() => el.classList.remove('wrong'), 300);
+  }
+}
+
+function finishCancel(){
+  cxSt.finished = true;
+  cxStopTimer();
+  $('btnCxRestart').disabled = false; /* 结束后允许再来一局 */
+  const cost = performance.now() - cxSt.t0;
+  $('cxTimer').textContent = formatTime(cost);
+
+  const key = cancelKey(cxSt.level);
+  const prev = loadJSON(key);
+  const isNew = !prev || cost < prev.ms;
+  if (isNew) saveJSON(key, { ms: cost, wrong: cxSt.wrong, at: Date.now() });
+  cxUpdateStats();
+
+  showResult('全部找到！用时 ' + formatTime(cost),
+    '误点 ' + cxSt.wrong + ' 次 · 挑战',
+    isNew,
+    () => { renderCancel(); cxDeal(); });
+}
+
+$('btnCxRestart').addEventListener('click', () => { renderCancel(); cxDeal(); });
+renderCancel();
+fitOneScreen(); /* 打开页面即做一屏适配 */
+
+/* ---------- 测试钩子（生产无副作用） ---------- */
+render();
+window.__FT = {
+  core: { charPool, shuffle, formatTime, bestKey, trackKey, stroopKey, schulteXKey, migrateLegacyAdvKeys, makeTrackingPuzzle, shapeSVG, makeStroopTrial, makeStore, memKey, makeMemoryDeck, MEM_EMOJIS, corsiKey, makeCorsiSeq, switchKey, makeSwitchTrial, switchAnswer, cancelKey, makeCancelPuzzle, CANCEL_SHAPES, CANCEL_COLORS, p24Key, p24EvalTokens, p24Check, p24FindSolution, makeP24Nums },
+  schulte: { state, render, onCell, board, comboStr, migrate: () => migrateLegacyAdvKeys(store) },
+  track: { st: trackSt, start: startTrack, click: onTrackCell },
+  stroop: { st: stroopSt, start: startStroop, answer: onStroopAnswer, finish: finishStroop },
+  p24: { st: p24St, start: dealP24, submit: () => $('btnP24Submit').click(), skip: p24Skip, showAnswer: p24ShowAnswer },
+  memory: { st: memSt, render: renderMemory, click: onMemCard, finish: finishMemory },
+  corsi: { st: corsiSt, start: startCorsi, click: onCorsiCell, over: corsiOver },
+  sw: { st: swSt, start: startSwitch, answer: onSwitchAnswer, finish: finishSwitch },
+  cx: { st: cxSt, render: renderCancel, click: onCxCell, finish: finishCancel }
+};
+</script>
+</body>
+</html>

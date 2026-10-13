@@ -569,6 +569,12 @@ body.kid-mode{padding-bottom:72px}
      （sp_quiz__<phone> 一个键存该账号 {done,wrong,excluded}，内部再按 bankId 分键），
      并随账号桶字段 quizDone/quizWrong/quizExcluded 上云多设备同步；当前题库 id 存 sp_quiz_bank。
      旧设备级键 sp_quiz_done__<bankId> / sp_quiz_wrong__<bankId> 由 sp_quiz_migrated 标记做一次性迁移，保留不删 -->
+<!-- 专注力训练（iframe 同源嵌入 focus.html）：最佳成绩按账号分键（sp_fx__<phone>:*），
+     云同步 sync-focus.json（双端可推，逐游戏更快纪录者胜）；iframe 内破纪录 postMessage → 主应用防抖上云 -->
+<div class="pg" id="p-focus">
+  <iframe id="focusFrame" title="专注力训练" style="width:100%;border:0;display:block" src="about:blank"></iframe>
+</div>
+
 <div class="pg" id="p-quiz">
   <div class="qz-top">
     <div class="qz-top-row">
@@ -771,6 +777,7 @@ body.kid-mode{padding-bottom:72px}
   <div class="ti on" onclick="st('home')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">首页</span></div>
   <div class="ti" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
   <div class="ti" onclick="st('checkin')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">打卡</span></div>
+  <div class="ti" onclick="st('focus')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">专注</span></div>
   <div class="ti" onclick="st('quiz')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">刷题</span></div>
   <div class="ti" id="tabReport" onclick="st('report')"><span class="t-ico"><span class="tico-chart" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">报告</span></div>
   <div class="ti" id="tabSettings" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
@@ -781,6 +788,7 @@ body.kid-mode{padding-bottom:72px}
   <div class="ti on" id="kt-records" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
   <div class="ti" id="kt-shop" onclick="st('shop')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">商城</span></div>
   <div class="ti" id="kt-checkin" onclick="st('checkin')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">打卡</span></div>
+  <div class="ti" id="kt-focus" onclick="st('focus')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">专注</span></div>
   <div class="ti" id="kt-pet" onclick="st('pet')"><span class="t-ico"><span class="tico-pet" aria-hidden="true"></span></span><span class="tl">宠物</span></div>
   <div class="ti" id="kt-report" onclick="st('report')"><span class="t-ico"><span class="tico-chart" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">报告</span></div>
 </div>
@@ -2315,7 +2323,8 @@ function st(tab){
   if(sessionRole==='kid'){
     // 孩子端五个页签：记录 / 商城 / 打卡 / 宠物 / 报告（刷题仍仅家长端开放，孩子端无入口，此处双保险拦截）
     if(tab==='quiz')return;
-    if(tab!=='records'&&tab!=='shop'&&tab!=='checkin'&&tab!=='pet'&&tab!=='report')return;
+    if(tab!=='records'&&tab!=='shop'&&tab!=='checkin'&&tab!=='focus'&&tab!=='pet'&&tab!=='report')return;
+    if(tab==='focus'){fxShow();return;}
     var pages=document.querySelectorAll('.pg');
     for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
     document.getElementById('p-'+tab).classList.add('on');
@@ -2340,6 +2349,7 @@ function st(tab){
   // 避免 syncPull 返回前的窗口期内判分按钮已可点、而 qzList 仍为空
   if(tab==='pet')return; // 宠物页为孩子端专属：家长端无入口且不开放（双保险）
   if(tab==='checkin'){ckPullAt=0;ckReconcileAwards();ckSweepStale();ckShow();} // 打卡页：强制拉取最新状态 + 自愈补积分 + 超时申请重置
+  if(tab==='focus'){fxShow();}
   if(tab==='quiz')qzShow();
   if(tab==='report')renderReport(); // 报告页：先按当前内存数据渲染，拉取完成后刷新
   var pages=document.querySelectorAll('.pg');
@@ -2347,7 +2357,7 @@ function st(tab){
   var tabs=document.querySelectorAll('.ti');
   for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('on');
   document.getElementById('p-'+tab).classList.add('on');
-  document.querySelector('.tb .ti:nth-child('+({'home':1,'records':2,'checkin':3,'quiz':4,'report':5,'settings':6}[tab]||1)+')').classList.add('on');
+  document.querySelector('.tb .ti:nth-child('+({'home':1,'records':2,'checkin':3,'focus':4,'quiz':5,'report':6,'settings':7}[tab]||1)+')').classList.add('on');
   curTab=tab;
   // 切换页签时同步
   if(currentUser){
@@ -3884,6 +3894,121 @@ document.addEventListener('visibilitychange',function(){ // 切回页面/切换�
   if(document.hidden)return;
   if(hasCkPending()&&!ckSyncBusy)ckSyncPush();
   if(curTab==='checkin'){ckPullAt=0;ckShow()}
+});
+
+// ===== 专注训练最佳成绩云同步（sync-focus.json，双端可推；逐游戏更快纪录者胜） =====
+// 成绩键由 focus.html 写入：sp_fx__<phone>:<相对键>（如 sp_fx__<phone>:p24.best.single）。
+// 同一账号家长端/孩子端共用同一前缀（孩子端 currentUser=家长手机号）→ 本地即互通；
+// 云端按手机号分桶，合并时含 ms 的值取更快（小）者，跨设备破纪录永不丢失。
+var GH_FX_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-focus.json';
+var FX_PENDING_KEY='sp_fx_sync_pending';
+var fxSyncSHA='',fxSyncTimer=null,fxSyncBusy=false,fxSyncErr='';
+function fxBucket(){ // 收集当前账号的专注成绩键
+  var out={},pre='sp_fx__'+currentUser+':',i,k;
+  try{
+    for(i=0;i<localStorage.length;i++){
+      k=localStorage.key(i);
+      if(k&&k.indexOf(pre)===0){out[k.slice(pre.length)]=localStorage.getItem(k)}
+    }
+  }catch(e){}
+  return out;
+}
+function fxSaveBucket(b){ // 写回各键（值保持字符串原样）
+  var pre='sp_fx__'+currentUser+':',k;
+  try{
+    for(k in b){if(b[k]!==null&&b[k]!==undefined)localStorage.setItem(pre+k,b[k])}
+  }catch(e){}
+}
+function fxValBetter(a,b){ // 单键合并：含 ms 取更快（小）者；否则按 at 新者胜
+  var va=null,vb=null;
+  try{va=JSON.parse(a)}catch(e){}
+  try{vb=JSON.parse(b)}catch(e){}
+  if(va&&typeof va==='object'&&vb&&typeof vb==='object'){
+    if(typeof va.ms==='number'&&typeof vb.ms==='number')return va.ms<=vb.ms?a:b;
+    return (va.at||0)>=(vb.at||0)?a:b;
+  }
+  return b;
+}
+function fxMergeAll(local,remote){ // 逐键并集合并
+  var out={},k,changed=false;
+  for(k in local){out[k]=local[k]}
+  for(k in remote){
+    if(out[k]===undefined){out[k]=remote[k];changed=true}
+    else{var better=fxValBetter(out[k],remote[k]);if(better!==out[k]){out[k]=better;changed=true}}
+  }
+  return {data:out,changed:changed};
+}
+function markFxPending(){try{localStorage.setItem(FX_PENDING_KEY,'1')}catch(e){}}
+function clearFxPending(){try{localStorage.removeItem(FX_PENDING_KEY)}catch(e){}}
+function hasFxPending(){try{return localStorage.getItem(FX_PENDING_KEY)==='1'}catch(e){return false}}
+function fxQueue(){ // 破纪录防抖上云（2 秒）
+  if(!currentUser||!getSyncToken())return;
+  markFxPending();
+  if(fxSyncTimer)clearTimeout(fxSyncTimer);
+  fxSyncTimer=setTimeout(fxSyncPush,2000);
+}
+function fxSyncPush(){
+  if(fxSyncTimer){clearTimeout(fxSyncTimer);fxSyncTimer=null}
+  if(fxSyncBusy||!hasFxPending()||!currentUser||!getSyncToken())return;
+  var local=fxBucket();
+  fxSyncBusy=true;
+  fetch(GH_FX_API,{headers:{'Authorization':'token '+getSyncToken()}})
+    .then(function(r){
+      if(r.status===404){fxSyncSHA='';return {sha:'',content:null}}
+      if(!r.ok){markFxPending();fxSyncErr='同步失败（HTTP '+r.status+'）';return null}
+      return r.json();
+    })
+    .then(function(meta){
+      if(!meta){fxSyncBusy=false;return}
+      fxSyncSHA=meta.sha||'';
+      var all={};
+      if(meta.content){try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
+      var merged=fxMergeAll(local,all[currentUser]||{});
+      fxSaveBucket(merged.data);
+      all[currentUser]=merged.data;
+      return fetch(GH_FX_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'fx-sync:'+currentUser,content:utf8ToB64(JSON.stringify(all)),sha:fxSyncSHA})})
+        .then(function(r){
+          fxSyncBusy=false;
+          if(r.ok){fxSyncErr='';clearFxPending()}else{markFxPending();fxSyncErr='同步失败（HTTP '+r.status+'）'}
+        });
+    })
+    .catch(function(){fxSyncBusy=false;fxSyncErr='网络异常，稍后自动重试';markFxPending()});
+}
+function fxSyncPull(){
+  if(!currentUser||!getSyncToken())return Promise.resolve();
+  return fetch(GH_FX_API,{headers:{'Authorization':'token '+getSyncToken()}})
+    .then(function(r){
+      if(!r.ok){if(hasFxPending())fxSyncPush();return}
+      return r.json().then(function(meta){
+        fxSyncSHA=meta.sha||'';
+        if(!meta.content){if(hasFxPending())fxSyncPush();return}
+        var all={};try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
+        var merged=fxMergeAll(fxBucket(),all[currentUser]||{});
+        fxSaveBucket(merged.data);
+        fxSyncErr='';
+        if(hasFxPending())fxSyncPush();
+      });
+    })
+    .catch(function(){if(hasFxPending())fxSyncPush()});
+}
+window.addEventListener('online',function(){if(hasFxPending())fxSyncPush()});
+setInterval(function(){if(hasFxPending()&&!fxSyncBusy)fxSyncPush()},60000);
+// 专注页 iframe 内破纪录 → 防抖上云
+window.addEventListener('message',function(e){
+  if(e.data&&e.data.type==='focus-best-updated')fxQueue();
+});
+// —— 专注页：拉云端合并成绩 → 重载 iframe（focus.html 按账号前缀读成绩） ——
+function fxShow(){
+  if(!currentUser)return;
+  var f=document.getElementById('focusFrame');
+  if(f)f.style.height=Math.max(420,window.innerHeight-70)+'px';
+  fxSyncPull().then(function(){
+    if(f)f.src='focus.html?acct='+encodeURIComponent(currentUser)+'&t='+Date.now();
+  });
+}
+window.addEventListener('resize',function(){
+  var f=document.getElementById('focusFrame');
+  if(f&&curTab==='focus')f.style.height=Math.max(420,window.innerHeight-70)+'px';
 });
 // —— 操作 ——
 function ckClaim(ds,id){ // 孩子端：我已完成（=申请，不计完成，待家长确认）
