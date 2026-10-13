@@ -4042,22 +4042,13 @@ setInterval(function(){
     });
   }
 },60000);
-// 专注页 iframe 内破纪录 → 防抖上云；高度上报 → 主应用统一缩放（与其他页签视觉一致，不跳动）
+// 专注页 iframe 内破纪录 → 防抖上云
 window.addEventListener('message',function(e){
   if(!e.data)return;
   if(e.data.type==='focus-best-updated')fxQueue();
-  if(e.data.type==='focus-height'){
-    var f=document.getElementById('focusFrame');
-    if(f){
-      var h=Math.max(420,parseInt(e.data.h,10)||0);
-      if(f.style.height!==h+'px')f.style.height=h+'px';
-      fitOneScreenBody(); /* iframe 高度变化后整页等比缩放适配 */
-    }
-  }
 });
 document.addEventListener('visibilitychange',function(){ // 切回页面立即对齐（换设备查看场景）
   if(document.hidden)return;
-  fitOneScreenBody();
   if(hasFxPending()&&!fxSyncBusy)fxSyncPush();
   if(curTab==='focus')fxShow();
 });
@@ -4074,7 +4065,7 @@ function fxFrameHeight(){ // 按实际固定 UI（导航条）精确计算 ifram
 function fxShow(){
   if(!currentUser)return;
   var f=document.getElementById('focusFrame');
-  if(f&&!f.style.height)f.style.height=fxFrameHeight()+'px'; /* 初始默认高度，加载后由 iframe 高度上报修正 */
+  if(f)f.style.height=fxFrameHeight()+'px'; /* 固定高度（一屏减导航）；内部适配由 focus.html 自缩放完成 */
   var vb=document.getElementById('fxVisBtn');
   if(vb)vb.style.display=sessionRole==='parent'?'':'none';
   fxUpdateSyncUI();
@@ -4105,35 +4096,6 @@ function fxVisSave(){
   fxVisClose();
   toast(tabs.length?('已开放 '+tabs.length+' 个练习给孩子端'):'已对孩子端隐藏全部练习','ok');
 }
-/* ===== 全局一屏适配：页眉/页签/页面内容/iframe 全部等比缩放 =====
-   iframe 高度由 focus.html 高度上报决定（内容永不裁切）；body zoom 收敛式计算：
-   needed 为当前 zoom 下的视觉高度 → 一步比例修正即精确适配，值不变不写（无循环抖动）。
-   下限 0.55：超过后停止缩小、允许页面滚动（列表类页面内容很长时不至于字太小）。 */
-function fitOneScreenBody(){
-  var b=document.body;
-  if(!b)return;
-  var cur=parseFloat(b.style.zoom)||1;
-  var needed=b.scrollHeight,avail=window.innerHeight;
-  if(!needed||!avail)return;
-  var z=cur;
-  if(needed>avail){
-    z=cur*(avail/needed);
-  }else if(needed<avail-8&&cur<0.999){ /* 大幅有余量才回填，防振荡 */
-    z=cur*(avail/needed);
-    if(z>=1)z=1;
-  }
-  z=Math.max(0.55,Math.min(1,z));
-  z=Math.floor(z*1000)/1000;
-  if(Math.abs(z-cur)>=0.001)b.style.zoom=z;
-}
-if(window.ResizeObserver){
-  try{
-    var _fxRO=new ResizeObserver(function(){fitOneScreenBody()});
-    _fxRO.observe(document.body);
-  }catch(e){}
-}
-window.addEventListener('resize',fitOneScreenBody);
-window.addEventListener('orientationchange',fitOneScreenBody);
 // —— 操作 ——
 function ckClaim(ds,id){ // 孩子端：我已完成（=申请，不计完成，待家长确认）
   if(sessionRole!=='kid')return;

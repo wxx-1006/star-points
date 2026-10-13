@@ -972,14 +972,10 @@ $('resultModal').addEventListener('click', (e) => {
   if (e.target === $('resultModal')) hideResult(); /* 点遮罩也可关闭 */
 });
 
-/* ---------- 一屏适配 ----------
-   独立打开：内容超出视口时整体 zoom 缩放。
-   嵌入赚星账本：不自缩（避免与主应用其他页签缩放比例不一致导致跳来跳去），
-   改为向父页面报告内容高度，由主应用统一缩放，全站视觉一致。 */
+/* ---------- 一屏适配：内容超出视口时整体 zoom 缩放（含游戏页签/内容/按钮一起等比缩，开始按钮始终可见） ---------- */
 function fitOneScreen(){
   const app = document.querySelector('.app');
   if (!app) return;
-  if (FOCUS_ACCT !== 'local'){ reportHeight(); return; }
   const prev = app.style.zoom;
   app.style.zoom = ''; /* 先还原，测自然高度 */
   const needed = app.scrollHeight;
@@ -991,17 +987,8 @@ function fitOneScreen(){
   if (z !== prev){ app.style.zoom = z; }
   else if (prev){ app.style.zoom = prev; } /* 值未变则原样恢复，避免布局抖动 */
 }
-function reportHeight(){
-  try {
-    const app = document.querySelector('.app');
-    if (app && window.parent && window.parent !== window){
-      window.parent.postMessage({ type: 'focus-height', h: app.scrollHeight }, '*');
-    }
-  } catch (e){}
-}
 window.addEventListener('resize', fitOneScreen);
 window.addEventListener('orientationchange', fitOneScreen);
-window.addEventListener('load', reportHeight);
 
 /* ---------- 页签 ---------- */
 $('tabs').addEventListener('click', (e) => {
