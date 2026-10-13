@@ -3747,10 +3747,19 @@ function ckCfg(){ // 配置：已有 _cfg 直接用（含空任务列表，即�
   if(ckHasState(b))return {tasks:JSON.parse(JSON.stringify(CK_DEFAULT_TASKS)),t:0};
   return {tasks:[],t:0};
 }
-function ckCfgSave(tasks){ // 家长端保存配置（孩子端只读，不会走到）
+function ckCfgSave(tasks){ // 家长端保存配置（孩子端只读，不会走到）；落库前按学科排序，使配置顺序=展示顺序
+  tasks=ckSortTasks(tasks);
   var b=ckBucket();
   b._cfg={tasks:tasks,t:Date.now()};
   ckSaveBucket(b);ckQueue();
+}
+function ckSortTasks(list){ // 按学科排序：语→数→英→科→其他（同科内保持原顺序，稳定排序）
+  var sk=Object.keys(CK_SUBJ);
+  return list.slice().sort(function(a,b){
+    var xa=sk.indexOf(a.subj||'other');if(xa<0)xa=4;
+    var xb=sk.indexOf(b.subj||'other');if(xb<0)xb=4;
+    return xa-xb;
+  });
 }
 function ckRecurDesc(t){ // 循环规则的文字描述
   var rc=t.recur||{type:'daily'};
@@ -3778,14 +3787,7 @@ function ckTasksFor(ds){ // 按日期 + 循环规则生成当日任务清单（�
     else if(rc.type==='rotate'){var df=Math.round((new Date(ds+'T00:00:00')-new Date(CK_EPOCH+'T00:00:00'))/86400000);ok=(((df%3)+3)%3===(rc.rot||0))} // 负数日期（查看历史）也正常轮换
     if(ok)list.push(t);
   }
-  /* 按学科排序：语→数→英→科→其他（同科内保持配置顺序，稳定排序） */
-  var sk=Object.keys(CK_SUBJ);
-  list.sort(function(a,b){
-    var xa=sk.indexOf(a.subj||'other');if(xa<0)xa=4;
-    var xb=sk.indexOf(b.subj||'other');if(xb<0)xb=4;
-    return xa-xb;
-  });
-  return list;
+  return ckSortTasks(list);
 }
 function ckTaskById(id){var tasks=ckCfg().tasks;for(var i=0;i<tasks.length;i++){if(tasks[i].id===id)return tasks[i]}return null}
 function ckFmtD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -4226,14 +4228,14 @@ function ckCfgOpen(){
 }
 function ckCfgClose(){document.getElementById('mCkCfg').classList.remove('show')}
 function ckCfgRender(){
-  var tasks=ckCfg().tasks,html='<button class="ck-cfg-add" onclick="ckCfgEdit(-1)">＋ 新增任务</button>';
+  var raw=ckCfg().tasks,tasks=ckSortTasks(raw),html='<button class="ck-cfg-add" onclick="ckCfgEdit(-1)">＋ 新增任务</button>';
   for(var i=0;i<tasks.length;i++){
-    var t=tasks[i],sm=CK_SUBJ[t.subj]||CK_SUBJ.other;
+    var t=tasks[i],sm=CK_SUBJ[t.subj]||CK_SUBJ.other,oi=raw.indexOf(t); /* 原数组下标：编辑/删除按原始索引操作 */
     var note=t.zw?'备注：按作文三阶段计划自动显示':(t.note||'');
     html+='<div class="ck-cfg-row">'
       +'<div class="ck-cfg-i"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.must?'<span class="ck-mustb">每天必打卡</span>':'')+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+'<span class="ck-min">+'+(t.pt||CK_PT)+'分</span></div>'
       +'<div class="ck-zw">'+escHtml(ckRecurDesc(t))+(note?' · '+escHtml(note):'')+'</div></div>'
-      +'<div class="ck-cfg-btns"><button class="ck-b" onclick="ckCfgEdit('+i+')">编辑</button><button class="ck-b d" onclick="ckCfgDel('+i+')">删除</button></div>'
+      +'<div class="ck-cfg-btns"><button class="ck-b" onclick="ckCfgEdit('+oi+')">编辑</button><button class="ck-b d" onclick="ckCfgDel('+oi+')">删除</button></div>'
       +'</div>';
   }
   html+='<div class="ck-cfg-tip">循环说明：每天=每日出现；每周=勾选星期几；每月=勾选几号；每日轮流=与其它轮流任务按 3 天一循环依次出现。任务配置会同步到所有设备。</div>';
