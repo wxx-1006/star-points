@@ -2324,7 +2324,7 @@ function st(tab){
     // 孩子端五个页签：记录 / 商城 / 打卡 / 宠物 / 报告（刷题仍仅家长端开放，孩子端无入口，此处双保险拦截）
     if(tab==='quiz')return;
     if(tab!=='records'&&tab!=='shop'&&tab!=='checkin'&&tab!=='focus'&&tab!=='pet'&&tab!=='report')return;
-    if(tab==='focus'){fxShow();return;}
+    if(tab==='focus')fxShow(); /* 不 return：继续走下方面板切换与页签高亮 */
     var pages=document.querySelectorAll('.pg');
     for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
     document.getElementById('p-'+tab).classList.add('on');
@@ -3998,17 +3998,39 @@ window.addEventListener('message',function(e){
   if(e.data&&e.data.type==='focus-best-updated')fxQueue();
 });
 // —— 专注页：拉云端合并成绩 → 重载 iframe（focus.html 按账号前缀读成绩） ——
+function fxFrameHeight(){ // 按实际固定 UI（导航条）精确计算 iframe 高度，避免页面出现滚动条
+  var tb=document.getElementById('tbMain'),kt=document.getElementById('kidTb');
+  var bar=null;
+  if(kt&&kt.style.display!=='none')bar=kt;
+  else if(tb&&tb.style.display!=='none')bar=tb;
+  var barH=bar?bar.offsetHeight:56;
+  return Math.max(420,window.innerHeight-barH-16);
+}
 function fxShow(){
   if(!currentUser)return;
   var f=document.getElementById('focusFrame');
-  if(f)f.style.height=Math.max(420,window.innerHeight-70)+'px';
+  fxFit();
   fxSyncPull().then(function(){
     if(f)f.src='focus.html?acct='+encodeURIComponent(currentUser)+'&t='+Date.now();
   });
 }
-window.addEventListener('resize',function(){
+function fxFit(){ // 设置高度后实测整页是否仍溢出（含头部等固定 UI），超出则回缩到恰好一屏
   var f=document.getElementById('focusFrame');
-  if(f&&curTab==='focus')f.style.height=Math.max(420,window.innerHeight-70)+'px';
+  if(!f)return;
+  var h=fxFrameHeight();
+  f.style.height=h+'px';
+  requestAnimationFrame(function(){
+    try{
+      var over=document.body.scrollHeight-window.innerHeight;
+      if(over>0){
+        h=Math.max(420,h-over-4);
+        f.style.height=h+'px';
+      }
+    }catch(e){}
+  });
+}
+window.addEventListener('resize',function(){
+  if(curTab==='focus')fxFit();
 });
 // —— 操作 ——
 function ckClaim(ds,id){ // 孩子端：我已完成（=申请，不计完成，待家长确认）

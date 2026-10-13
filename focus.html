@@ -29,6 +29,7 @@
   .app{ max-width:720px; margin:0 auto; padding:12px 14px 18px; }
 
   .title{ display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:17px; font-weight:700; letter-spacing:.5px; }
+  body.fx-embedded .title{ display:none; }
   .title i{ width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 14px var(--accent); }
 
   /* 页签（9 个，窄屏横向滚动） */
@@ -552,6 +553,13 @@ const FOCUS_ACCT = (function(){
   } catch (e){ return 'local'; }
 })();
 const FOCUS_PREFIX = 'sp_fx__' + FOCUS_ACCT + ':';
+/* 嵌入赚星账本时隐藏大标题（页签已表明身份，省一行高度） */
+if (FOCUS_ACCT !== 'local'){
+  document.addEventListener('DOMContentLoaded', function(){
+    try { document.body.classList.add('fx-embedded'); } catch (e){}
+  });
+  if (document.body) document.body.classList.add('fx-embedded');
+}
 /* 老版本无前缀键（focus.*）一次性迁移到当前前缀下，避免独立打开丢历史成绩 */
 (function migrateLegacyFocusKeys(){
   if (!FOCUS_PREFIX) return;
