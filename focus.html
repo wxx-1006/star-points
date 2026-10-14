@@ -9,6 +9,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="专注力训练" />
 <title>专注力训练</title>
+<script>
+/* 嵌入赚星账本（URL 带 acct）时，在样式表生效前同步挂主题 class——消除首帧蓝色主题闪烁 */
+try {
+  if (new URLSearchParams(location.search).get('acct')){
+    document.documentElement.className += ' fx-embedded';
+  }
+} catch (e){}
+</script>
 <style>
   *{ box-sizing:border-box; }
   :root{
@@ -29,7 +37,7 @@
   .app{ max-width:720px; margin:0 auto; padding:12px 14px 18px; }
 
   .title{ display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:17px; font-weight:700; letter-spacing:.5px; }
-  body.fx-embedded .title{ display:none; }
+  html.fx-embedded .title{ display:none; }
   .title i{ width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 14px var(--accent); }
 
   /* 页签（9 个，窄屏横向滚动） */
@@ -201,48 +209,58 @@
 
   /* ===== 嵌入赚星账本主题（fx-embedded）：与主应用暖色积木风保持一致 =====
      --dim 调黑（同正文色）：游戏名/配置/说明等内容文字按用户要求加深 */
-  body.fx-embedded{
+  html.fx-embedded{
     --bg:#FBF7EF; --card:#FFFFFF; --card2:#F6F1E7; --line:#F0EADC;
     --txt:#4A4238; --dim:#4A4238;
     --accent:#EE6F5F; --accent-deep:#C9503F;
     background:#FBF7EF;
   }
   /* 嵌入模式放大操作区：压缩固定开销 + 棋盘撑满可用宽（高度适配交给主应用统一缩放） */
-  body.fx-embedded .app{ padding:8px 12px 12px; }
-  body.fx-embedded .tabs{ margin-bottom:8px; }
-  body.fx-embedded .stats{ margin-bottom:7px; }
-  body.fx-embedded .hint{ margin-bottom:6px; }
-  body.fx-embedded .actions{ margin-top:9px; }
-  body.fx-embedded .board-wrap,
-  body.fx-embedded .board-wrap:disabled{ width:100%; }
+  html.fx-embedded .app{ padding:8px 12px 12px; }
+  html.fx-embedded .tabs{ margin-bottom:8px; }
+  html.fx-embedded .stats{ margin-bottom:7px; }
+  html.fx-embedded .hint{ margin-bottom:6px; }
+  html.fx-embedded .actions{ margin-top:9px; }
+  html.fx-embedded .board-wrap,
+  html.fx-embedded .board-wrap:disabled{ width:100%; }
   @media (max-width:540px){
-    body.fx-embedded .board-wrap{ width:100%; margin:0 auto; }
+    html.fx-embedded .board-wrap{ width:100%; margin:0 auto; }
   }
   /* 舒尔特/视觉追踪/记忆翻牌：游戏区域收窄 14%（居中），内容字号/图形反向补偿保持原大小 */
-  body.fx-embedded #boardWrap,
-  body.fx-embedded #trackWrap,
-  body.fx-embedded #memWrap{ width:86%; margin-left:auto; margin-right:auto; }
-  body.fx-embedded #trackWrap .cell svg{ width:67%; height:67%; }
-  body.fx-embedded .p24-nums button{ padding:21px 0; font-size:34px; }
-  body.fx-embedded .p24-expr{ min-height:60px; font-size:26px; }
-  body.fx-embedded .tabs{ background:#F6F1E7; }
-  body.fx-embedded .tab.on{ box-shadow:0 3px 12px rgba(201,80,63,.28); }
-  body.fx-embedded .seg button.on{ box-shadow:inset 0 0 0 1.5px #eab3a6; }
-  body.fx-embedded .btn.primary{ box-shadow:0 6px 16px rgba(238,111,95,.30); }
-  body.fx-embedded .cell,
-  body.fx-embedded .mcard,
-  body.fx-embedded .cx-cell,
-  body.fx-embedded .cx-head .cx-sample,
-  body.fx-embedded .p24-nums button,
-  body.fx-embedded .p24-keys button,
-  body.fx-embedded .sw-answers button{ border-color:#F0EADC; box-shadow:0 2px 6px rgba(74,66,56,.08); }
-  body.fx-embedded .mcard.down{ background:#F6F1E7; border-color:#E5DBC8; }
-  body.fx-embedded .hole{ background:#F6F1E7; border-color:#E5DBC8; }
-  body.fx-embedded .sw-stage{ border-color:#E0D5C0; }
-  body.fx-embedded .sw-stage.parity{ border-color:#d9a94e; background:#FCF3DC; }
-  body.fx-embedded .sw-stage.size{ border-color:#63BD87; background:#E8F5EC; }
-  body.fx-embedded .result .line2{ color:#4A4238; }
-  body.fx-embedded .stat.best .v{ color:#C9503F; }
+  html.fx-embedded #boardWrap,
+  html.fx-embedded #trackWrap,
+  html.fx-embedded #memWrap{ width:86%; margin-left:auto; margin-right:auto; }
+  html.fx-embedded #trackWrap .cell svg{ width:67%; height:67%; }
+  html.fx-embedded .p24-nums button{ padding:21px 0; font-size:34px; }
+  html.fx-embedded .p24-expr{ min-height:60px; font-size:26px; }
+  /* 舒尔特再紧凑：工具条/统计/说明/按钮全面收距，棋盘再收窄一档 */
+  html.fx-embedded #panel-schulte .toolbar{ margin-bottom:6px; gap:5px 10px; }
+  html.fx-embedded #panel-schulte .field > span{ font-size:11.5px; }
+  html.fx-embedded #panel-schulte .seg button{ min-width:38px; padding:4px 7px; font-size:12px; }
+  html.fx-embedded #panel-schulte .stats{ margin-bottom:5px; }
+  html.fx-embedded #panel-schulte .stat{ padding:4px 3px; border-radius:9px; }
+  html.fx-embedded #panel-schulte .stat .v{ font-size:15px; }
+  html.fx-embedded #panel-schulte .hint{ margin-bottom:4px; font-size:11.5px; }
+  html.fx-embedded #panel-schulte .actions{ margin-top:7px; }
+  html.fx-embedded #boardWrap{ width:82%; }
+  html.fx-embedded .tabs{ background:#F6F1E7; }
+  html.fx-embedded .tab.on{ box-shadow:0 3px 12px rgba(201,80,63,.28); }
+  html.fx-embedded .seg button.on{ box-shadow:inset 0 0 0 1.5px #eab3a6; }
+  html.fx-embedded .btn.primary{ box-shadow:0 6px 16px rgba(238,111,95,.30); }
+  html.fx-embedded .cell,
+  html.fx-embedded .mcard,
+  html.fx-embedded .cx-cell,
+  html.fx-embedded .cx-head .cx-sample,
+  html.fx-embedded .p24-nums button,
+  html.fx-embedded .p24-keys button,
+  html.fx-embedded .sw-answers button{ border-color:#F0EADC; box-shadow:0 2px 6px rgba(74,66,56,.08); }
+  html.fx-embedded .mcard.down{ background:#F6F1E7; border-color:#E5DBC8; }
+  html.fx-embedded .hole{ background:#F6F1E7; border-color:#E5DBC8; }
+  html.fx-embedded .sw-stage{ border-color:#E0D5C0; }
+  html.fx-embedded .sw-stage.parity{ border-color:#d9a94e; background:#FCF3DC; }
+  html.fx-embedded .sw-stage.size{ border-color:#63BD87; background:#E8F5EC; }
+  html.fx-embedded .result .line2{ color:#4A4238; }
+  html.fx-embedded .stat.best .v{ color:#C9503F; }
   .cx-cell.wrong{ background:#fde9e7; border-color:var(--bad); animation:shake .28s; }
 </style>
 </head>
@@ -608,13 +626,7 @@ const FOCUS_ROLE = (function(){
     return (q === 'parent' || q === 'kid') ? q : '';
   } catch (e){ return ''; }
 })();
-/* 嵌入赚星账本时隐藏大标题（页签已表明身份，省一行高度） */
-if (FOCUS_ACCT !== 'local'){
-  document.addEventListener('DOMContentLoaded', function(){
-    try { document.body.classList.add('fx-embedded'); } catch (e){}
-  });
-  if (document.body) document.body.classList.add('fx-embedded');
-}
+/* 嵌入主题 class 已在 <head> 同步脚本挂到 documentElement（消除首帧蓝色闪烁），此处无需重复添加 */
 /* 老版本无前缀键（focus.*）一次性迁移到当前前缀下，避免独立打开丢历史成绩 */
 (function migrateLegacyFocusKeys(){
   if (!FOCUS_PREFIX) return;
