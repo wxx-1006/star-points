@@ -3962,6 +3962,19 @@ function fxMergeAll(local,remote){ // 逐键并集合并
   for(k in local){out[k]=local[k]}
   for(k in remote){
     if(out[k]===undefined){out[k]=remote[k];changed=true}
+    else if(k==='history'){ /* 历史成绩：两设备并集去重（按条目唯一 id），新的在前，上限 300 */
+      var la=[],ra=[];
+      try{la=JSON.parse(out[k])||[]}catch(e){}
+      try{ra=JSON.parse(remote[k])||[]}catch(e){}
+      if(!Array.isArray(la))la=[];if(!Array.isArray(ra))ra=[];
+      var seen={},u1=[],i;
+      for(i=0;i<la.length;i++){var r1=la[i];if(r1&&r1.u){seen[r1.u]=1}u1.push(r1)}
+      for(i=0;i<ra.length;i++){var r2=ra[i];if(r2&&r2.u&&!seen[r2.u]){u1.push(r2);changed=true}}
+      u1.sort(function(a,b){return String(b.tm||'').localeCompare(String(a.tm||''))||String(b.u||'').localeCompare(String(a.u||''))});
+      if(u1.length>300)u1=u1.slice(0,300);
+      var ser=JSON.stringify(u1);
+      if(ser!==out[k]){out[k]=ser;changed=true}
+    }
     else{var better=fxValBetter(out[k],remote[k]);if(better!==out[k]){out[k]=better;changed=true}}
   }
   return {data:out,changed:changed};

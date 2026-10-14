@@ -108,6 +108,12 @@ try {
   #trackPreStart{ aspect-ratio:1/1; }
 
   .fx-empty-tip{ padding:22px 0; text-align:center; font-size:13.5px; color:var(--dim); }
+  .hh-row{ display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
+  .hh-l{ flex:1; min-width:0; }
+  .hh-g{ font-weight:700; font-size:14px; color:var(--txt); }
+  .hh-s{ font-size:11.5px; color:var(--dim); margin-top:2px; }
+  .hh-v{ text-align:right; font-weight:800; font-size:15px; color:var(--accent-deep); font-variant-numeric:tabular-nums; flex-shrink:0; }
+  .hh-t{ display:block; font-size:10.5px; color:var(--dim); font-weight:400; margin-top:2px; white-space:nowrap; }
 
   /* 结果弹窗（不再内嵌页面，避免把开始按钮往下挤） */
   .modal-mask{ position:fixed; inset:0; background:rgba(23,42,60,.45); display:flex; align-items:center; justify-content:center; z-index:99; padding:20px; }
@@ -277,6 +283,7 @@ try {
     <button class="tab" data-tab="corsi" type="button">空间方块</button>
     <button class="tab" data-tab="switch" type="button">快速切换</button>
     <button class="tab" data-tab="cancel" type="button">符号划消</button>
+    <button class="tab" data-tab="history" type="button">历史</button>
   </nav>
 
   <!-- ========== 1 舒尔特方格 ========== -->
@@ -511,6 +518,12 @@ try {
       <button class="btn primary" id="btnCxRestart" type="button">开始</button>
     </div>
   </section>
+
+  <!-- ========== 9 历史成绩 ========== -->
+  <section class="panel" id="panel-history">
+    <p class="hint">最近 300 次练习的完成记录；标有「新纪录」的是刷新个人最好成绩的那一次。</p>
+    <div id="histList"></div>
+  </section>
 </div>
 
 <!-- 结果弹窗（全局唯一，替代页面内结果条） -->
@@ -651,6 +664,70 @@ function notifyBestUpdated(key){
       window.parent.postMessage({ type: 'focus-best-updated', key: key, acct: FOCUS_ACCT }, '*');
     }
   } catch (e){}
+}
+
+/* ---------- 历史成绩：每次完成自动记录，最多 300 条；随 sync-focus.json 双端同步（并集去重） ---------- */
+const HIST_FMT = {
+  schulte:{ n:'舒尔特方格', f:function(v){ return formatTime(v); } },
+  track:{ n:'视觉追踪', f:function(v){ return formatTime(v); } },
+  stroop:{ n:'色词干扰', f:function(v){ return v + ' 题'; } },
+  p24:{ n:'24点', f:function(v){ return formatTime(v); } },
+  memory:{ n:'记忆翻牌', f:function(v){ return formatTime(v); } },
+  corsi:{ n:'空间方块', f:function(v){ return v + ' 格'; } },
+  switch:{ n:'快速切换', f:function(v){ return v + ' 题'; } },
+  cancel:{ n:'符号划消', f:function(v){ return formatTime(v); } }
+};
+function loadHistory(){
+  try {
+    const r = store.get('history');
+    const a = r ? JSON.parse(r) : [];
+    return Array.isArray(a) ? a : [];
+  } catch (e){ return []; }
+}
+function pushHistory(rec){
+  try {
+    const a = loadHistory();
+    a.push(rec);
+    a.sort((x, y) => (y.tm || '').localeCompare(x.tm || '') || (y.u || '').localeCompare(x.u || ''));
+    while (a.length > 300) a.pop();
+    store.set('history', JSON.stringify(a));
+    notifyBestUpdated('history'); /* 触发主应用云同步 */
+  } catch (e){}
+}
+function recordHistory(g, v, sub, best){
+  const d = new Date();
+  const p2 = (n) => (n < 10 ? '0' : '') + n;
+  pushHistory({
+    g: g,
+    ds: d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()),
+    tm: p2(d.getHours()) + ':' + p2(d.getMinutes()),
+    v: Math.round(v * 100) / 100,
+    sub: sub || '',
+    best: best ? 1 : 0,
+    u: Math.random().toString(36).slice(2, 8) + Date.now().toString(36)
+  });
+}
+function renderHistory(){
+  const host = $('histList');
+  if (!host) return;
+  const a = loadHistory();
+  if (!a.length){
+    host.innerHTML = '<div class="fx-empty-tip" style="padding:30px 0">暂无成绩记录，先去玩一局吧</div>';
+    return;
+  }
+  const d = new Date();
+  const p2 = (n) => (n < 10 ? '0' : '') + n;
+  const tds = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+  let h = '';
+  for (let i = 0; i < a.length; i++){
+    const r = a[i];
+    const g = HIST_FMT[r.g] || { n: r.g, f: function(v){ return v; } };
+    const when = r.ds === tds ? r.tm : r.ds.slice(5) + ' ' + r.tm;
+    h += '<div class="hh-row"><div class="hh-l"><span class="hh-g">' + g.n + '</span>' + (r.best ? '<span class="rec">新纪录</span>' : '')
+      + (r.sub ? '<div class="hh-s">' + r.sub + '</div>' : '') + '</div>'
+      + '<div class="hh-v">' + g.f(r.v) + '<span class="hh-t">' + when + '</span></div></div>';
+  }
+  host.innerHTML = h;
 }
 
 /* ---------- 视觉追踪：生成一轮谜图 ---------- */
@@ -935,7 +1012,7 @@ function applyFocusVisibility(){ /* 移除孩子端不可见的页签；全部�
   if (!FOCUS_VISIBLE || FOCUS_ROLE === 'parent') return;
   const tabsBox = $('tabs');
   tabsBox.querySelectorAll('.tab').forEach((b) => {
-    if (FOCUS_VISIBLE.indexOf(b.dataset.tab) < 0) b.remove();
+    if (b.dataset.tab !== 'history' && FOCUS_VISIBLE.indexOf(b.dataset.tab) < 0) b.remove(); /* 历史页签始终保留 */
   });
   const left = tabsBox.querySelectorAll('.tab');
   if (!left.length){
@@ -1017,6 +1094,7 @@ $('tabs').addEventListener('click', (e) => {
     p.classList.toggle('on', p.id === 'panel-' + btn.dataset.tab);
   });
   if (btn.dataset.tab === 'schulte') fitFont();
+  if (btn.dataset.tab === 'history') renderHistory();
   fitOneScreen();
 });
 
@@ -1197,6 +1275,7 @@ function finish(){
   if (isNew) saveJSON(key, { ms: cost, errors: state.errors, at: Date.now() });
   updateStats();
 
+  recordHistory('schulte', cost, '错误 ' + state.errors + ' 次 · ' + state.size + '×' + state.size + ' ' + (state.type === 'num' ? '数字' : '字母'), isNew);
   showResult('完成！用时 ' + formatTime(cost),
     (comboStr() === 'none' ? '' : comboLabel() + ' · ') + '错误 ' + state.errors + ' 次 · 本局 ' + state.size + '×' + state.size + ' ' + (state.type === 'num' ? '数字' : '字母'),
     isNew,
@@ -1351,6 +1430,7 @@ function finishTrack(){
   if (isNew) saveJSON(key, { ms: cost, errors: trackSt.errors, at: Date.now() });
   trackUpdateStats();
 
+  recordHistory('track', cost, '错误 ' + trackSt.errors + ' 次 · ' + (trackSt.level === 1 ? '简单' : trackSt.level === 2 ? '中等' : '困难'), isNew);
   showResult('完成！总用时 ' + formatTime(cost),
     '10 轮 · 错误 ' + trackSt.errors + ' 次 · ' + (trackSt.level === 1 ? '简单' : trackSt.level === 2 ? '中等' : '困难'),
     isNew,
@@ -1463,6 +1543,7 @@ function finishStroop(){
   if (isNew) saveJSON(key, { score: stroopSt.ok, at: Date.now() });
   stroopUpdateStats();
 
+  recordHistory('stroop', stroopSt.ok, '答错 ' + stroopSt.err + ' 次 · 正确率 ' + (stroopSt.ok + stroopSt.err > 0 ? Math.round(stroopSt.ok * 100 / (stroopSt.ok + stroopSt.err)) : 0) + '%', isNew);
   showResult('答对 ' + stroopSt.ok + ' 题',
     '答错 ' + stroopSt.err + ' 次 · 正确率 ' + (stroopSt.ok + stroopSt.err > 0 ? Math.round(stroopSt.ok * 100 / (stroopSt.ok + stroopSt.err)) : 0) + '%',
     isNew,
@@ -1635,6 +1716,7 @@ function finishP24(){
   if (isNew) saveJSON(key, { ms: cost, errors: p24St.errors, at: Date.now() });
   p24UpdateStats();
 
+  recordHistory('p24', cost, '第 ' + p24St.qn + ' 题 · 错误 ' + p24St.errors + ' 次', isNew);
   showResult('答对了！用时 ' + formatTime(cost),
     '第 ' + p24St.qn + ' 题 · 错误 ' + p24St.errors + ' 次 · 点开始继续下一题',
     isNew,
@@ -1848,6 +1930,7 @@ function finishMemory(){
   if (isNew) saveJSON(key, { ms: cost, moves: memSt.moves, at: Date.now() });
   memUpdateStats();
 
+  recordHistory('memory', cost, memSt.moves + ' 步 · ' + (memSt.level === 1 ? '4×3 · 6 对' : memSt.level === 2 ? '5×4 · 10 对' : '6×5 · 15 对'), isNew);
   showResult('全部配对！用时 ' + formatTime(cost),
     memSt.moves + ' 步 · ' + (memSt.level === 1 ? '4×3 · 6 对' : memSt.level === 2 ? '5×4 · 10 对' : '6×5 · 15 对'),
     isNew,
@@ -1999,6 +2082,7 @@ function corsiOver(){
   if (isNew && span > 0) saveJSON(key, { span: span, at: Date.now() });
   corsiUpdateStats();
 
+  recordHistory('corsi', span, '', isNew && span > 0);
   showResult(span > 0 ? '空间广度：' + span + ' 格' : '挑战结束',
     '本次最高通过 ' + span + ' 格',
     isNew && span > 0,
@@ -2096,6 +2180,7 @@ function finishSwitch(){
   if (isNew) saveJSON(key, { score: swSt.ok, at: Date.now() });
   swUpdateStats();
 
+  recordHistory('switch', swSt.ok, '答错 ' + swSt.err + ' 次 · 正确率 ' + (swSt.ok + swSt.err > 0 ? Math.round(swSt.ok * 100 / (swSt.ok + swSt.err)) : 0) + '%', isNew);
   showResult('答对 ' + swSt.ok + ' 题',
     '答错 ' + swSt.err + ' 次 · 正确率 ' + (swSt.ok + swSt.err > 0 ? Math.round(swSt.ok * 100 / (swSt.ok + swSt.err)) : 0) + '%',
     isNew,
@@ -2220,6 +2305,7 @@ function finishCancel(){
   if (isNew) saveJSON(key, { ms: cost, wrong: cxSt.wrong, at: Date.now() });
   cxUpdateStats();
 
+  recordHistory('cancel', cost, '误点 ' + cxSt.wrong + ' 次', isNew);
   showResult('全部找到！用时 ' + formatTime(cost),
     '误点 ' + cxSt.wrong + ' 次 · 挑战',
     isNew,
