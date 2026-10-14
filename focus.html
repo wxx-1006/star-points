@@ -219,8 +219,8 @@ try {
     --bg:#FBF7EF; --card:#FFFFFF; --card2:#F6F1E7; --line:#F0EADC;
     --txt:#4A4238; --dim:#4A4238;
     --accent:#EE6F5F; --accent-deep:#C9503F;
-    background:#FBF7EF;
   }
+  html.fx-embedded body{ background:#FBF7EF; } /* 覆盖 body 默认蓝色渐变（class 挂 html 后 body 级渐变需单独覆盖） */
   /* 嵌入模式放大操作区：压缩固定开销 + 棋盘撑满可用宽（高度适配交给主应用统一缩放） */
   html.fx-embedded .app{ padding:8px 12px 12px; }
   html.fx-embedded .tabs{ margin-bottom:8px; }
