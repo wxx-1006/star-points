@@ -1098,7 +1098,8 @@ function fitOneScreen(){
   const avail = window.innerHeight;
   let z = '';
   if (needed > avail && needed > 0){
-    z = Math.max(0.55, avail / needed).toFixed(3); /* 下限 0.55，过小宁可滚动 */
+    /* 向下取整到 3 位小数 + 1px 余量：杜绝 toFixed 四舍五入向上导致缩放后仍溢出几像素、页面可滚 */
+    z = Math.max(0.55, Math.floor(((avail - 1) / needed) * 1000) / 1000).toFixed(3);
   }
   if (z !== prev){ app.style.zoom = z; }
   else if (prev){ app.style.zoom = prev; } /* 值未变则原样恢复，避免布局抖动 */
@@ -1107,12 +1108,15 @@ function fitOneScreen(){
 function fitHistory(){
   const host = $('histList');
   if (!host) return;
-  const top = host.getBoundingClientRect().top;
-  const avail = window.innerHeight - top - 10;
+  const app = document.querySelector('.app');
+  const padB = app ? (parseFloat(getComputedStyle(app).paddingBottom) || 0) : 0; /* 扣掉 .app 底部内边距，否则页面总高超出视口必然可滚 */
+  const top = host.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || 0); /* 文档坐标：不受当前滚动位置影响 */
+  const avail = window.innerHeight - top - 10 - padB;
   host.style.maxHeight = Math.max(180, Math.floor(avail)) + 'px';
 }
 window.addEventListener('resize', fitOneScreen);
 window.addEventListener('orientationchange', fitOneScreen);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitOneScreen); /* iOS 地址栏收展改变视口，即时重算 */
 
 /* ---------- 页签 ---------- */
 $('tabs').addEventListener('click', (e) => {
