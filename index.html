@@ -3722,10 +3722,10 @@ var CK_DEFAULT_TASKS=[
   {id:'r2',name:'科学精准学',subj:'science',min:15,pt:5,recur:{type:'rotate',rot:1}},
   {id:'r3',name:'语文听写',subj:'chinese',min:15,pt:5,recur:{type:'rotate',rot:2}},
   {id:'ws1',name:'语文阅读理解',subj:'chinese',min:20,pt:5,recur:{type:'weekly',days:[3,6]}},
-  {id:'e1',name:'数学加油包',subj:'math',pt:5,note:'华罗庚 / 举一反三 / 周周学 / 大白本',recur:{type:'weekly',days:[0,6]}},
-  {id:'e2',name:'语文作文训练',subj:'chinese',min:10,pt:20,zw:1,recur:{type:'weekly',days:[0,6]}},
-  {id:'e3',name:'学习机语文练习',subj:'chinese',pt:5,recur:{type:'weekly',days:[0,6]}},
-  {id:'e4',name:'校内背诵',subj:'other',pt:5,recur:{type:'weekly',days:[0,6]}}
+  {id:'e1',name:'数学加油包',subj:'math',pt:5,note:'华罗庚 / 举一反三 / 周周学 / 大白本',recur:{type:'weekend'}},
+  {id:'e2',name:'语文作文训练',subj:'chinese',min:10,pt:20,zw:1,recur:{type:'weekend'}},
+  {id:'e3',name:'学习机语文练习',subj:'chinese',pt:5,recur:{type:'weekend'}},
+  {id:'e4',name:'校内背诵',subj:'other',pt:5,recur:{type:'weekend'}}
 ];
 function ckDays(a,b){var da=new Date(a+'T00:00:00'),db=new Date(b+'T00:00:00');return Math.max(0,Math.round((db-da)/86400000))}
 function ckZwStage(ds){ // 语文作文三阶段（按计划图）：1=观察与素材 2=结构与详略 3=细节打磨与情感
@@ -3780,6 +3780,8 @@ function ckSortTasks(list){ // 按学科排序：语→数→英→科→其他�
 function ckRecurDesc(t){ // 循环规则的文字描述
   var rc=t.recur||{type:'daily'};
   if(rc.type==='daily')return '每天';
+  if(rc.type==='weekday')return '工作日（周一至五）';
+  if(rc.type==='weekend')return '周末（周六日 · 两天共用）';
   if(rc.type==='weekly'){
     var nm=['日','一','二','三','四','五','六'],dd=(rc.days||[]).slice().sort(),arr=[];
     for(var i=0;i<dd.length;i++)arr.push('周'+nm[dd[i]]);
@@ -3800,7 +3802,9 @@ function ckTasksFor(ds){ // 按日期 + 循环规则生成当日任务清单（�
     if(rc.type==='daily')ok=true;
     else if(rc.type==='weekly')ok=(rc.days||[]).indexOf(wd)>=0;
     else if(rc.type==='monthly')ok=(rc.days||[]).indexOf(dom)>=0;
-    else if(rc.type==='rotate'){var df=Math.round((new Date(ds+'T00:00:00')-new Date(CK_EPOCH+'T00:00:00'))/86400000);ok=(((df%3)+3)%3===(rc.rot||0))} // 负数日期（查看历史）也正常轮换
+    else if(rc.type==='weekday')ok=(wd>=1&&wd<=5); // 工作日：周一至周五
+    else if(rc.type==='weekend')ok=(wd===0||wd===6); // 周末：周六+周日（两天共用状态）
+    else if(rc.type==='rotate'){var df=Math.round((new Date(ds+'T00:00:00')-new Date(CK_EPOCH+'T00:00:00'))/86400000);ok=(((df%3)+3)%3===(rc.rot||0))} // 负数日期（查看历史）也正常轮换（仅旧任务兼容，配置不再新增）
     if(ok)list.push(t);
   }
   return ckSortTasks(list);
@@ -3813,8 +3817,9 @@ function ckStateKey(ds){ // 周末任务两天共用状态（以周六为锚）�
   if(d.getDay()===0){d.setDate(d.getDate()-1);return ckFmtD(d)}
   return ds;
 }
-function ckKeyFor(ds,t){ // 仅周末任务共用周末状态键；每日/轮流等任务仍按各自日期独立计
-  return t.type==='weekend'?ckStateKey(ds):ds;
+function ckKeyFor(ds,t){ // 仅周末任务共用周末状态键（周六为锚：任一天完成即算周末完成）；其余任务按各自日期独立计
+  var wk=(t.recur&&t.recur.type==='weekend')||t.type==='weekend';
+  return wk?ckStateKey(ds):ds;
 }
 // —— 状态：{[date]:{[taskId]:{c:孩子已申请,d:家长确认完成,r:已加分,t:最后操作时间}}}（date=状态键，周末任务以周六为锚）——
 var ckDate=today(),ckPullAt=0;
@@ -4325,7 +4330,8 @@ function ckCfgEdit(idx){
   h+='</select></div>'
     +'<div class="fg"><label class="fl">是否必打卡</label><select class="fi" id="ckfMust"><option value="0"'+(t.must?'':' selected')+'>否</option><option value="1"'+(t.must?' selected':'')+'>是</option></select></div>'
     +'<div class="fg"><label class="fl">循环方式</label><select class="fi" id="ckfType" onchange="ckCfgTypePick()">';
-  var types=[['daily','每天'],['weekly','每周（选星期）'],['monthly','每月（选几号）'],['rotate','每日轮流（3 天一轮）']];
+  var types=[['daily','每天'],['weekday','工作日（周一至五）'],['weekend','周末（周六日·共用）'],['weekly','每周（选星期）'],['monthly','每月（选几号）']];
+  if((t.recur||{}).type==='rotate')types.push(['rotate','每日轮流（3 天一轮）']); // 仅旧轮流任务可见，兼容不新增
   for(var k=0;k<types.length;k++)h+='<option value="'+types[k][0]+'"'+((t.recur||{}).type===types[k][0]?' selected':'')+'>'+types[k][1]+'</option>';
   h+='</select><div id="ckfPick"></div></div>'
     +'<div class="fg" style="display:flex;gap:10px"><div style="flex:1"><label class="fl">预计时长（分钟，0=不显示）</label><input class="fi" id="ckfMin" type="number" min="0" max="600" value="'+(t.min||0)+'"></div>'
@@ -4340,6 +4346,8 @@ function ckCfgTypePick(recur){ // 按循环方式渲染选择器（星期多选 
   var type=document.getElementById('ckfType').value;
   var el=document.getElementById('ckfPick');
   if(type==='daily'){el.innerHTML='<div class="ck-cfg-tip">每天都会出现在打卡列表</div>';return}
+  if(type==='weekday'){el.innerHTML='<div class="ck-cfg-tip">周一至周五出现，周末不出现</div>';return}
+  if(type==='weekend'){el.innerHTML='<div class="ck-cfg-tip">周六和周日出现，且两天共用打卡状态：任一天完成即算周末完成</div>';return}
   if(type==='weekly'){
     var days=(recur.days)||[],nm=['日','一','二','三','四','五','六'],vals=[0,1,2,3,4,5,6],h='<div class="ck-days">';
     for(var i=0;i<7;i++)h+='<label class="ck-day'+(days.indexOf(vals[i])>=0?' on':'')+'"><input type="checkbox" value="'+vals[i]+'"'+(days.indexOf(vals[i])>=0?' checked':'')+' onchange="this.parentNode.classList.toggle(\'on\',this.checked)">'+nm[i]+'</label>';
