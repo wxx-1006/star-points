@@ -668,14 +668,14 @@ function notifyBestUpdated(key){
 
 /* ---------- 历史成绩：每次完成自动记录，最多 300 条；随 sync-focus.json 双端同步（并集去重） ---------- */
 const HIST_FMT = {
-  schulte:{ n:'舒尔特方格', f:function(v){ return formatTime(v); } },
-  track:{ n:'视觉追踪', f:function(v){ return formatTime(v); } },
-  stroop:{ n:'色词干扰', f:function(v){ return v + ' 题'; } },
-  p24:{ n:'24点', f:function(v){ return formatTime(v); } },
-  memory:{ n:'记忆翻牌', f:function(v){ return formatTime(v); } },
-  corsi:{ n:'空间方块', f:function(v){ return v + ' 格'; } },
-  switch:{ n:'快速切换', f:function(v){ return v + ' 题'; } },
-  cancel:{ n:'符号划消', f:function(v){ return formatTime(v); } }
+  schulte:{ n:'舒尔特方格', f:function(v){ return formatTime(v); }, mm:'min' },
+  track:{ n:'视觉追踪', f:function(v){ return formatTime(v); }, mm:'min' },
+  stroop:{ n:'色词干扰', f:function(v){ return v + ' 题'; }, mm:'max' },
+  p24:{ n:'24点', f:function(v){ return formatTime(v); }, mm:'min' },
+  memory:{ n:'记忆翻牌', f:function(v){ return formatTime(v); }, mm:'min' },
+  corsi:{ n:'空间方块', f:function(v){ return v + ' 格'; }, mm:'max' },
+  switch:{ n:'快速切换', f:function(v){ return v + ' 题'; }, mm:'max' },
+  cancel:{ n:'符号划消', f:function(v){ return formatTime(v); }, mm:'min' }
 };
 function loadHistory(){
   try {
@@ -688,7 +688,7 @@ function pushHistory(rec){
   try {
     const a = loadHistory();
     a.push(rec);
-    a.sort((x, y) => (y.tm || '').localeCompare(x.tm || '') || (y.u || '').localeCompare(x.u || ''));
+    a.sort((x, y) => (y.ts || 0) - (x.ts || 0) || (y.tm || '').localeCompare(x.tm || '') || (y.u || '').localeCompare(x.u || '')); /* 精确时间戳倒序：同分钟内也保持最新在前 */
     while (a.length > 300) a.pop();
     store.set('history', JSON.stringify(a));
     notifyBestUpdated('history'); /* 触发主应用云同步 */
@@ -701,6 +701,7 @@ function recordHistory(g, v, sub, best){
     g: g,
     ds: d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()),
     tm: p2(d.getHours()) + ':' + p2(d.getMinutes()),
+    ts: Date.now(),
     v: Math.round(v * 100) / 100,
     sub: sub || '',
     best: best ? 1 : 0,
@@ -711,9 +712,17 @@ function renderHistory(){
   const host = $('histList');
   if (!host) return;
   const a = loadHistory();
+  a.sort((x, y) => (y.ts || 0) - (x.ts || 0) || (y.tm || '').localeCompare(x.tm || '')); /* 渲染前再排序：任何来源（云合并/注入）都保证最新在前 */
   if (!a.length){
     host.innerHTML = '<div class="fx-empty-tip" style="padding:30px 0">暂无成绩记录，先去玩一局吧</div>';
     return;
+  }
+  /* 新纪录标动态判定：只标每个游戏当前最好成绩的那条（耗时类取最小，题数/格数类取最大），过往旧标不再显示 */
+  const bestV = {};
+  for (let i = 0; i < a.length; i++){
+    const r = a[i], mm = (HIST_FMT[r.g] || {}).mm || 'min';
+    if (!(r.g in bestV)) bestV[r.g] = r.v;
+    else bestV[r.g] = (mm === 'max') ? Math.max(bestV[r.g], r.v) : Math.min(bestV[r.g], r.v);
   }
   const d = new Date();
   const p2 = (n) => (n < 10 ? '0' : '') + n;
@@ -723,7 +732,8 @@ function renderHistory(){
     const r = a[i];
     const g = HIST_FMT[r.g] || { n: r.g, f: function(v){ return v; } };
     const when = r.ds === tds ? r.tm : r.ds.slice(5) + ' ' + r.tm;
-    h += '<div class="hh-row"><div class="hh-l"><span class="hh-g">' + g.n + '</span>' + (r.best ? '<span class="rec">新纪录</span>' : '')
+    const isBest = r.v === bestV[r.g];
+    h += '<div class="hh-row"><div class="hh-l"><span class="hh-g">' + g.n + '</span>' + (isBest ? '<span class="rec">新纪录</span>' : '')
       + (r.sub ? '<div class="hh-s">' + r.sub + '</div>' : '') + '</div>'
       + '<div class="hh-v">' + g.f(r.v) + '<span class="hh-t">' + when + '</span></div></div>';
   }

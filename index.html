@@ -3970,7 +3970,7 @@ function fxMergeAll(local,remote){ // 逐键并集合并
       var seen={},u1=[],i;
       for(i=0;i<la.length;i++){var r1=la[i];if(r1&&r1.u){seen[r1.u]=1}u1.push(r1)}
       for(i=0;i<ra.length;i++){var r2=ra[i];if(r2&&r2.u&&!seen[r2.u]){u1.push(r2);changed=true}}
-      u1.sort(function(a,b){return String(b.tm||'').localeCompare(String(a.tm||''))||String(b.u||'').localeCompare(String(a.u||''))});
+      u1.sort(function(a,b){return (b.ts||0)-(a.ts||0)||String(b.tm||'').localeCompare(String(a.tm||''))||String(b.u||'').localeCompare(String(a.u||''))});
       if(u1.length>300)u1=u1.slice(0,300);
       var ser=JSON.stringify(u1);
       if(ser!==out[k]){out[k]=ser;changed=true}
