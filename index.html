@@ -4372,7 +4372,10 @@ function ckCfgSubmit(idx){
     for(var i=0;i<cbs.length;i++)days.push(parseInt(cbs[i].value,10));
     if(!days.length){toast('每周循环请至少选择一个星期','err');return}
     days.sort(function(a,b){return ((a+6)%7)-((b+6)%7)}); // 周一~周日排序
-    recur.days=days;
+    /* 归一化：恰好勾满工作日 → 存为工作日类型；恰好勾周六+周日 → 存为周末类型（两天共用状态） */
+    if(days.length===5&&days.join(',')==='1,2,3,4,5'){type='weekday';recur={type:'weekday'}}
+    else if(days.length===2&&days.join(',')==='6,0'){type='weekend';recur={type:'weekend'}}
+    else recur.days=days;
   }else if(type==='monthly'){
     var cbs2=document.querySelectorAll('#ckfPick input:checked'),md=[];
     for(var j=0;j<cbs2.length;j++)md.push(parseInt(cbs2[j].value,10));
