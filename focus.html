@@ -109,6 +109,7 @@ try {
 
   .fx-empty-tip{ padding:22px 0; text-align:center; font-size:13.5px; color:var(--dim); }
   .hh-row{ display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
+  #histList{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
   .hh-l{ flex:1; min-width:0; }
   .hh-g{ font-weight:700; font-size:14px; color:var(--txt); }
   .hh-s{ font-size:11.5px; color:var(--dim); margin-top:2px; }
@@ -715,6 +716,7 @@ function renderHistory(){
   a.sort((x, y) => (y.ts || 0) - (x.ts || 0) || (y.tm || '').localeCompare(x.tm || '')); /* 渲染前再排序：任何来源（云合并/注入）都保证最新在前 */
   if (!a.length){
     host.innerHTML = '<div class="fx-empty-tip" style="padding:30px 0">暂无成绩记录，先去玩一局吧</div>';
+    fitHistory();
     return;
   }
   /* 新纪录标动态判定：只标每个游戏当前最好成绩的那条（耗时类取最小，题数/格数类取最大），过往旧标不再显示 */
@@ -738,6 +740,7 @@ function renderHistory(){
       + '<div class="hh-v">' + g.f(r.v) + '<span class="hh-t">' + when + '</span></div></div>';
   }
   host.innerHTML = h;
+  fitHistory(); /* 渲染后按当前可视区重算列表限高，页面整体不缩放 */
 }
 
 /* ---------- 视觉追踪：生成一轮谜图 ---------- */
@@ -1080,6 +1083,15 @@ $('resultModal').addEventListener('click', (e) => {
 function fitOneScreen(){
   const app = document.querySelector('.app');
   if (!app) return;
+  /* 历史页是长列表：整页不缩放，改为列表内部滚动（fitHistory 限高） */
+  const hp = document.getElementById('panel-history');
+  if (hp && hp.classList.contains('on')){
+    app.style.zoom = '';
+    fitHistory();
+    return;
+  }
+  const hl = $('histList');
+  if (hl) hl.style.maxHeight = ''; /* 切回游戏页时还原列表高度 */
   const prev = app.style.zoom;
   app.style.zoom = ''; /* 先还原，测自然高度 */
   const needed = app.scrollHeight;
@@ -1090,6 +1102,14 @@ function fitOneScreen(){
   }
   if (z !== prev){ app.style.zoom = z; }
   else if (prev){ app.style.zoom = prev; } /* 值未变则原样恢复，避免布局抖动 */
+}
+/* 历史列表限高：列表自己滚动，页面整体保持原始字号不再缩小 */
+function fitHistory(){
+  const host = $('histList');
+  if (!host) return;
+  const top = host.getBoundingClientRect().top;
+  const avail = window.innerHeight - top - 10;
+  host.style.maxHeight = Math.max(180, Math.floor(avail)) + 'px';
 }
 window.addEventListener('resize', fitOneScreen);
 window.addEventListener('orientationchange', fitOneScreen);
