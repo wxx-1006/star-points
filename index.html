@@ -2352,7 +2352,7 @@ function st(tab){
     document.getElementById('kt-'+tab).classList.add('on');
     curTab=tab;
     if(tab==='pet')ptShow();       // 宠物页：本机状态渲染 + 欢迎语（数据不上云，无需等待 syncPull）
-    if(tab==='checkin'){ckPullAt=0;ckSweepStale();ckShow();}   // 打卡页：强制拉取最新状态 + 超时申请重置
+    if(tab==='checkin'){ckPullAt=0;ckShow();}   // 打卡页：强制拉取最新状态（超时重置+必打卡结算在云端合并后的回调里执行，避免误扣）
     if(tab==='report')renderReport(); // 先按当前数据渲染，拉取后刷新
     if(!currentUser){render();return}
     // 进入记录页/商城/报告均重新拉取：家长桶（总积分/奖励项/刷题只读字段）
@@ -2367,7 +2367,7 @@ function st(tab){
   // 刷题页：进度按账号存本机（sp_quiz__<phone>）并随账号桶上云 → 先备好题目列表再显示页面，
   // 避免 syncPull 返回前的窗口期内判分按钮已可点、而 qzList 仍为空
   if(tab==='pet')return; // 宠物页为孩子端专属：家长端无入口且不开放（双保险）
-  if(tab==='checkin'){ckPullAt=0;ckReconcileAwards();ckSweepStale();ckShow();} // 打卡页：强制拉取最新状态 + 自愈补积分 + 超时申请重置
+  if(tab==='checkin'){ckPullAt=0;ckReconcileAwards();ckShow();} // 打卡页：强制拉取最新状态 + 自愈补积分（超时重置+必打卡结算在云端合并后的回调里执行）
   if(tab==='focus'){fxShow();}
   if(tab==='quiz')qzShow();
   if(tab==='report')renderReport(); // 报告页：先按当前内存数据渲染，拉取完成后刷新
@@ -3902,24 +3902,26 @@ function ckSyncPush(){
     })
     .catch(function(){ckSyncBusy=false;ckSyncErr='网络异常，稍后自动重试';markCkPending();if(curTab==='checkin')ckShow()});
 }
-function ckSyncPull(){ // 进打卡页拉取：合并云端申请/完成状态后刷新
-  if(!currentUser||!getSyncToken())return;
+function ckSyncPull(cb){ // 进打卡页拉取：合并云端申请/完成状态后刷新；cb=合并完成后的回调（必打卡结算挂在此处，避免本地缺孩子端申请状态被误扣）
+  if(!currentUser)return;
+  if(!getSyncToken()){if(cb)cb();return} // 未配置同步：本地即全部真相，立即回调
   fetch(GH_CK_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
-      if(!r.ok){ckSyncErr='拉取失败（HTTP '+r.status+'）';if(hasCkPending())ckSyncPush();else if(curTab==='checkin')ckShow();return}
+      if(!r.ok){ckSyncErr='拉取失败（HTTP '+r.status+'）';if(cb)cb();if(hasCkPending())ckSyncPush();else if(curTab==='checkin')ckShow();return}
       return r.json().then(function(meta){
         ckSyncSHA=meta.sha||'';
-        if(!meta.content){ckCloudCnt=0;if(hasCkPending())ckSyncPush();return}
+        if(!meta.content){ckCloudCnt=0;if(cb)cb();if(hasCkPending())ckSyncPush();return}
         var all={};try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
         ckCloudCnt=ckDateKeys(all[currentUser]);
         var merged=ckMergeAll(ckBucket(),all[currentUser]||{});
         ckSaveBucket(merged);
         ckSyncErr='';
+        if(cb)cb(); // 合并完成后先回调（此时孩子端申请/完成状态已在本地，结算不会误判）
         if(hasCkPending())ckSyncPush();
         if(curTab==='checkin')ckShow();
       });
     })
-    .catch(function(){ckSyncErr='网络异常，稍后自动重试';if(curTab==='checkin')ckShow()});
+    .catch(function(){ckSyncErr='网络异常，稍后自动重试';if(cb)cb();if(curTab==='checkin')ckShow()});
 }
 window.addEventListener('online',function(){if(hasCkPending())ckSyncPush()});
 setInterval(function(){if(hasCkPending()&&!ckSyncBusy)ckSyncPush()},60000); // 网络不稳：待同步内容每分钟自动补推
@@ -4194,7 +4196,7 @@ function ckShift(n){ // 日视图 ±1 天；最多查看今天起 7 天内
   if(ds>ckAddDays(today(),7))return;
   ckDate=ds;ckShow();
 }
-function ckMustSweep(now){ // 必打卡结算：当日22点后（及历史遗漏日期）未完成且未申请 → 标记 m 并扣任务分值；now 供测试注入
+function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无家长确认d/无孩子申请c/未扣过m）才扣分；孩子已申请(c)不扣——24h未确认由 ckSweepStale 重置回初始状态，之后由本函数补扣；now 供测试注入
   now=now||new Date();
   if(!currentUser)return;
   var tds=ckFmtD(now),after22=now.getHours()>=22;
@@ -4232,9 +4234,12 @@ function ckMustSweep(now){ // 必打卡结算：当日22点后（及历史遗漏
 function ckShow(){
   var host=document.getElementById('ckList');
   if(!host||!currentUser)return;
-  ckMustSweep(); // 必打卡结算（22点后未完成自动扣分；幂等）
   if(ckDate>ckAddDays(today(),7))ckDate=ckAddDays(today(),7);
-  if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull()} // 30 秒节流拉云端申请/完成状态
+  /* 结算时序：必须先拉云端合并孩子端的申请/完成状态，再跑超时重置与必打卡结算——
+     否则本地缺刚提交的 c/d 状态会误扣（修复"明明打卡了还被扣分"）。
+     30 秒内已拉过则本地状态新鲜，直接结算。 */
+  if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull(function(){ckSweepStale();ckMustSweep()})}
+  else{ckSweepStale();ckMustSweep()}
   var tasks=ckTasksFor(ckDate),b=ckBucket();
   var syncHtml='';
   if(!getSyncToken())syncHtml='<span class="ck-sync err" onclick="ckTokOpen()" title="点击配置同步令牌">同步未开启，点击配置令牌</span>';
