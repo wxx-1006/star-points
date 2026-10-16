@@ -4296,12 +4296,12 @@ function ckShow(){
     }else if(ckDate>today()){
       html+='<div class="ck-st wait">计划中</div>'; // 未来日期仅查看计划，不可操作
     }else if(sessionRole==='kid'){
-      /* 过去日期仍未打卡：状态显示「过期未打卡」，按钮变「补打卡」保留补申请能力 */
-      html+=(st.c?'<div class="ck-st wait">待家长确认</div>':(expired?'<div class="ck-st exp">过期未打卡</div>':''))
-        +(st.c?'':'<button class="ck-b" onclick="ckClaim(\''+k+'\',\''+t.id+'\')">'+(expired?'补打卡':'我已完成')+'</button>');
+      /* 过去日期仍未打卡：状态即「过期未打卡」（纯展示，不可再操作） */
+      html+=st.c?'<div class="ck-st wait">待家长确认</div>'
+        :(expired?'<div class="ck-st exp">过期未打卡</div>':'<button class="ck-b" onclick="ckClaim(\''+k+'\',\''+t.id+'\')">我已完成</button>');
     }else{
-      html+=(expired?'<div class="ck-st exp">过期未打卡</div>':'')
-        +'<button class="ck-b p" onclick="ckConfirm(\''+k+'\',\''+t.id+'\')">'+(st.c?'孩子已打卡，请确认！':'确认完成')+'</button>';
+      html+=expired?'<div class="ck-st exp">过期未打卡</div>'
+        :'<button class="ck-b p" onclick="ckConfirm(\''+k+'\',\''+t.id+'\')">'+(st.c?'孩子已打卡，请确认！':'确认完成')+'</button>';
     }
     html+='</div>';
   }
