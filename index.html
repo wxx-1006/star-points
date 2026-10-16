@@ -4196,13 +4196,14 @@ function ckShift(n){ // 日视图 ±1 天；最多查看今天起 7 天内
   if(ds>ckAddDays(today(),7))return;
   ckDate=ds;ckShow();
 }
-function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无家长确认d/无孩子申请c/未扣过m）才扣分；孩子已申请(c)不扣——24h未确认由 ckSweepStale 重置回初始状态，之后由本函数补扣；now 供测试注入
+function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无家长确认d/无孩子申请c/未扣过m）才扣分；孩子已申请(c)不扣——24h未确认由 ckSweepStale 重置回初始状态，之后由本函数补扣；周末任务(两天共用)扣分时点=该周末周日24点后；now 供测试注入
   now=now||new Date();
   if(!currentUser)return;
   var tds=ckFmtD(now),after22=now.getHours()>=22;
   var tasks=ckCfg().tasks,musts=[];
   for(var i=0;i<tasks.length;i++){if(tasks[i].must)musts.push(tasks[i])}
   if(!musts.length)return;
+  var isWk=function(t){return (t.recur&&t.recur.type==='weekend')||t.type==='weekend'};
   var b=ckBucket(),changed=false,anyPenalty=false;
   var scan=function(ds){
     var day=ckTasksFor(ds),ids={},ti;
@@ -4210,6 +4211,11 @@ function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无
     for(var m=0;m<musts.length;m++){
       var t=musts[m];
       if(!ids[t.id])continue;
+      if(isWk(t)){
+        /* 周末任务以周六为锚两天共用：周日仍有整天可打卡，扣分统一推迟到该周末周日24点后（=锚周六+2的周一00:00起）；
+           此前（含周六/周日22点的当日结算、历史遍历）一律跳过，防止提前扣 */
+        if(ckFmtD(now)<ckAddDays(ds,2))continue;
+      }
       var k=ckKeyFor(ds,t),st=(b[k]&&b[k][t.id])||{};
       if(st.d||st.c||st.m)continue;
       b[k]=b[k]||{};
@@ -4219,7 +4225,7 @@ function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无
         var rid='ckm_'+ds+'_'+t.id,has=false;
         for(var j=0;j<ad.records.length;j++){if(ad.records[j].id===rid){has=true;break}}
         if(!has){
-          ad.records.push({id:rid,date:ds,timestamp:Date.now(),type:'down',itemId:'ck_must',name:t.name+'（必打卡未完成）',category:'打卡',score:-(t.pt||CK_PT),note:'必打卡当日22点前未完成自动扣分'});
+          ad.records.push({id:rid,date:ds,timestamp:Date.now(),type:'down',itemId:'ck_must',name:t.name+'（必打卡未完成）',category:'打卡',score:-(t.pt||CK_PT),note:isWk(t)?'必打卡周末任务周日24点前未完成自动扣分':'必打卡当日22点前未完成自动扣分'});
           ad.totalPoints-=(t.pt||CK_PT);
           anyPenalty=true;
         }
@@ -4228,6 +4234,9 @@ function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无
   };
   if(after22)scan(tds);
   for(var k2 in b){if(k2!=='_cfg'&&k2<tds)scan(k2)}
+  /* 周末任务兜底：bucket 可能没有周末键（孩子整周末没打卡），周一~周五主动补扫上一个周六锚键 */
+  var dow=now.getDay();
+  if(dow>=1&&dow<=5)scan(ckAddDays(tds,-((dow+1)%7)));
   if(changed){ckSaveBucket(b);ckQueue()}
   if(anyPenalty){sd(ad);toast('必打卡任务有超时未完成，已自动扣分','err')}
 }
