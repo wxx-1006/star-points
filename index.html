@@ -676,6 +676,7 @@ body.kid-mode{padding-bottom:72px}
 .fx-vis-row.on{border-color:var(--red);background:var(--red-l)}
 .fx-vis-row input{width:18px;height:18px;flex:none;accent-color:var(--red)}
 .ck-mustb{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--red-l);color:var(--red-deep);font:700 10px/1.6 var(--ff);vertical-align:1px;white-space:nowrap}
+.ck-exp{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--red);color:#fff;font:700 10px/1.6 var(--ff);vertical-align:1px;white-space:nowrap}
 .ck-item.must-pending{border-width:1.5px;border-style:solid}
 .ck-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ck-day{border:1.5px solid #E8E0D2;background:#fff;border-radius:8px;padding:5px 9px;font:700 11.5px/1 var(--ff);color:#8F8578;cursor:pointer;user-select:none}
@@ -4285,8 +4286,9 @@ function ckShow(){
     var bd=st.d?'#B9DDB2':(st.c?'#E8D49A':sm.bd); // 已完成绿描边 / 待确认黄描边 / 学科本色
     if(t.must)note+=(note?' · ':'')+'必打卡，当日22点前未打卡扣除相应分值';
     var mustPending=t.must&&!st.d&&!st.m; // 必打卡且未完成未扣分：描边加重区分
+    var expired=ckDate<today()&&!st.d&&!st.c; // 过去日期仍未打卡（无家长确认也无孩子申请）：标过期
     html+='<div class="ck-item'+(mustPending?' must-pending':'')+'" style="background:'+sm.bg+';border-color:'+bd+'">'
-      +'<div class="ck-i-l"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.must?'<span class="ck-mustb">必打卡</span>':'')+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+(st.m&&!st.d?'<span class="ck-min" style="color:var(--red-deep)">已扣'+(t.pt||CK_PT)+'分</span>':'')+'</div>'
+      +'<div class="ck-i-l"><div class="ck-nm"><span class="ck-subj" style="background:'+sm.c+'">'+sm.n+'</span>'+escHtml(t.name)+(t.must?'<span class="ck-mustb">必打卡</span>':'')+(expired?'<span class="ck-exp">过期未打卡</span>':'')+(t.min?'<span class="ck-min">'+t.min+'min</span>':'')+(st.m&&!st.d?'<span class="ck-min" style="color:var(--red-deep)">已扣'+(t.pt||CK_PT)+'分</span>':'')+'</div>'
       +(note?'<div class="ck-zw">'+escHtml(note)+'</div>':'')
       +'</div>';
     if(st.d){
