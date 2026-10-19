@@ -1518,7 +1518,7 @@ function syncPush(data){
 //   推送失败标记 sp_pet_sync_pending，网络恢复/成功拉取后补推；未配置 token 时全部静默跳过。
 var GH_PET_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-pet.json';
 var PET_SYNC_PENDING_KEY='sp_pet_sync_pending';
-var petSyncSHA='',petSyncTimer=null;
+var petSyncSHA='',petSyncTimer=null,petSyncErr=''; // petSyncErr：宠物同步失败原因（打卡页顶部状态行显示，供排查）
 function markPetPending(){try{localStorage.setItem(PET_SYNC_PENDING_KEY,'1')}catch(e){}}
 function clearPetPending(){try{localStorage.removeItem(PET_SYNC_PENDING_KEY)}catch(e){}}
 function hasPetPending(){try{return localStorage.getItem(PET_SYNC_PENDING_KEY)==='1'}catch(e){return false}}
@@ -1550,7 +1550,7 @@ function petSyncPush(){
   fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
       if(r.status===404){petSyncSHA='';return {sha:'',content:null}}
-      if(!r.ok){markPetPending();return null}
+      if(!r.ok){markPetPending();petSyncErr='宠物同步失败（HTTP '+r.status+'，多为令牌失效或权限不足）';return null}
       return r.json();
     })
     .then(function(meta){
@@ -1562,21 +1562,23 @@ function petSyncPush(){
       if(remote&&(!local||(remote.updatedAt||0)>(local.updatedAt||0))){
         // 云端较新：吸收合并结果到本地（ptAdoptRemote 重新持久化后自动排队补推合并结果）
         if(typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(petMerge(local,remote));
+        petSyncErr='';
         return;
       }
       allData[currentUser]=local;
       return fetch(GH_PET_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'pet-sync:'+currentUser,content:utf8ToB64(JSON.stringify(allData)),sha:petSyncSHA})})
-        .then(function(r){if(r.ok)clearPetPending();else markPetPending()});
+        .then(function(r){if(r.ok){clearPetPending();petSyncErr=''}else{markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+'）'}});
     })
-    .catch(function(){markPetPending()});
+    .catch(function(){markPetPending();petSyncErr='宠物同步网络异常（GitHub API 连不上）'});
 }
 function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收；有待推改动则补推
   if(!currentUser||!getSyncToken())return;
   fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
-      if(!r.ok){if(hasPetPending())petSyncPush();return}
+      if(!r.ok){petSyncErr='宠物同步失败（HTTP '+r.status+'，多为令牌失效或权限不足）';if(hasPetPending())petSyncPush();return}
       return r.json().then(function(meta){
         petSyncSHA=meta.sha||'';
+        petSyncErr='';
         if(!meta.content){if(hasPetPending())petSyncPush();return}
         var allData={};try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
         var remote=allData[currentUser]||null,local=petLocalState();
@@ -1586,7 +1588,7 @@ function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收�
         if(hasPetPending())petSyncPush();
       });
     })
-    .catch(function(){});
+    .catch(function(){petSyncErr='宠物同步网络异常（GitHub API 连不上）'});
 }
 window.addEventListener('online',function(){if(hasPetPending())petSyncPush()});
 // 同步状态合并进用户胶囊：6px 色点（绿=已同步，黄=同步中，红=失败，灰=未配置）
@@ -4258,6 +4260,7 @@ function ckShow(){
   else if(ckSyncBusy)syncHtml='<span class="ck-sync">同步中…</span>';
   else if(ckSyncErr)syncHtml='<span class="ck-sync err" onclick="ckSyncPush()" title="点击立即重试">同步异常：'+escHtml(ckSyncErr)+'</span>';
   else if(hasCkPending())syncHtml='<span class="ck-sync">待同步…</span>'; // 已同步时不显示任何状态文字
+  if(petSyncErr)syncHtml+='<span class="ck-sync err" onclick="petSyncPush()" title="点击立即重试">'+escHtml(petSyncErr)+'</span>'; // 宠物同步失败独立显示（孩子端主要数据通道，静默失败难排查）
   var maxD=ckAddDays(today(),7);
   var html='<div class="ck-nav">'
     +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
