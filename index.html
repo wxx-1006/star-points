@@ -1536,8 +1536,9 @@ function petMerge(local,remote){ // 较新者为基础，累计资源取两设�
   return m;
 }
 function petSyncQueue(){ // ptSave 防抖入口：5 秒内的多次保存合并为一次推送
-  if(!currentUser||!getSyncToken())return;
-  markPetPending();
+  if(!currentUser)return;
+  markPetPending(); /* 先标记待推：即使当前未配 token（孩子先玩后配 token 的场景），之后配置/恢复网络也会补推 */
+  if(!getSyncToken())return;
   if(petSyncTimer)clearTimeout(petSyncTimer);
   petSyncTimer=setTimeout(petSyncPush,5000);
 }
@@ -1641,6 +1642,7 @@ function saveSyncToken(){
       render();
       retryPendingSync(); // token 修复/首次配置后立即补推待同步改动
     });
+    petSyncPush(); // 补推配置 token 前积压的宠物改动（先玩后配 token 的场景）
   }else{
     syncStatus='off';syncErr='';updateSyncUI();
   }
