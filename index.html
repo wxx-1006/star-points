@@ -839,6 +839,22 @@ body.kid-mode{padding-bottom:72px}
   </div>
 </div>
 
+<!-- 自定义统计区间（报告页） -->
+<div class="mo" id="mReportCustom">
+  <div class="ml">
+    <span class="ml-handle" aria-hidden="true"></span>
+    <div class="ml-header">
+      <div class="ml-title">自定义统计区间</div>
+      <button class="ml-close" onclick="cm('mReportCustom')">✕</button>
+    </div>
+    <div class="ml-body">
+      <div class="fg"><label class="fl">开始日期</label><input type="date" class="fi" id="rcStart"></div>
+      <div class="fg"><label class="fl">结束日期</label><input type="date" class="fi" id="rcEnd"></div>
+      <button class="bn bn-p" onclick="applyReportCustom()">应用</button>
+    </div>
+  </div>
+</div>
+
 <!-- 兑换积分弹窗 -->
 <div class="mo" id="ms2">
   <div class="ml">
@@ -3238,13 +3254,37 @@ function rejectRequest(id){
 
 
 // ===== 学习报告（#8）：周/月积分趋势（纯 CSS 柱状）+ 加分构成 + 刷题打卡与兑换统计 =====
-var reportRange='week'; // 'week' | 'month'（内存态，刷新重置）
+var reportRange='week'; // 'week' | 'month' | 'year' | 'custom'（内存态，刷新重置）
 var rdStart=''; // 当前报告范围起点（YYYY-MM-DD），明细弹窗按此过滤
-function setReportRange(r){reportRange=(r==='month')?'month':'week';renderReport()}
+var rdEnd='';   // 当前报告范围终点（明细弹窗过滤上限），空=今天
+var reportCustom={start:'',end:''}; // 自定义统计区间（内存态）
+function rdEndDate(){return rdEnd||today()}
+function setReportRange(r){ // custom 打开区间选择弹窗，确认后再渲染；其余直接切换渲染
+  if(r!=='week'&&r!=='month'&&r!=='year'&&r!=='custom')r='week';
+  reportRange=r;
+  if(r==='custom'){openReportCustom();return}
+  renderReport();
+}
+function openReportCustom(){ // 回填当前自定义区间（默认本年 1/1 ~ 今天）
+  var d=new Date(),f=function(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+  var defStart=reportCustom.start||d.getFullYear()+'-01-01';
+  var defEnd=reportCustom.end||f(d);
+  document.getElementById('rcStart').value=defStart;
+  document.getElementById('rcEnd').value=defEnd;
+  document.getElementById('mReportCustom').classList.add('show');
+}
+function applyReportCustom(){
+  var s=document.getElementById('rcStart').value,e=document.getElementById('rcEnd').value;
+  if(!s||!e){toast('请选择开始和结束日期','err');return}
+  if(s>e){toast('开始日期不能晚于结束日期','err');return}
+  reportCustom={start:s,end:e};
+  cm('mReportCustom');
+  renderReport();
+}
 function renderReportTabs(){
   var el=document.getElementById('reportRangeTabs');
   if(!el)return;
-  var defs=[['week','本周'],['month','本月']];
+  var defs=[['week','本周'],['month','本月'],['year','本年'],['custom','自定义']];
   var h='';
   for(var i=0;i<defs.length;i++){
     h+='<div class="ftb'+(reportRange===defs[i][0]?' on':'')+'" onclick="setReportRange(\''+defs[i][0]+'\')">'+defs[i][1]+'</div>';
@@ -3264,31 +3304,40 @@ function renderReport(){
   if(!body)return;
   renderReportTabs();
   if(!ad){body.innerHTML='';return} // 孩子端开放只读查看：数据来自家长桶（syncPull 已拉取）
-  // 计算日期范围
+  // 计算日期范围（custom 用自定义区间，其余快捷区间终点=今天）
   var startD=new Date();
   if(reportRange==='week')startD.setDate(startD.getDate()-6);
+  else if(reportRange==='year')startD=new Date(startD.getFullYear(),0,1);
+  else if(reportRange==='custom'&&reportCustom.start){var ps=new Date(reportCustom.start+'T00:00:00');if(!isNaN(ps))startD=ps}
   else startD.setDate(1);
   var f=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-  var startStr=f(startD),endStr=today();
-  rdStart=startStr; // 记录当前报告范围起点，供明细弹窗按范围过滤
-  // 逐日净分 + 分类加分
-  var dl2=[],guard=0;
-  (function(){var d=new Date(startD);
-    while(guard++<62){
-      var ds=f(d);dl2.push(ds);
-      if(ds>=endStr)break;
-      d.setDate(d.getDate()+1);
+  var endD=new Date();
+  if(reportRange==='custom'&&reportCustom.end){var pe=new Date(reportCustom.end+'T00:00:00');if(!isNaN(pe))endD=pe}
+  var startStr=f(startD),endStr=f(endD);
+  if(startStr>endStr){var tmpS=startStr;startStr=endStr;endStr=tmpS} // 兜底倒挂
+  rdStart=startStr;rdEnd=endStr; // 明细弹窗按此区间过滤
+  // 净分序列：跨度>62天按月聚合（本年/长自定义），否则逐日
+  var spanDays=Math.round((new Date(endStr+'T00:00:00')-new Date(startStr+'T00:00:00'))/86400000)+1;
+  var byMonth=spanDays>62;
+  var dl2=[],netBy={},guard=0;
+  (function(){var d=new Date(startStr+'T00:00:00');
+    while(guard++<400){
+      var key=byMonth?(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')):f(d);
+      if(dl2.indexOf(key)<0)dl2.push(key);
+      var last=byMonth?(key>=endStr.slice(0,7)):(key>=endStr);
+      if(last)break;
+      if(byMonth)d.setMonth(d.getMonth()+1);else d.setDate(d.getDate()+1);
     }
   })();
-  var netBy={},i;
   for(i=0;i<dl2.length;i++)netBy[dl2[i]]=0;
   var recs=ad.records.filter(function(r){return r.date>=startStr&&r.date<=endStr});
   var exs=ad.exchanges.filter(function(e){return e.date>=startStr&&e.date<=endStr});
+  var keyOf=byMonth?function(ds){return ds.slice(0,7)}:function(ds){return ds}; // 月聚合：按 YYYY-MM 归入
   // 加分/扣分构成：手动记录按分类；答题奖励、打卡奖励单独成项；系统购买类（补签卡）不计入构成
   var catBy={},downBy={},quizPts=0,ckPts=0;
   for(i=0;i<recs.length;i++){
-    var r0=recs[i];
-    if(r0.date in netBy)netBy[r0.date]+=r0.score;
+    var r0=recs[i],kk=keyOf(r0.date);
+    if(kk in netBy)netBy[kk]+=r0.score;
     if(r0.score>0){
       if(rdIsQuizReward(r0))quizPts+=r0.score; // 答题奖励单独成项（老流水无 itemId 也按名称识别）
       else if(rdIsCkReward(r0))ckPts+=r0.score; // 打卡奖励单独成项
@@ -3297,7 +3346,7 @@ function renderReport(){
       var c1=r0.category||'其他';downBy[c1]=(downBy[c1]||0)+r0.score;
     }
   }
-  // —— 柱状趋势图 ——
+  // —— 柱状趋势图（逐日或按月）——
   var maxAbs=1;
   for(i=0;i<dl2.length;i++)maxAbs=Math.max(maxAbs,Math.abs(netBy[dl2[i]]));
   var chart='<div class="rp-chart">';
@@ -3306,13 +3355,15 @@ function renderReport(){
     var hh=Math.max(3,Math.round(Math.abs(v)/maxAbs*100));
     var cls=v>0?' u':(v<0?' d':'');
     var bg=v===0?';background:var(--line)':'';
-    chart+='<div class="rp-col" title="'+dl2[i]+' · '+(v>0?'+':'')+v+' 分" onclick="openRdDay(\''+dl2[i]+'\')"><i class="rp-bar'+cls+'" style="height:'+hh+'%'+bg+'"></i></div>';
+    var tap=byMonth?'':' onclick="openRdDay(\''+dl2[i]+'\')"'; // 月聚合柱不可点开单日明细
+    chart+='<div class="rp-col"'+tap+' title="'+dl2[i]+' · '+(v>0?'+':'')+v+' 分"><i class="rp-bar'+cls+'" style="height:'+hh+'%'+bg+'"></i></div>';
   }
   chart+='</div><div class="rp-x">';
-  var step=reportRange==='week'?1:Math.max(1,Math.ceil(dl2.length/8));
+  var step=(reportRange==='week'||byMonth)?1:Math.max(1,Math.ceil(dl2.length/8));
   for(i=0;i<dl2.length;i++){
-    var show=(reportRange==='week')||(i%step===0)||(i===dl2.length-1);
-    chart+='<span class="rp-xl">'+(show?parseInt(dl2[i].split('-')[2],10):'')+'</span>';
+    var show=(reportRange==='week')||byMonth||(i%step===0)||(i===dl2.length-1);
+    var lab=byMonth?(parseInt(dl2[i].slice(5),10)+'月'):parseInt(dl2[i].split('-')[2],10);
+    chart+='<span class="rp-xl">'+(show?lab:'')+'</span>';
   }
   chart+='</div>';
   // —— 加分构成条：手动分类 + 答题奖励 + 打卡奖励 ——
@@ -3354,7 +3405,7 @@ function renderReport(){
   var exCost=0;
   for(i=0;i<exs.length;i++)exCost+=exs[i].cost||0;
   body.innerHTML=
-    '<div class="sec" style="margin-top:16px"><div class="sec-h"><div class="st-t">每日净积分 · '+startStr.replace(/-/g,'/')+' ~ '+endStr.replace(/-/g,'/')+'</div></div>'
+    '<div class="sec" style="margin-top:16px"><div class="sec-h"><div class="st-t">'+(byMonth?'每月净积分':'每日净积分')+' · '+startStr.replace(/-/g,'/')+' ~ '+endStr.replace(/-/g,'/')+'</div></div>'
     +chart
     +'<div class="rp-lg"><span class="rp-li"><i class="rp-bar u" style="width:10px;height:10px"></i>净加分</span><span class="rp-li"><i class="rp-bar d" style="width:10px;height:10px"></i>净扣分</span></div></div>'
     +'<div class="sec"><div class="sec-h"><div class="st-t">加分构成</div></div><div class="rp-cats">'+catHtml+'</div></div>'
@@ -3396,7 +3447,7 @@ function openRdDay(ds){
 // 某分类加分明细：报告范围内该分类的全部手动加分记录（答题/打卡等系统奖励不混入）
 function openRdCat(cat){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
-  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&(r.category||'其他')===cat&&!rdIsSystem(r)});
+  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=rdEndDate()&&r.score>0&&(r.category||'其他')===cat&&!rdIsSystem(r)});
   rdSortDesc(recs);
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内「'+escHtml(cat)+'」暂无加分</div></div>';
@@ -3406,7 +3457,7 @@ function openRdCat(cat){
 // 答题奖励明细（所选范围）：答题得分 + 连续刷题里程碑奖励
 function openRdQuizR(){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
-  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&rdIsQuizReward(r)});
+  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=rdEndDate()&&r.score>0&&rdIsQuizReward(r)});
   rdSortDesc(recs);
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内暂无答题奖励</div></div>';
@@ -3416,7 +3467,7 @@ function openRdQuizR(){
 // 打卡奖励明细（所选范围）：每日打卡确认奖励 + 当日全勤奖励
 function openRdCkR(){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
-  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score>0&&rdIsCkReward(r)});
+  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=rdEndDate()&&r.score>0&&rdIsCkReward(r)});
   rdSortDesc(recs);
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内暂无打卡奖励</div></div>';
@@ -3426,7 +3477,7 @@ function openRdCkR(){
 // 某分类扣分明细（所选范围）：该分类的全部人工扣分记录
 function openRdCatD(cat){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
-  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=today()&&r.score<0&&(r.category||'其他')===cat&&!rdIsSystem(r)});
+  var recs=ad.records.filter(function(r){return r.date>=rdStart&&r.date<=rdEndDate()&&r.score<0&&(r.category||'其他')===cat&&!rdIsSystem(r)});
   rdSortDesc(recs);
   var h='';
   if(!recs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内「'+escHtml(cat)+'」暂无扣分</div></div>';
@@ -3545,12 +3596,12 @@ function openRdStreak(){
 // 兑换明细：报告范围内全部兑换/储蓄流水
 function openRdEx(){
   if(!ad)return; // 报告明细家长/孩子均可查看（只读，行内无编辑入口）
-  var exs=ad.exchanges.filter(function(e){return e.date>=rdStart&&e.date<=today()});
+  var exs=ad.exchanges.filter(function(e){return e.date>=rdStart&&e.date<=rdEndDate()});
   rdSortDesc(exs);
   var h='';
   if(!exs.length)h='<div class="es" style="padding:24px 0">'+esBricks()+'<div class="et">该时间段内暂无兑换</div></div>';
   for(var i=0;i<exs.length;i++)h+=renderExchange(exs[i],'',true);
-  rdShow('兑换明细（'+rdStart.replace(/-/g,'/')+' 起）',h);
+  rdShow('兑换明细（'+rdStart.replace(/-/g,'/')+' ~ '+rdEndDate().replace(/-/g,'/')+'）',h);
 }
 
 // ===== 本地备份（#2）：导出当前账号账本+刷题进度+自定义题库为 JSON；导入覆盖本机并上云 =====
