@@ -1272,6 +1272,8 @@ function ptShow() {
   } else {
     ptSay(ptTalk(PT_TALK.greet), true);
   }
+  /* 进宠物页立即补推待推数据：5 秒防抖 timer 在锁屏/切后台会被冻结，不等它 */
+  if (typeof window.hasPetPending === 'function' && window.hasPetPending() && typeof window.petSyncPush === 'function') window.petSyncPush();
 }
 // 进页面时对齐进食会话：已跨过 30 分钟 → 收碗（碗回空）；仍在餐中 → 重置循环计时立即继续吃
 function ptMealSync() {

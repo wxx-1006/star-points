@@ -3984,6 +3984,7 @@ setInterval(function(){if(hasCkPending()&&!ckSyncBusy)ckSyncPush()},60000); // �
 document.addEventListener('visibilitychange',function(){ // 切回页面/切换设备查看时立即对齐最新状态
   if(document.hidden)return;
   if(hasCkPending()&&!ckSyncBusy)ckSyncPush();
+  if(hasPetPending())petSyncPush(); /* 宠物待推补推：5秒防抖 timer 在锁屏/切后台会被冻结，切回立即补 */
   if(curTab==='checkin'){ckPullAt=0;ckShow()}
 });
 
@@ -4558,6 +4559,6 @@ function ckTokSave(){
   });
 })();
 </script>
-<script src="pet.js?v=20261009a"></script>
+<script src="pet.js?v=20261021a"></script>
 </body>
 </html>
