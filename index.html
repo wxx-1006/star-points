@@ -1545,10 +1545,27 @@ function petMerge(local,remote){ // 较新者为基础，累计资源取两设�
   var a=local||null,b=remote||null;
   if(!a)return b;if(!b)return a;
   var base=((b.updatedAt||0)>=(a.updatedAt||0))?b:a,other=(base===b)?a:b;
-  var m=JSON.parse(JSON.stringify(base));
-  ['coins','eaten','food','cans','strips','hungryDays'].forEach(function(k){
-    if(typeof other[k]==='number'&&typeof m[k]==='number')m[k]=Math.max(m[k],other[k]);
+  var m=JSON.parse(JSON.stringify(base)),k;
+  /* 资源与累计成长：取大（金币/猫粮/罐头/肉条/累计喂食/挨饿天数/抚摸/玩具互动计数）——只进不退 */
+  ['coins','eaten','food','cans','strips','hungryDays','patN','fedToday'].forEach(function(k2){
+    if(typeof other[k2]==='number'&&typeof m[k2]==='number')m[k2]=Math.max(m[k2],other[k2]);
   });
+  /* 陪伴起始日：取更早——陪伴天数只增不减，绝不能被重置设备的新宠物覆盖（本轮事故根因） */
+  var c1=a.created||'',c2=b.created||'';
+  if(c1&&c2)m.created=(c1<c2)?c1:c2;else m.created=c1||c2||m.created;
+  /* 玩具互动计数：逐键取大 */
+  var tn={};for(k in (a.toyN||{}))tn[k]=a.toyN[k]||0;
+  for(k in (b.toyN||{}))tn[k]=Math.max(tn[k]||0,b.toyN[k]||0);
+  m.toyN=tn;
+  /* 已拥有家具/玩具/摆放：并集（装备回退不掉） */
+  var ow={};for(k in (a.owned||{}))if(a.owned[k])ow[k]=true;
+  for(k in (b.owned||{}))if(b.owned[k])ow[k]=true;
+  m.owned=ow;
+  var tg=[],seen={},pl=[],seen2={};
+  (a.toys||[]).concat(b.toys||[]).forEach(function(x){if(x&&!seen[x]){seen[x]=true;tg.push(x)}});
+  (a.placed||[]).concat(b.placed||[]).forEach(function(x){if(x&&!seen2[x]){seen2[x]=true;pl.push(x)}});
+  m.toys=tg;m.placed=pl;
+  m.tree=!!(a.tree||b.tree);
   return m;
 }
 function petSyncQueue(){ // ptSave 防抖入口：5 秒内的多次保存合并为一次推送
@@ -1581,9 +1598,12 @@ function petSyncPush(){
         petSyncErr='';
         return;
       }
-      allData[currentUser]=local;
+      /* 关键：本地较新也要与云端字段级合并后再推——保留云端更早的 created 与更大的累计值，防重置设备覆盖老宠物 */
+      var merged=petMerge(local,remote);
+      var oldCloud=!!(remote&&local&&remote.created&&local.created&&remote.created<local.created); // 云端陪伴更早 → 推送后本地也要吸收
+      allData[currentUser]=merged;
       return fetch(GH_PET_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'pet-sync:'+currentUser,content:utf8ToB64(JSON.stringify(allData)),sha:petSyncSHA})})
-        .then(function(r){if(r.ok){clearPetPending();petSyncErr=''}else{markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+'）'}});
+        .then(function(r){if(r.ok){clearPetPending();petSyncErr='';if(oldCloud&&typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(merged)}else{markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+'）'}});
     })
     .catch(function(){markPetPending();petSyncErr='宠物同步网络异常（GitHub API 连不上）'});
 }
