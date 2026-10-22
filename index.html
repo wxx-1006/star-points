@@ -676,6 +676,7 @@ body.kid-mode{padding-bottom:72px}
 .fx-vis-row{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;background:var(--fill);border:1.5px solid transparent;border-radius:12px;padding:11px 14px;margin-bottom:8px;font:600 14px/1.3 var(--ff);color:var(--ink);cursor:pointer;white-space:nowrap}
 .fx-vis-row.on{border-color:var(--red);background:var(--red-l)}
 .fx-vis-row input{width:18px;height:18px;flex:none;accent-color:var(--red)}
+.pet-sync-bar{font:600 11px/1.5 -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;color:var(--red-deep);background:var(--red-l);border-radius:8px;padding:5px 10px;margin:0 10px 8px;text-align:center;cursor:pointer}
 .ck-mustb{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--red-l);color:var(--red-deep);font:700 10px/1.6 var(--ff);vertical-align:1px;white-space:nowrap}
 .ck-item.must-pending{border-width:1.5px;border-style:solid}
 .ck-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
@@ -1568,6 +1569,19 @@ function petMerge(local,remote){ // 较新者为基础，累计资源取两设�
   m.tree=!!(a.tree||b.tree);
   return m;
 }
+function petSyncBar(){ // 宠物页同步状态：正常时隐藏（安静），失败/待推时显示原因并可点击重试
+  var host=document.getElementById('p-pet');
+  if(!host)return;
+  var el=document.getElementById('petSyncBar');
+  if(!el){el=document.createElement('div');el.id='petSyncBar';el.className='pet-sync-bar';host.insertBefore(el,host.firstChild);}
+  var s='';
+  if(!getSyncToken())s='同步未开启（在打卡页配置令牌）';
+  else if(petSyncErr)s=petSyncErr+'（点击重试）';
+  else if(hasPetPending())s='宠物资料待同步…';
+  el.textContent=s;
+  el.style.display=s?'':'none';
+  el.onclick=function(){if(petSyncErr||hasPetPending())petSyncPush()};
+}
 function petSyncQueue(){ // ptSave 防抖入口：5 秒内的多次保存合并为一次推送
   if(!currentUser)return;
   markPetPending(); /* 先标记待推：即使当前未配 token（孩子先玩后配 token 的场景），之后配置/恢复网络也会补推 */
@@ -1592,26 +1606,24 @@ function petSyncPush(){
       var allData={};
       if(meta.content){try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
       var remote=allData[currentUser]||null;
-      if(remote&&(!local||(remote.updatedAt||0)>(local.updatedAt||0))){
-        // 云端较新：吸收合并结果到本地（ptAdoptRemote 重新持久化后自动排队补推合并结果）
-        if(typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(petMerge(local,remote));
-        petSyncErr='';
-        return;
-      }
-      /* 关键：本地较新也要与云端字段级合并后再推——保留云端更早的 created 与更大的累计值，防重置设备覆盖老宠物 */
+      /* 合并后一律推回云端（幂等）——修复"云端较新就只吸收、不推送"导致本地改动要等二次队列才上云的空窗 */
       var merged=petMerge(local,remote);
-      var oldCloud=!!(remote&&local&&remote.created&&local.created&&remote.created<local.created); // 云端陪伴更早 → 推送后本地也要吸收
+      var needAdopt=!!(remote&&local&&((remote.updatedAt||0)>(local.updatedAt||0)||(remote.created&&local.created&&remote.created<local.created)));
       allData[currentUser]=merged;
       return fetch(GH_PET_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'pet-sync:'+currentUser,content:utf8ToB64(JSON.stringify(allData)),sha:petSyncSHA})})
-        .then(function(r){if(r.ok){clearPetPending();petSyncErr='';if(oldCloud&&typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(merged)}else{markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+'）'}});
+        .then(function(r){
+          if(r.ok){clearPetPending();petSyncErr='';if(needAdopt&&typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(merged)}
+          else{markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+'）'}
+          if(curTab==='pet')petSyncBar();
+        });
     })
-    .catch(function(){markPetPending();petSyncErr='宠物同步网络异常（GitHub API 连不上）'});
+    .catch(function(){markPetPending();petSyncErr='宠物同步网络异常（GitHub API 连不上）';if(curTab==='pet')petSyncBar()});
 }
 function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收；有待推改动则补推
   if(!currentUser||!getSyncToken())return;
   fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
-      if(!r.ok){petSyncErr='宠物同步失败（HTTP '+r.status+'，多为令牌失效或权限不足）';if(hasPetPending())petSyncPush();return}
+      if(!r.ok){petSyncErr='宠物同步失败（HTTP '+r.status+'，多为令牌失效或权限不足）';if(hasPetPending())petSyncPush();if(curTab==='pet')petSyncBar();return}
       return r.json().then(function(meta){
         petSyncSHA=meta.sha||'';
         petSyncErr='';
@@ -1622,9 +1634,10 @@ function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收�
           if(typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(petMerge(local,remote));
         }
         if(hasPetPending())petSyncPush();
+        if(curTab==='pet')petSyncBar();
       });
     })
-    .catch(function(){petSyncErr='宠物同步网络异常（GitHub API 连不上）'});
+    .catch(function(){petSyncErr='宠物同步网络异常（GitHub API 连不上）';if(curTab==='pet')petSyncBar()});
 }
 window.addEventListener('online',function(){if(hasPetPending())petSyncPush()});
 // 同步状态合并进用户胶囊：6px 色点（绿=已同步，黄=同步中，红=失败，灰=未配置）
@@ -2392,7 +2405,7 @@ function st(tab){
     for(var j=0;j<ktabs.length;j++) ktabs[j].classList.remove('on');
     document.getElementById('kt-'+tab).classList.add('on');
     curTab=tab;
-    if(tab==='pet')ptShow();       // 宠物页：本机状态渲染 + 欢迎语（数据不上云，无需等待 syncPull）
+    if(tab==='pet'){ptShow();petSyncBar()} // 宠物页：本机状态渲染 + 同步状态条（正常时隐藏）
     if(tab==='checkin'){ckPullAt=0;ckShow();}   // 打卡页：强制拉取最新状态（超时重置+必打卡结算在云端合并后的回调里执行，避免误扣）
     if(tab==='report')renderReport(); // 先按当前数据渲染，拉取后刷新
     if(!currentUser){render();return}
