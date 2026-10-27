@@ -1148,6 +1148,7 @@ body.kid-mode{padding-bottom:72px}
       <button class="bn bn-q" style="height:40px;margin-top:8px" onclick="cancelPinStep()">返回重新填写</button>
     </div>
     <button class="cta" id="loginSubmit" onclick="doLogin()">开始使用</button>
+    <div class="login-hint" style="text-align:center;margin-top:10px"><span style="cursor:pointer;text-decoration:underline" onclick="ckTokOpen()">已有账本？配置同步令牌找回</span></div>
     <div id="loginQuickWrap">
       <div class="login-divider">快速登录</div>
       <div class="login-quick" id="loginQuick"></div>
@@ -1870,13 +1871,14 @@ function checkLoginPhone(){
   var b=loadBucket(phone);
   if(b&&b.pinHash){setLoginDetectHint('找到账本，输入 PIN 登录','ok');return}
   if(b&&!getSyncToken()){setLoginDetectHint('该账本尚未设置 PIN，点击登录后设置','ok');return}
-  if(!b&&!getSyncToken()){setLoginDetectHint('新用户：点击登录后将创建账本（未配置同步，仅本机使用）','nu');return}
+  if(!b&&!getSyncToken()){setLoginDetectHint('本机无此账本；新设备请点下方「配置同步令牌」找回','nu');return}
   setLoginDetectHint('正在查找账本…','na');
   syncPull(phone).then(function(){
     if(seq!==detectSeq)return; // 过期检测：手机号已改动，丢弃本次结果
     var b2=loadBucket(phone);
     if(b2&&b2.pinHash)setLoginDetectHint('找到账本，输入 PIN 登录','ok');
     else if(b2)setLoginDetectHint('该账本尚未设置 PIN，点击登录后设置','ok');
+    else if(!getSyncToken())setLoginDetectHint('本机无此账本；新设备请点下方「配置同步令牌」找回','nu');
     else setLoginDetectHint('新用户：点击登录后将创建账本','nu');
   });
 }
@@ -2078,7 +2080,7 @@ function doKidLogin(){
     toast('已进入孩子视角（只读）','ok');
     return;
   }
-  if(!getSyncToken()){toast('该手机号暂无账本，请让家长先登录一次','err');return}
+  if(!getSyncToken()){toast('新设备需先配置同步令牌才能找到账本','err');ckTokOpen();return}
   toast('正在查找账本…');
   syncPull(phone).then(function(){
     var b2=loadBucket(phone);
@@ -4595,7 +4597,14 @@ function ckTokSave(){
   var v=document.getElementById('ckTokInput').value.trim();
   if(!v){toast('请填写令牌','err');return}
   try{localStorage.setItem(TOKEN_KEY,v)}catch(e){}
-  ckTokClose();ckPullAt=0;ckShow();
+  ckTokClose();
+  if(!currentUser){ // 登录页：配好令牌后立即重新查找账本（打通新设备找回流程）
+    toast('令牌已保存，正在查找账本…','ok');
+    var pEl=document.getElementById('loginPhone');
+    if(pEl&&pEl.value.trim())doLogin();else checkLoginPhone();
+    return;
+  }
+  ckPullAt=0;ckShow();
   toast('令牌已保存，正在同步打卡状态…','ok');
 }
 // 初始化：检查登录状态（孩子会话优先，其次家长会话）
