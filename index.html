@@ -4374,7 +4374,8 @@ function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无
           for(var j0=0;j0<ad.records.length;j0++){if(ad.records[j0].id===rid0){has0=true;break}}
           if(!has0){
             ad.records.push({id:rid0,date:ds,timestamp:st.t||Date.now(),type:'down',itemId:'ck_must',name:t.name+'（必打卡未完成）',category:'打卡',score:-(t.pt||CK_PT),note:isWk(t)?'必打卡周末任务周日24点前未完成自动扣分':'必打卡当日24点前未完成自动扣分'});
-            ad.totalPoints-=(t.pt||CK_PT);anyPenalty=true;
+            ad.totalPoints-=(t.pt||CK_PT);
+            markPendingSync();sd(ad); // 静默补记（后台修账，不弹提示避免每次进页面反复提醒）
           }
         }
         continue;
@@ -4388,6 +4389,7 @@ function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无
         if(!has){
           ad.records.push({id:rid,date:ds,timestamp:Date.now(),type:'down',itemId:'ck_must',name:t.name+'（必打卡未完成）',category:'打卡',score:-(t.pt||CK_PT),note:isWk(t)?'必打卡周末任务周日24点前未完成自动扣分':'必打卡当日24点前未完成自动扣分'});
           ad.totalPoints-=(t.pt||CK_PT);
+          markPendingSync(); // 防随即 pull 用云端旧账本覆盖刚写的扣分流水
           anyPenalty=true;
         }
       }
