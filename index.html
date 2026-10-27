@@ -1201,13 +1201,16 @@ function ld(){var phone=currentUser;if(!phone)return gd();try{var r=localStorage
   b.records=(b.records||[]).filter(function(x){return !(x&&x.id&&b.del['r:'+x.id])});
   b.exchanges=(b.exchanges||[]).filter(function(x){return !(x&&x.id&&b.del['e:'+x.id])});
 }return b}}catch(e){}return gd()}
-function rdSumScore(d){ // 总分唯一口径：Σrecords.score − Σexchanges.cost（与同步合并时的重算完全一致）
-  var tp=0,i,rs=d&&d.records,es=d&&d.exchanges;
-  if(rs)for(i=0;i<rs.length;i++)tp+=(rs[i]&&rs[i].score)||0;
-  if(es)for(i=0;i<es.length;i++)tp-=(es[i]&&es[i].cost)||0;
+function rdSumScore(d){ // 总分唯一口径：Σrecords.score − Σexchanges.cost（与同步合并重算一致；跳过删除墓碑，保证与可见明细一致）
+  var tp=0,i,rs=d&&d.records,es=d&&d.exchanges,del=(d&&d.del)||{};
+  if(rs)for(i=0;i<rs.length;i++){var r=rs[i];if(r&&(!r.id||!del['r:'+r.id]))tp+=(r.score)||0;}
+  if(es)for(i=0;i<es.length;i++){var e=es[i];if(e&&(!e.id||!del['e:'+e.id]))tp-=(e.cost)||0;}
   return tp;
 }
 function sd(d){if(sessionRole==='kid')return;var phone=currentUser;if(!phone)return;
+  var del=d.del||{}; // 删除墓碑清理：已删记录不留在账本里（防"总分含、明细看不见"的幽灵记录）
+  if(d.records)d.records=d.records.filter(function(r){return !(r&&r.id&&del['r:'+r.id])});
+  if(d.exchanges)d.exchanges=d.exchanges.filter(function(e){return !(e&&e.id&&del['e:'+e.id])});
   d.totalPoints=rdSumScore(d); // 每次保存按流水重算总分：消除增量加减/重复补记导致的总分漂移
   dataVersion++;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
 function migrateOldData(phone){try{var old=localStorage.getItem(SK);if(old&&phone){var parsed=JSON.parse(old);if(parsed.records&&parsed.records.length>0){localStorage.setItem(userKey(phone),JSON.stringify(parsed));toast('已迁移历史数据')}}}catch(e){}}
@@ -2905,7 +2908,7 @@ function deleteRecord(id){
   if(!r)return;
   // 系统流水不可删除：答题奖励 / 连续打卡里程碑奖励 / 购买补签卡 / 每日打卡确认奖励 / 全勤奖励
   // （删除会破坏对应业务状态：奖励已发放、打卡已达成、补签卡已入库，故一律拦截）
-  if(r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward'||r.itemId==='ck_bonus'){toast('系统积分流水不可删除','err');return}
+  if(r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward'||r.itemId==='ck_bonus'||r.itemId==='ck_must'||r.itemId==='ck_must_bonus'||r.itemId==='ck_makeup'){toast('系统积分流水不可删除','err');return}
   var sign=r.score>0?'+':'';
   var action=r.score>0?'减少':'增加';
   sc2('删除记录','删除「'+r.name+'」('+sign+r.score+'分)？总分将'+action+Math.abs(r.score)+'分。',function(){
@@ -4381,7 +4384,7 @@ function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无
         if(sessionRole==='parent'&&ad&&ad.records){
           var rid0='ckm_'+ds+'_'+t.id,has0=false;
           for(var j0=0;j0<ad.records.length;j0++){if(ad.records[j0].id===rid0){has0=true;break}}
-          if(!has0){
+          if(!has0&&!(ad.del&&ad.del['r:'+rid0])){ // 有删除墓碑=家长已删除该扣分，视为豁免，不再补记
             ad.records.push({id:rid0,date:ds,timestamp:st.t||Date.now(),type:'down',itemId:'ck_must',name:t.name+'（必打卡未完成）',category:'打卡',score:-(t.pt||CK_PT),note:isWk(t)?'必打卡周末任务周日24点前未完成自动扣分':'必打卡当日24点前未完成自动扣分'});
             ad.totalPoints-=(t.pt||CK_PT);
             markPendingSync();sd(ad); // 静默补记（后台修账，不弹提示避免每次进页面反复提醒）
@@ -4395,7 +4398,7 @@ function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无
       if(sessionRole==='parent'&&ad&&ad.records){
         var rid='ckm_'+ds+'_'+t.id,has=false;
         for(var j=0;j<ad.records.length;j++){if(ad.records[j].id===rid){has=true;break}}
-        if(!has){
+        if(!has&&!(ad.del&&ad.del['r:'+rid])){ // 有删除墓碑=家长已删除该扣分，视为豁免，不再重复扣
           ad.records.push({id:rid,date:ds,timestamp:Date.now(),type:'down',itemId:'ck_must',name:t.name+'（必打卡未完成）',category:'打卡',score:-(t.pt||CK_PT),note:isWk(t)?'必打卡周末任务周日24点前未完成自动扣分':'必打卡当日24点前未完成自动扣分'});
           ad.totalPoints-=(t.pt||CK_PT);
           markPendingSync(); // 防随即 pull 用云端旧账本覆盖刚写的扣分流水
