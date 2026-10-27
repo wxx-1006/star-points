@@ -4365,7 +4365,18 @@ function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无
         if(ckFmtD(now)<ckAddDays(ds,2))continue;
       }
       var k=ckKeyFor(ds,t),st=(b[k]&&b[k][t.id])||{};
-      if(st.d||st.c||st.m)continue;
+      if(st.d||st.c)continue;
+      if(st.m){ // 已标记扣分：孩子端先结算时只写标记、不写账本流水（孩子端数据不落库），家长端补记扣分流水
+        if(sessionRole==='parent'&&ad&&ad.records){
+          var rid0='ckm_'+ds+'_'+t.id,has0=false;
+          for(var j0=0;j0<ad.records.length;j0++){if(ad.records[j0].id===rid0){has0=true;break}}
+          if(!has0){
+            ad.records.push({id:rid0,date:ds,timestamp:st.t||Date.now(),type:'down',itemId:'ck_must',name:t.name+'（必打卡未完成）',category:'打卡',score:-(t.pt||CK_PT),note:isWk(t)?'必打卡周末任务周日24点前未完成自动扣分':'必打卡当日24点前未完成自动扣分'});
+            ad.totalPoints-=(t.pt||CK_PT);anyPenalty=true;
+          }
+        }
+        continue;
+      }
       b[k]=b[k]||{};
       b[k][t.id]={c:st.c||0,d:0,r:st.r||0,m:1,t:Date.now()};
       changed=true;
