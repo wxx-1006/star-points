@@ -1201,7 +1201,15 @@ function ld(){var phone=currentUser;if(!phone)return gd();try{var r=localStorage
   b.records=(b.records||[]).filter(function(x){return !(x&&x.id&&b.del['r:'+x.id])});
   b.exchanges=(b.exchanges||[]).filter(function(x){return !(x&&x.id&&b.del['e:'+x.id])});
 }return b}}catch(e){}return gd()}
-function sd(d){if(sessionRole==='kid')return;var phone=currentUser;if(!phone)return;dataVersion++;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
+function rdSumScore(d){ // 总分唯一口径：Σrecords.score − Σexchanges.cost（与同步合并时的重算完全一致）
+  var tp=0,i,rs=d&&d.records,es=d&&d.exchanges;
+  if(rs)for(i=0;i<rs.length;i++)tp+=(rs[i]&&rs[i].score)||0;
+  if(es)for(i=0;i<es.length;i++)tp-=(es[i]&&es[i].cost)||0;
+  return tp;
+}
+function sd(d){if(sessionRole==='kid')return;var phone=currentUser;if(!phone)return;
+  d.totalPoints=rdSumScore(d); // 每次保存按流水重算总分：消除增量加减/重复补记导致的总分漂移
+  dataVersion++;try{localStorage.setItem(userKey(phone),JSON.stringify(d))}catch(e){};syncPush(d)}
 function migrateOldData(phone){try{var old=localStorage.getItem(SK);if(old&&phone){var parsed=JSON.parse(old);if(parsed.records&&parsed.records.length>0){localStorage.setItem(userKey(phone),JSON.stringify(parsed));toast('已迁移历史数据')}}}catch(e){}}
 
 // ===== 家长 PIN 与角色（新增能力，不动现有字段/键） =====
@@ -2451,6 +2459,7 @@ function st(tab){
 }
 
 function render(){
+  if(ad&&sessionRole!=='kid'&&ad.totalPoints!==rdSumScore(ad)){ad.totalPoints=rdSumScore(ad);sd(ad)} // 打开即自愈：总分≠流水加总时自动校正（修复历史漂移）
   document.getElementById('hd').textContent=fd(today());
   renderHome();
   renderRecords();
