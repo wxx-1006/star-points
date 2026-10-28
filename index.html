@@ -1409,6 +1409,11 @@ function mergeAccountData(loc,rem){
 }
 function utf8ToB64(str){return btoa(unescape(encodeURIComponent(str)))}
 function b64ToUtf8(b64){return decodeURIComponent(escape(atob(b64)))}
+function ghPutBody(msg,contentB64,sha){ // GitHub Contents API：更新已有文件才带 sha；新建文件绝不能带空 sha（否则 422，宠物文件因此从未创建成功）
+  var b={message:msg,content:contentB64};
+  if(sha)b.sha=sha;
+  return JSON.stringify(b);
+}
 function syncPull(phone){
   var token=getSyncToken();
   var verAtReq=dataVersion; // 请求发起时的本地写版本，用于过期响应守卫
@@ -1514,7 +1519,7 @@ function syncPush(data){
       var merged=mergeAccountData(data,remote);
       allData[currentUser]=merged.data;
       var content=utf8ToB64(JSON.stringify(allData));
-      return fetch(GH_API,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:JSON.stringify({message:'sync:'+currentUser,content:content,sha:syncSHA})})
+      return fetch(GH_API,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:ghPutBody('sync:'+currentUser,content,syncSHA)})
         .then(function(r){
           if(r.status===401){
             syncStatus='error';syncErr='token 无效或无权限，请到设置页重新填写';markPendingSync();
@@ -1609,7 +1614,7 @@ function petSyncPush(){
   fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
       if(r.status===404){petSyncSHA='';return {sha:'',content:null}}
-      if(!r.ok){markPetPending();petSyncErr='宠物同步失败（HTTP '+r.status+'，多为令牌失效或权限不足）';return null}
+      if(!r.ok){return r.json().then(function(j){markPetPending();petSyncErr='宠物同步失败（HTTP '+r.status+(j&&j.message?'：'+j.message:'')+'）';if(curTab==='pet')petSyncBar();return null}).catch(function(){markPetPending();petSyncErr='宠物同步失败（HTTP '+r.status+'）';return null})}
       return r.json();
     })
     .then(function(meta){
@@ -1622,10 +1627,10 @@ function petSyncPush(){
       var merged=petMerge(local,remote);
       var needAdopt=!!(remote&&local&&((remote.updatedAt||0)>(local.updatedAt||0)||(remote.created&&local.created&&remote.created<local.created)));
       allData[currentUser]=merged;
-      return fetch(GH_PET_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'pet-sync:'+currentUser,content:utf8ToB64(JSON.stringify(allData)),sha:petSyncSHA})})
+      return fetch(GH_PET_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:ghPutBody('pet-sync:'+currentUser,utf8ToB64(JSON.stringify(allData)),petSyncSHA)})
         .then(function(r){
           if(r.ok){clearPetPending();petSyncErr='';if(needAdopt&&typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(merged)}
-          else{markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+'）'}
+          else{return r.json().then(function(j){markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+(j&&j.message?'：'+j.message:'')+'）';if(curTab==='pet')petSyncBar()}).catch(function(){markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+'）'})}
           if(curTab==='pet')petSyncBar();
         });
     })
@@ -1635,7 +1640,7 @@ function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收�
   if(!currentUser||!getSyncToken())return;
   fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
     .then(function(r){
-      if(!r.ok){petSyncErr='宠物同步失败（HTTP '+r.status+'，多为令牌失效或权限不足）';if(hasPetPending())petSyncPush();if(curTab==='pet')petSyncBar();return}
+      if(!r.ok){return r.json().then(function(j){petSyncErr='宠物同步失败（HTTP '+r.status+(j&&j.message?'：'+j.message:'')+'）';if(hasPetPending())petSyncPush();if(curTab==='pet')petSyncBar()}).catch(function(){petSyncErr='宠物同步失败（HTTP '+r.status+'）'})}
       return r.json().then(function(meta){
         petSyncSHA=meta.sha||'';
         petSyncErr='';
@@ -3088,7 +3093,7 @@ function pullRequests(){
 function pushRequests(obj){
   var token=getSyncToken();
   if(!token)return Promise.resolve(false);
-  return fetch(GH_REQ_API,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:JSON.stringify({message:'sync:requests',content:utf8ToB64(JSON.stringify(obj)),sha:reqSHA})})
+  return fetch(GH_REQ_API,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:ghPutBody('sync:requests',utf8ToB64(JSON.stringify(obj)),reqSHA)})
     .then(function(r){
       if(!r.ok)return false;
       return r.json().then(function(m){reqSHA=m.sha||reqSHA;return true}).catch(function(){return true});
@@ -3996,7 +4001,7 @@ function ckSyncPush(){
       var merged=ckMergeAll(local,all[currentUser]||{});
       ckSaveBucket(merged);
       all[currentUser]=merged;
-      return fetch(GH_CK_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'ck-sync:'+currentUser,content:utf8ToB64(JSON.stringify(all)),sha:ckSyncSHA})})
+      return fetch(GH_CK_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:ghPutBody('ck-sync:'+currentUser,utf8ToB64(JSON.stringify(all)),ckSyncSHA)})
         .then(function(r){
           ckSyncBusy=false;
           if(r.ok){ckSyncErr='';clearCkPending();ckCloudCnt=ckDateKeys(merged)}else{markCkPending();ckSyncErr='同步失败（HTTP '+r.status+'）'}
@@ -4118,7 +4123,7 @@ function fxSyncPush(){
       var merged=fxMergeAll(local,all[currentUser]||{});
       fxSaveBucket(merged.data);
       all[currentUser]=merged.data;
-      return fetch(GH_FX_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:JSON.stringify({message:'fx-sync:'+currentUser,content:utf8ToB64(JSON.stringify(all)),sha:fxSyncSHA})})
+      return fetch(GH_FX_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:ghPutBody('fx-sync:'+currentUser,utf8ToB64(JSON.stringify(all)),fxSyncSHA)})
         .then(function(r){
           fxSyncBusy=false;
           if(r.ok){fxSyncErr='';clearFxPending()}else{markFxPending();fxSyncErr='同步失败（HTTP '+r.status+'）'}
