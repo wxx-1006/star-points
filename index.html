@@ -1457,15 +1457,11 @@ function syncPull(phone){
             var content=b64ToUtf8(meta.content);
             var allData=JSON.parse(content);
             if(allData && allData[phone]){
-              // 本地有待推改动（曾推送失败）时不可被云端覆盖：把云端记录级合并进本地，随后由补推上云
-              if(hasPendingSync()){
-                var lb=null;
-                try{lb=JSON.parse(localStorage.getItem(userKey(phone)))}catch(e){lb=null}
-                if(lb&&typeof lb==='object'){localStorage.setItem(userKey(phone),JSON.stringify(mergeAccountData(lb,allData[phone]).data))}
-                else{localStorage.setItem(userKey(phone),JSON.stringify(allData[phone]))}
-              }else{
-                localStorage.setItem(userKey(phone),JSON.stringify(allData[phone]));
-              }
+              // 一律记录级合并（并集+墓碑+总分重算），绝不简单覆盖本地——本地未推的改动不会因 pull 丢失
+              var lb=null;
+              try{lb=JSON.parse(localStorage.getItem(userKey(phone)))}catch(e){lb=null}
+              if(lb&&typeof lb==='object'){localStorage.setItem(userKey(phone),JSON.stringify(mergeAccountData(lb,allData[phone]).data))}
+              else{localStorage.setItem(userKey(phone),JSON.stringify(allData[phone]))}
             }
           }catch(e){}
         }
@@ -1552,7 +1548,7 @@ function syncPush(data){
 //   推送失败标记 sp_pet_sync_pending，网络恢复/成功拉取后补推；未配置 token 时全部静默跳过。
 var GH_PET_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-pet.json';
 var PET_SYNC_PENDING_KEY='sp_pet_sync_pending';
-var petSyncSHA='',petSyncTimer=null,petSyncErr=''; // petSyncErr：宠物同步失败原因（打卡页顶部状态行显示，供排查）
+var petSyncSHA='',petSyncTimer=null,petSyncErr='',petSyncBusy=false; // petSyncErr：宠物同步失败原因（打卡页顶部状态行显示，供排查）
 function markPetPending(){try{localStorage.setItem(PET_SYNC_PENDING_KEY,'1')}catch(e){}}
 function clearPetPending(){try{localStorage.removeItem(PET_SYNC_PENDING_KEY)}catch(e){}}
 function hasPetPending(){try{return localStorage.getItem(PET_SYNC_PENDING_KEY)==='1'}catch(e){return false}}
@@ -1608,33 +1604,46 @@ function petSyncQueue(){ // ptSave 防抖入口：5 秒内的多次保存合并�
 }
 function petSyncPush(){
   if(petSyncTimer){clearTimeout(petSyncTimer);petSyncTimer=null}
-  if(!hasPetPending()||!currentUser||!getSyncToken())return;
-  var local=petLocalState();
-  if(!local)return;
-  fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
-    .then(function(r){
-      if(r.status===404){petSyncSHA='';return {sha:'',content:null}}
-      if(!r.ok){return r.json().then(function(j){markPetPending();petSyncErr='宠物同步失败（HTTP '+r.status+(j&&j.message?'：'+j.message:'')+'）';if(curTab==='pet')petSyncBar();return null}).catch(function(){markPetPending();petSyncErr='宠物同步失败（HTTP '+r.status+'）';return null})}
-      return r.json();
-    })
-    .then(function(meta){
-      if(!meta)return;
-      petSyncSHA=meta.sha||'';
-      var allData={};
-      if(meta.content){try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
-      var remote=allData[currentUser]||null;
-      /* 合并后一律推回云端（幂等）——修复"云端较新就只吸收、不推送"导致本地改动要等二次队列才上云的空窗 */
-      var merged=petMerge(local,remote);
-      var needAdopt=!!(remote&&local&&((remote.updatedAt||0)>(local.updatedAt||0)||(remote.created&&local.created&&remote.created<local.created)));
-      allData[currentUser]=merged;
-      return fetch(GH_PET_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:ghPutBody('pet-sync:'+currentUser,utf8ToB64(JSON.stringify(allData)),petSyncSHA)})
-        .then(function(r){
-          if(r.ok){clearPetPending();petSyncErr='';if(needAdopt&&typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(merged)}
-          else{return r.json().then(function(j){markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+(j&&j.message?'：'+j.message:'')+'）';if(curTab==='pet')petSyncBar()}).catch(function(){markPetPending();petSyncErr='宠物同步推送失败（HTTP '+r.status+'）'})}
-          if(curTab==='pet')petSyncBar();
-        });
-    })
-    .catch(function(){markPetPending();petSyncErr='宠物同步网络异常（GitHub API 连不上）';if(curTab==='pet')petSyncBar()});
+  if(petSyncBusy||!hasPetPending()||!currentUser||!getSyncToken())return; // 串行：并发推送会拿同一个 sha 互相冲突（409）
+  var local0=petLocalState();
+  if(!local0)return;
+  petSyncBusy=true;
+  var tries=0;
+  var fail=function(msg){petSyncBusy=false;markPetPending();petSyncErr=msg;if(curTab==='pet')petSyncBar()};
+  var attempt=function(){
+    tries++;
+    var local=petLocalState()||local0;
+    fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
+      .then(function(r){
+        if(r.status===404)return {sha:'',content:null};
+        if(!r.ok)return r.json().then(function(){throw {code:r.status,resp:r}}).catch(function(e){throw (e&&e.code)?e:{code:r.status,resp:r}});
+        return r.json();
+      })
+      .then(function(meta){
+        petSyncSHA=meta.sha||'';
+        var allData={};
+        if(meta.content){try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
+        var remote=allData[currentUser]||null;
+        /* 按时间戳/只进不退合并后推回云端（绝不简单覆盖） */
+        var merged=petMerge(local,remote);
+        var needAdopt=!!(remote&&local&&((remote.updatedAt||0)>(local.updatedAt||0)||(remote.created&&local.created&&remote.created<local.created)));
+        allData[currentUser]=merged;
+        return fetch(GH_PET_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:ghPutBody('pet-sync:'+currentUser,utf8ToB64(JSON.stringify(allData)),petSyncSHA)})
+          .then(function(r2){return {r:r2,merged:merged,needAdopt:needAdopt}});
+      })
+      .then(function(res){
+        if(res.r.ok){petSyncBusy=false;clearPetPending();petSyncErr='';
+          if(res.needAdopt&&typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(res.merged);
+          if(curTab==='pet')petSyncBar();return}
+        if(res.r.status===409&&tries<4)return attempt(); // sha 冲突（并发写入）：重新拉最新内容合并后再推，最多 4 次
+        return res.r.json().then(function(j){fail('宠物同步推送失败（HTTP '+res.r.status+(j&&j.message?'：'+j.message:'')+'）')}).catch(function(){fail('宠物同步推送失败（HTTP '+res.r.status+'）')});
+      })
+      .catch(function(e){
+        if(e&&e.code)return e.resp.json().then(function(j){fail('宠物同步失败（HTTP '+e.code+(j&&j.message?'：'+j.message:'')+'）')}).catch(function(){fail('宠物同步失败（HTTP '+e.code+'）')});
+        fail('宠物同步网络异常（GitHub API 连不上）');
+      });
+  };
+  attempt();
 }
 function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收；有待推改动则补推
   if(!currentUser||!getSyncToken())return;
@@ -1647,8 +1656,10 @@ function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收�
         if(!meta.content){if(hasPetPending())petSyncPush();return}
         var allData={};try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
         var remote=allData[currentUser]||null,local=petLocalState();
-        if(remote&&(!local||(remote.updatedAt||0)>(local.updatedAt||0))){
-          if(typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(petMerge(local,remote));
+        if(remote&&typeof window.ptAdoptRemote==='function'){
+          var mergedPull=petMerge(local,remote); // 始终按时间戳/只进不退合并（两端任一方的成长与累计都不丢）
+          if(local&&JSON.stringify(mergedPull)!==JSON.stringify(local))window.ptAdoptRemote(mergedPull);
+          else if(!local)window.ptAdoptRemote(mergedPull);
         }
         if(hasPetPending())petSyncPush();
         if(curTab==='pet')petSyncBar();
