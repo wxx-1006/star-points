@@ -47,6 +47,10 @@ try {
         font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; transition:background .18s,color .18s; }
   .tab:hover{ color:var(--txt); }
   .tab.on{ background:#fff; color:var(--accent-deep); box-shadow:0 3px 12px rgba(63,124,191,.35); }
+  .daily-rec{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; padding:7px 10px; background:var(--card); border:1px solid var(--line); border-radius:12px; font-size:13px; }
+  .daily-rec .dr-l{ color:var(--dim); font-weight:600; white-space:nowrap; }
+  .daily-rec .dr-chip{ padding:3px 11px; border-radius:999px; background:var(--card2); color:var(--accent-deep); font-weight:700; cursor:pointer; border:1px solid var(--line); }
+  .daily-rec .dr-chip:active{ transform:scale(.96); }
   @media (max-width:430px){ .tab{ padding:8px 9px; font-size:13px; } }
 
   .panel{ display:none; }
@@ -110,6 +114,17 @@ try {
   .fx-empty-tip{ padding:22px 0; text-align:center; font-size:13.5px; color:var(--dim); }
   .hh-row{ display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
   #histList{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .rec-title{ font-size:13px; font-weight:700; color:var(--dim); margin:12px 0 6px; }
+  #recSummary{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .rs-card{ flex:1 0 auto; min-width:104px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:7px 9px; cursor:pointer; }
+  .rs-card.on{ border-color:var(--accent-deep); box-shadow:0 3px 10px rgba(63,124,191,.25); }
+  .rs-card .rs-n{ font-size:12px; font-weight:700; color:var(--txt); }
+  .rs-card .rs-b{ font-size:13px; font-weight:800; color:var(--accent-deep); font-variant-numeric:tabular-nums; }
+  .rs-card .rs-c{ font-size:11px; color:var(--dim); }
+  .rs-weak{ width:100%; font-size:12px; color:var(--bad); font-weight:700; padding:2px 2px 0; }
+  #recTrend{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; margin-bottom:8px; }
+  #recTrend .rt-h{ font-size:12px; font-weight:700; color:var(--dim); margin-bottom:4px; }
+  #recTrend svg{ display:block; width:100%; height:auto; }
   .hh-l{ flex:1; min-width:0; }
   .hh-g{ font-weight:700; font-size:14px; color:var(--txt); }
   .hh-s{ font-size:11.5px; color:var(--dim); margin-top:2px; }
@@ -275,6 +290,7 @@ try {
 <div class="app">
   <h1 class="title"><i></i>专注力训练</h1>
 
+  <div id="dailyRec" class="daily-rec" hidden></div>
   <nav class="tabs" id="tabs">
     <button class="tab on" data-tab="schulte" type="button">舒尔特</button>
     <button class="tab" data-tab="track" type="button">视觉追踪</button>
@@ -522,7 +538,10 @@ try {
 
   <!-- ========== 9 历史成绩 ========== -->
   <section class="panel" id="panel-history">
-    <p class="hint">最近 300 次练习的完成记录；标有「新纪录」的是刷新个人最好成绩的那一次。</p>
+    <p class="hint">成绩总览：点某个游戏看近 10 次走势；「新纪录」是刷新个人最好成绩的那一次。</p>
+    <div id="recSummary"></div>
+    <div id="recTrend"></div>
+    <div class="rec-title">全部记录</div>
     <div id="histList"></div>
   </section>
 </div>
@@ -571,6 +590,20 @@ function formatTime(ms){
   const m = Math.floor(s / 60);
   const r = s - m * 60;
   return m + ':' + (r < 10 ? '0' : '') + r.toFixed(1);
+}
+
+/* 计时类游戏的"准确优先"结算：错误过多的局不参与最佳（防为抢时间乱点），并给与最佳的对比文案 */
+function timingResult(prev, cost, errors){
+  const MAX_ERR = 2;
+  if (errors != null && errors > MAX_ERR){
+    return { isNew: false, cmp: '错误 ' + errors + ' 次过多，未计入最佳' };
+  }
+  if (!prev || prev.ms == null){
+    return { isNew: true, cmp: '首次完成，已记入最佳' };
+  }
+  const d = cost - prev.ms;
+  if (d < 0) return { isNew: true, cmp: '快了 ' + formatTime(-d) };
+  return { isNew: false, cmp: '比最佳慢 ' + formatTime(d) };
 }
 
 /* ---------- 存储 key ---------- */
@@ -709,16 +742,89 @@ function recordHistory(g, v, sub, best){
     u: Math.random().toString(36).slice(2, 8) + Date.now().toString(36)
   });
 }
+/* ---------- 成绩分析：按游戏汇总 + 近10次趋势（家长端额外标注近7天练得最少的游戏） ---------- */
+let recSelGame = null;
+function summarizeHistory(a){
+  const sum = {};
+  const p2 = (n) => (n < 10 ? '0' : '') + n;
+  const now = new Date();
+  const last7 = new Date(now.getTime() - 6 * 86400000);
+  const l7 = last7.getFullYear() + '-' + p2(last7.getMonth() + 1) + '-' + p2(last7.getDate());
+  for (let i = 0; i < a.length; i++){
+    const r = a[i];
+    if (!sum[r.g]) sum[r.g] = { count: 0, best: null, last7: 0, last10: [] };
+    const s = sum[r.g], mm = (HIST_FMT[r.g] || {}).mm || 'min';
+    s.count++;
+    if (s.best === null) s.best = r.v;
+    else s.best = (mm === 'max') ? Math.max(s.best, r.v) : Math.min(s.best, r.v);
+    if (r.ds >= l7) s.last7++;
+    if (s.last10.length < 10) s.last10.push(r.v);
+  }
+  for (const g in sum) sum[g].last10.reverse(); /* 旧 → 新 */
+  return sum;
+}
+function sparklineSvg(vals, mm){
+  if (!vals || vals.length < 2) return '';
+  const W = 260, H = 46, P = 5;
+  const min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  const range = (max - min) || 1;
+  const n = vals.length;
+  const pts = vals.map((v, i) => {
+    const x = P + (W - 2 * P) * (i / (n - 1));
+    const y = (mm === 'min') ? P + (H - 2 * P) * ((v - min) / range) : P + (H - 2 * P) * ((max - v) / range);
+    return [x.toFixed(1), y.toFixed(1)];
+  });
+  const line = pts.map((p) => p[0] + ',' + p[1]).join(' ');
+  const last = pts[pts.length - 1];
+  return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">'
+    + '<polyline points="' + line + '" fill="none" stroke="var(--accent-deep)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'
+    + '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="3.5" fill="var(--accent-deep)"/></svg>';
+}
+function renderRecSummary(a){
+  const host = $('recSummary');
+  if (!host) return;
+  const sum = summarizeHistory(a);
+  let h = '';
+  for (const g in sum){
+    const s = sum[g], f = HIST_FMT[g] || { n: g, f: function(v){ return v; } };
+    h += '<div class="rs-card' + (g === recSelGame ? ' on' : '') + '" data-g="' + g + '">'
+      + '<div class="rs-n">' + f.n + '</div>'
+      + '<div class="rs-b">' + f.f(s.best) + '</div>'
+      + '<div class="rs-c">练 ' + s.count + ' 次 · 近7天 ' + s.last7 + '</div>'
+      + '</div>';
+  }
+  if (FOCUS_ROLE === 'parent'){
+    let weak = null;
+    for (const g in sum){ if (!weak || sum[g].last7 < sum[weak].last7) weak = g; }
+    if (weak) h += '<div class="rs-weak">近 7 天练得最少：' + (HIST_FMT[weak] || {}).n + '</div>';
+  }
+  host.innerHTML = h;
+}
+function renderRecTrend(a, g){
+  const host = $('recTrend');
+  if (!host) return;
+  if (!g){ host.innerHTML = ''; return; }
+  const s = summarizeHistory(a)[g];
+  if (!s){ host.innerHTML = ''; return; }
+  const f = HIST_FMT[g] || { n: g };
+  const svg = sparklineSvg(s.last10, f.mm);
+  host.innerHTML = '<div class="rt-h">' + f.n + ' · 近 ' + s.last10.length + ' 次走势' + (f.mm === 'min' ? '（越靠上越快）' : '（越靠上越好）') + '</div>'
+    + (svg || '<div class="rt-h" style="font-weight:400">至少 2 次才有走势曲线</div>');
+}
 function renderHistory(){
   const host = $('histList');
   if (!host) return;
   const a = loadHistory();
   a.sort((x, y) => (y.ts || 0) - (x.ts || 0) || (y.tm || '').localeCompare(x.tm || '')); /* 渲染前再排序：任何来源（云合并/注入）都保证最新在前 */
   if (!a.length){
+    $('recSummary').innerHTML = ''; $('recTrend').innerHTML = '';
     host.innerHTML = '<div class="fx-empty-tip" style="padding:30px 0">暂无成绩记录，先去玩一局吧</div>';
     fitHistory();
     return;
   }
+  if (!recSelGame || !summarizeHistory(a)[recSelGame]) recSelGame = a[0].g;
+  renderRecSummary(a);
+  renderRecTrend(a, recSelGame);
   /* 新纪录标动态判定：只标每个游戏当前最好成绩的那条（耗时类取最小，题数/格数类取最大），过往旧标不再显示 */
   const bestV = {};
   for (let i = 0; i < a.length; i++){
@@ -1305,14 +1411,25 @@ function finish(){
 
   const key = keyFor(state.type, state.size);
   const prev = loadJSON(key);
-  const isNew = !prev || cost < prev.ms;
-  if (isNew) saveJSON(key, { ms: cost, errors: state.errors, at: Date.now() });
+  const r = timingResult(prev, cost, state.errors);
+  if (r.isNew) saveJSON(key, { ms: cost, errors: state.errors, at: Date.now() });
   updateStats();
 
-  recordHistory('schulte', cost, '错误 ' + state.errors + ' 次 · ' + state.size + '×' + state.size + ' ' + (state.type === 'num' ? '数字' : '字母'), isNew);
+  /* 连续达标进阶：同尺寸连续 3 局错误≤2 → 提示挑战更高难度（自动进阶引导） */
+  const pass = state.errors <= 2;
+  const skey = 'schulte.streak.' + state.type + '.' + state.size;
+  let cnt = pass ? (parseInt(store.get(skey) || '0', 10) + 1) : 0;
+  let adv = '';
+  if (pass && cnt >= 3){
+    cnt = 0;
+    adv = state.size >= 6 ? ' · 已达最高难度，太棒了！' : ' · 连续 3 次达标，试试更大格子吧';
+  }
+  store.set(skey, String(cnt));
+
+  recordHistory('schulte', cost, '错误 ' + state.errors + ' 次 · ' + state.size + '×' + state.size + ' ' + (state.type === 'num' ? '数字' : '字母'), r.isNew);
   showResult('完成！用时 ' + formatTime(cost),
-    (comboStr() === 'none' ? '' : comboLabel() + ' · ') + '错误 ' + state.errors + ' 次 · 本局 ' + state.size + '×' + state.size + ' ' + (state.type === 'num' ? '数字' : '字母'),
-    isNew,
+    (comboStr() === 'none' ? '' : comboLabel() + ' · ') + '错误 ' + state.errors + ' 次 · ' + r.cmp + adv,
+    r.isNew,
     () => { render(); deal(); });
 }
 
@@ -1460,14 +1577,14 @@ function finishTrack(){
 
   const key = trackKey(trackSt.level);
   const prev = loadJSON(key);
-  const isNew = !prev || cost < prev.ms;
-  if (isNew) saveJSON(key, { ms: cost, errors: trackSt.errors, at: Date.now() });
+  const r = timingResult(prev, cost, trackSt.errors);
+  if (r.isNew) saveJSON(key, { ms: cost, errors: trackSt.errors, at: Date.now() });
   trackUpdateStats();
 
-  recordHistory('track', cost, '错误 ' + trackSt.errors + ' 次 · ' + (trackSt.level === 1 ? '简单' : trackSt.level === 2 ? '中等' : '困难'), isNew);
+  recordHistory('track', cost, '错误 ' + trackSt.errors + ' 次 · ' + (trackSt.level === 1 ? '简单' : trackSt.level === 2 ? '中等' : '困难'), r.isNew);
   showResult('完成！总用时 ' + formatTime(cost),
-    '10 轮 · 错误 ' + trackSt.errors + ' 次 · ' + (trackSt.level === 1 ? '简单' : trackSt.level === 2 ? '中等' : '困难'),
-    isNew,
+    '10 轮 · 错误 ' + trackSt.errors + ' 次 · ' + r.cmp,
+    r.isNew,
     startTrack);
   $('btnTrackStart').disabled = false;
   $('trackBoard').classList.remove('done');
@@ -2335,14 +2452,14 @@ function finishCancel(){
 
   const key = cancelKey(cxSt.level);
   const prev = loadJSON(key);
-  const isNew = !prev || cost < prev.ms;
-  if (isNew) saveJSON(key, { ms: cost, wrong: cxSt.wrong, at: Date.now() });
+  const r = timingResult(prev, cost, cxSt.wrong);
+  if (r.isNew) saveJSON(key, { ms: cost, wrong: cxSt.wrong, at: Date.now() });
   cxUpdateStats();
 
-  recordHistory('cancel', cost, '误点 ' + cxSt.wrong + ' 次', isNew);
+  recordHistory('cancel', cost, '误点 ' + cxSt.wrong + ' 次', r.isNew);
   showResult('全部找到！用时 ' + formatTime(cost),
-    '误点 ' + cxSt.wrong + ' 次 · 挑战',
-    isNew,
+    '误点 ' + cxSt.wrong + ' 次 · ' + r.cmp,
+    r.isNew,
     () => { renderCancel(); cxDeal(); });
 }
 
@@ -2350,6 +2467,56 @@ $('btnCxRestart').addEventListener('click', () => { renderCancel(); cxDeal(); })
 renderCancel();
 applyFocusVisibility(); /* 孩子端按家长配置过滤可见页签 */
 fitOneScreen(); /* 打开页面即做一屏适配 */
+
+/* ---------- 今日推荐：按类别每日轮换 3 个游戏（注意力/记忆/抑制各 1），点击直达 ---------- */
+const REC_GROUPS = [ ['schulte','track','cancel'], ['memory','corsi'], ['stroop','switch'] ];
+function dailyRecList(){
+  const now = new Date();
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  return [ REC_GROUPS[0][doy % REC_GROUPS[0].length], REC_GROUPS[1][doy % REC_GROUPS[1].length], REC_GROUPS[2][doy % REC_GROUPS[2].length] ];
+}
+function renderDailyRec(){
+  const host = $('dailyRec');
+  if (!host) return;
+  const names = { schulte:'舒尔特', track:'视觉追踪', cancel:'符号划消', memory:'记忆翻牌', corsi:'空间方块', stroop:'色词干扰', switch:'快速切换' };
+  const visible = FOCUS_VISIBLE || Object.keys(names);
+  const chips = dailyRecList().filter((g) => visible.indexOf(g) >= 0);
+  if (!chips.length){ host.hidden = true; return; }
+  host.innerHTML = '<span class="dr-l">今日推荐</span>' + chips.map((g) =>
+    '<span class="dr-chip" data-g="' + g + '">' + names[g] + '</span>').join('');
+  host.hidden = false;
+}
+$('dailyRec').addEventListener('click', (e) => {
+  const c = e.target.closest('.dr-chip');
+  if (!c) return;
+  const tb = document.querySelector('#tabs .tab[data-tab="' + c.dataset.g + '"]');
+  if (tb) tb.click();
+});
+$('recSummary').addEventListener('click', (e) => {
+  const c = e.target.closest('.rs-card');
+  if (!c) return;
+  recSelGame = c.dataset.g;
+  renderHistory();
+});
+renderDailyRec();
+
+/* ---------- 护眼休息提醒：本次停留超 20 分钟且当天未提醒 → 弹一次 ---------- */
+const REST_LIMIT_MS = 20 * 60 * 1000;
+const PAGE_LOAD_AT = Date.now();
+function restDue(loadAt, now, reminded){ return !reminded && (now - loadAt) >= REST_LIMIT_MS; }
+(function(){
+  try {
+    const d = new Date(), p2 = (n) => (n < 10 ? '0' : '') + n;
+    const dk = 'rest.reminded.' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+    if (store.get(dk)) return;
+    setInterval(function(){
+      if (restDue(PAGE_LOAD_AT, Date.now(), false)){
+        store.set(dk, '1');
+        showResult('该休息啦 👀', '连续使用超过 20 分钟，让眼睛休息一下、看看远处吧', false, null);
+      }
+    }, 60 * 1000);
+  } catch (e){}
+})();
 
 /* ---------- 测试钩子（生产无副作用） ---------- */
 render();
