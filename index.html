@@ -1544,7 +1544,8 @@ function syncPush(data){
 // ===== 宠物数据同步（独立文件 sync-pet.json，孩子端允许推送） =====
 //   宠物是孩子端专属功能，syncPush 对孩子端禁推（防旧账本覆盖云端），故宠物走独立文件：
 //   结构 { [phone]: 宠物状态对象(含 updatedAt 毫秒时间戳) }；冲突策略：updatedAt 较新者胜，
-//   合并时累计资源字段（coins/eaten/food/cans/strips/hungryDays）取较大值，防双设备交替玩时资源回退。
+//   合并时累计资源字段（coins/eaten/food/cans/strips/hungryDays）取较大值，防双设备交替玩时资源回退；
+//   当日状态字段（fedToday/patN/toyN）跨天重置、按较新侧，绝不取大。
 //   推送失败标记 sp_pet_sync_pending，网络恢复/成功拉取后补推；未配置 token 时全部静默跳过。
 var GH_PET_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-pet.json';
 var PET_SYNC_PENDING_KEY='sp_pet_sync_pending';
@@ -1560,17 +1561,15 @@ function petMerge(local,remote){ // 较新者为基础，累计资源取两设�
   if(!a)return b;if(!b)return a;
   var base=((b.updatedAt||0)>=(a.updatedAt||0))?b:a,other=(base===b)?a:b;
   var m=JSON.parse(JSON.stringify(base)),k;
-  /* 资源与累计成长：取大（金币/猫粮/罐头/肉条/累计喂食/挨饿天数/抚摸/玩具互动计数）——只进不退 */
-  ['coins','eaten','food','cans','strips','hungryDays','patN','fedToday'].forEach(function(k2){
+  /* 资源与累计成长：取大（金币余额/库存/累计喂食/累计挨饿）——只进不退。
+     注：fedToday（今日已喂）/patN（抚摸）/toyN（玩具）是【当日状态、跨天重置】，绝不可取大，
+     否则会把某设备昨天残留的已喂/已玩次数合并回今天（表现为当天首次登录就显示已喂过） */
+  ['coins','eaten','food','cans','strips','hungryDays'].forEach(function(k2){
     if(typeof other[k2]==='number'&&typeof m[k2]==='number')m[k2]=Math.max(m[k2],other[k2]);
   });
   /* 陪伴起始日：取更早——陪伴天数只增不减，绝不能被重置设备的新宠物覆盖（本轮事故根因） */
   var c1=a.created||'',c2=b.created||'';
   if(c1&&c2)m.created=(c1<c2)?c1:c2;else m.created=c1||c2||m.created;
-  /* 玩具互动计数：逐键取大 */
-  var tn={};for(k in (a.toyN||{}))tn[k]=a.toyN[k]||0;
-  for(k in (b.toyN||{}))tn[k]=Math.max(tn[k]||0,b.toyN[k]||0);
-  m.toyN=tn;
   /* 已拥有家具/玩具/摆放：并集（装备回退不掉） */
   var ow={};for(k in (a.owned||{}))if(a.owned[k])ow[k]=true;
   for(k in (b.owned||{}))if(b.owned[k])ow[k]=true;
