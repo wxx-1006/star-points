@@ -1157,8 +1157,10 @@ function saveJSON(key, v){
 
 /* ---------- 结果弹窗 ---------- */
 let resultReplay = null; /* 「再来一局」回调：由弹结果的游戏传入自己的开局逻辑 */
-function showResult(mainText, subText, showRec, replay){
+let resultOnOk = null;   /* 「确定/关闭」回调：休息提醒用它重置下一次提醒计时 */
+function showResult(mainText, subText, showRec, replay, onOk){
   resultReplay = replay || null;
+  resultOnOk = onOk || null;
   $('modalReplay').hidden = !resultReplay;
   $('modalMain').textContent = mainText;
   const sub = $('modalSub');
@@ -1171,7 +1173,10 @@ function showResult(mainText, subText, showRec, replay){
   }
   $('resultModal').hidden = false;
 }
-function hideResult(){ $('resultModal').hidden = true; }
+function hideResult(){
+  $('resultModal').hidden = true;
+  if (resultOnOk){ const fn = resultOnOk; resultOnOk = null; fn(); }
+}
 $('modalOk').addEventListener('click', hideResult);
 $('modalReplay').addEventListener('click', () => {
   hideResult();
@@ -2500,23 +2505,18 @@ $('recSummary').addEventListener('click', (e) => {
 });
 renderDailyRec();
 
-/* ---------- 护眼休息提醒：本次停留超 20 分钟且当天未提醒 → 弹一次 ---------- */
+/* ---------- 护眼休息提醒：每累计使用 20 分钟提醒一次；点「确定」后才重新计 20 分钟 ---------- */
 const REST_LIMIT_MS = 20 * 60 * 1000;
-const PAGE_LOAD_AT = Date.now();
-function restDue(loadAt, now, reminded){ return !reminded && (now - loadAt) >= REST_LIMIT_MS; }
-(function(){
-  try {
-    const d = new Date(), p2 = (n) => (n < 10 ? '0' : '') + n;
-    const dk = 'rest.reminded.' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
-    if (store.get(dk)) return;
-    setInterval(function(){
-      if (restDue(PAGE_LOAD_AT, Date.now(), false)){
-        store.set(dk, '1');
-        showResult('该休息啦 👀', '连续使用超过 20 分钟，让眼睛休息一下、看看远处吧', false, null);
-      }
-    }, 60 * 1000);
-  } catch (e){}
-})();
+let nextRestAt = Date.now() + REST_LIMIT_MS;
+function restDue(nextAt, now, modalOpen){ return !modalOpen && now >= nextAt; }
+setInterval(function(){
+  const modalOpen = !$('resultModal').hidden;
+  if (restDue(nextRestAt, Date.now(), modalOpen)){
+    showResult('该休息啦 👀', '连续使用超过 20 分钟，让眼睛休息一下、看看远处吧', false, null, function(){
+      nextRestAt = Date.now() + REST_LIMIT_MS; /* 点确定/关闭后，再过 20 分钟才提醒 */
+    });
+  }
+}, 30 * 1000);
 
 /* ---------- 测试钩子（生产无副作用） ---------- */
 render();
