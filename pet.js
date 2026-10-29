@@ -482,13 +482,16 @@ function ptR2(n) { return Math.round(n * 100) / 100; }
 //   （starved 条件触发低落欢迎语，激励孩子背单词赚猫币买粮）；跨天重置当日已喂餐数/玩耍/背单词次数
 function ptRoll() {
   var t = today();
-  if (ptS.lastVisit === t) return;
-  var gap = ptDaysBetween(ptS.lastVisit, t);
-  if (ptS.food <= 0) ptS.hungryDays += gap; // 存粮为空过夜：挨饿天数累计（不扣粮，仅记挨饿）
-  ptS.lastVisit = t;
-  ptS.fedToday = 0;
-  ptS.toyN = {}; ptS.patN = 0; // 跨天重置今日玩耍次数（toyN 按玩具 id 分计）
-  if (ptS.quiz && ptS.quiz.d !== t) ptS.quiz = { d: t, n: 0 }; // 跨天重置背单词次数
+  if (ptS.lastVisit !== t) {
+    var gap = ptDaysBetween(ptS.lastVisit, t);
+    if (ptS.food <= 0) ptS.hungryDays += gap; // 存粮为空过夜：挨饿天数累计（不扣粮，仅记挨饿）
+    ptS.lastVisit = t;
+    ptS.fedToday = 0;
+    ptS.toyN = {}; ptS.patN = 0; // 跨天重置今日玩耍次数（toyN 按玩具 id 分计）
+    if (ptS.quiz && ptS.quiz.d !== t) ptS.quiz = { d: t, n: 0 }; // 跨天重置背单词次数
+  }
+  // 兜底：lastVisit 已是今天（被云端旧快照带回）但 fedToday 残留 → 按最后喂食日纠正（fedToday>0 必意味着 lastFeed=今天）
+  if (ptS.fedToday && ptS.lastFeed !== t) ptS.fedToday = 0;
 }
 
 // ---------- 页面骨架（构建一次，随后只刷新数据） ----------

@@ -1570,14 +1570,17 @@ function petMerge(local,remote){ // 较新者为基础，累计资源取两设�
   /* 陪伴起始日：取更早——陪伴天数只增不减，绝不能被重置设备的新宠物覆盖（本轮事故根因） */
   var c1=a.created||'',c2=b.created||'';
   if(c1&&c2)m.created=(c1<c2)?c1:c2;else m.created=c1||c2||m.created;
-  /* 已拥有家具/玩具/摆放：并集（装备回退不掉） */
+  /* 已拥有（owned）与玩具库存（toys）不可逆：并集。
+     placed（当前摆放）是可逆状态——收起家具后绝不能被旧快照并集复活，故按较新侧（base），
+     且只保留仍拥有的项（placed 恒为 owned 子集，防脏数据） */
   var ow={};for(k in (a.owned||{}))if(a.owned[k])ow[k]=true;
   for(k in (b.owned||{}))if(b.owned[k])ow[k]=true;
   m.owned=ow;
-  var tg=[],seen={},pl=[],seen2={};
+  var tg=[],seen={};
   (a.toys||[]).concat(b.toys||[]).forEach(function(x){if(x&&!seen[x]){seen[x]=true;tg.push(x)}});
-  (a.placed||[]).concat(b.placed||[]).forEach(function(x){if(x&&!seen2[x]){seen2[x]=true;pl.push(x)}});
-  m.toys=tg;m.placed=pl;
+  m.toys=tg;
+  if(Object.prototype.toString.call(m.placed)!=='[object Array]')m.placed=[];
+  m.placed=m.placed.filter(function(x){return x&&ow[x]});
   m.tree=!!(a.tree||b.tree);
   return m;
 }
@@ -4675,6 +4678,6 @@ function ckTokSave(){
   });
 })();
 </script>
-<script src="pet.js?v=20261021a"></script>
+<script src="pet.js?v=20261029a"></script>
 </body>
 </html>
