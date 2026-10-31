@@ -1414,6 +1414,69 @@ function ghPutBody(msg,contentB64,sha){ // GitHub Contents API：更新已有文
   if(sha)b.sha=sha;
   return JSON.stringify(b);
 }
+
+/* ===== 统一同步通道（所有云端文件共用一套流程）=====
+   此前账本/打卡/宠物/专注/请求各写一套 GET→合并→PUT→重试，复制粘贴导致空 sha、409 冲突、
+   覆盖丢失等事故在每条通道重复发生。现统一为：
+     ghApiGet / ghApiPut        —— 底层读写（含 404、空 sha 规避、错误 message 提取）
+     syncChannelPush           —— 通用推送：GET → 合并 → PUT → 409 重新拉取合并后重试
+     syncChannelPull           —— 通用拉取：GET → 合并 → 交业务落盘
+   业务只需提供 merge(localAll, remoteAll) → { all, merged } 与文案。 */
+function ghApiGet(api){
+  return fetch(api,{headers:{'Authorization':'token '+getSyncToken()}})
+    .then(function(r){
+      if(r.status===404)return {sha:'',obj:null,notFound:true}; /* 文件尚未创建 */
+      if(!r.ok){
+        return r.json().then(function(j){throw {code:r.status,msg:(j&&j.message)||''}})
+          .catch(function(e){throw (e&&e.code)?e:{code:r.status,msg:''}});
+      }
+      return r.json().then(function(meta){
+        var obj=null;
+        if(meta.content){try{obj=JSON.parse(b64ToUtf8(meta.content))}catch(e){obj=null}}
+        return {sha:meta.sha||'',obj:obj};
+      });
+    });
+}
+function ghApiPut(api,obj,sha,msg){
+  return fetch(api,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:ghPutBody(msg,utf8ToB64(JSON.stringify(obj)),sha)})
+    .then(function(r){
+      if(r.ok)return {ok:true,code:200,msg:''};
+      return r.json().then(function(j){return {ok:false,code:r.status,msg:(j&&j.message)||''}})
+        .catch(function(){return {ok:false,code:r.status,msg:''}});
+    });
+}
+/* 通用推送：opts={api,msg,local():整份本地数据,merge(localAll,remoteAll):{all,merged,...},maxRetry,onBusy}
+   返回 Promise<{ok,code,msg,merged,extra}> */
+function syncChannelPush(opts){
+  var tries=0;
+  function attempt(){
+    tries++;
+    return ghApiGet(opts.api).then(function(g){
+      var remoteAll=g.obj||{};
+      var m=opts.merge(opts.local?opts.local():null,remoteAll)||{};
+      return ghApiPut(opts.api,m.all,g.sha,opts.msg).then(function(p){
+        if(p.ok)return {ok:true,code:200,msg:'',merged:m.merged,extra:m};
+        if(p.code===409&&tries<(opts.maxRetry||3))return attempt(); /* sha 冲突：重新拉最新内容合并后再推 */
+        return {ok:false,code:p.code,msg:p.msg,merged:m.merged,extra:m};
+      });
+    }).catch(function(e){
+      return {ok:false,code:(e&&e.code)||0,msg:(e&&e.msg)||'网络异常，稍后自动重试'};
+    });
+  }
+  return attempt();
+}
+/* 通用拉取：opts={api,merge(localAll,remoteAll):{all,merged,...},onResult(res)} */
+function syncChannelPull(opts){
+  return ghApiGet(opts.api).then(function(g){
+    var remoteAll=g.obj||{};
+    var m=opts.merge(opts.local?opts.local():null,remoteAll)||{};
+    if(opts.onResult)opts.onResult(m,g);
+    return m;
+  }).catch(function(e){
+    if(opts.onError)opts.onError(e);
+    return null;
+  });
+}
 function syncPull(phone){
   var token=getSyncToken();
   var verAtReq=dataVersion; // 请求发起时的本地写版本，用于过期响应守卫
@@ -1489,57 +1552,34 @@ function syncPush(data){
   }
   syncStatus='loading';
   updateSyncUI();
-  fetch(GH_API,{headers:{'Authorization':'token '+token}})
-    .then(function(r){
-      // 404 = 云端文件尚未创建（首次推送即迁移），按空数据处理走创建流程
-      if(r.status===404){syncSHA='';return {sha:'',content:null}}
-      // 其他非 ok（401/403/5xx/429 等）：语义不明时不推送，避免误创建覆盖
-      if(!r.ok){
-        syncStatus='error';
-        syncErr=(r.status===401||r.status===403)?'token 无效或无权限，请到设置页重新填写':'同步失败（HTTP '+r.status+'），本地数据不受影响';
-        markPendingSync(); // 待重试：网络/权限恢复后补推
-        updateSyncUI();
-        return null;
+  syncChannelPush({
+    api:GH_API, msg:'sync:'+currentUser, maxRetry:3,
+    local:function(){return data},
+    merge:function(local,remoteAll){
+      /* 记录级合并：远端同账号数据与本地并集（两台设备先后各记一笔不再互相覆盖） */
+      var remote=(remoteAll&&typeof remoteAll==='object'&&Object.prototype.toString.call(remoteAll)!=='[object Array]')?remoteAll[currentUser]:null;
+      var merged=mergeAccountData(local,remote);
+      var all={};for(var k in remoteAll)all[k]=remoteAll[k];
+      all[currentUser]=merged.data;
+      return {all:all,merged:merged.data,changed:merged.changed};
+    }
+  }).then(function(res){
+    if(res.ok){
+      syncStatus='synced';syncErr='';clearPendingSync();
+      if(res.extra&&res.extra.changed){ // 合并吸收了远端独有数据：回写本地并刷新界面
+        try{localStorage.setItem(userKey(currentUser),JSON.stringify(res.merged))}catch(e){}
+        if(ad===data)ad=res.merged;
+        render();
       }
-      return r.json();
-    })
-    .then(function(meta){
-      if(!meta)return;
-      syncSHA=meta.sha||'';
-      var allData={};
-      if(meta.content){
-        try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
-      }
-      // 记录级合并：远端同账号数据与本地并集（两台设备先后各记一笔不再互相覆盖）
-      var remote=(allData&&typeof allData==='object'&&Object.prototype.toString.call(allData)!=='[object Array]')?allData[currentUser]:null;
-      var merged=mergeAccountData(data,remote);
-      allData[currentUser]=merged.data;
-      var content=utf8ToB64(JSON.stringify(allData));
-      return fetch(GH_API,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:ghPutBody('sync:'+currentUser,content,syncSHA)})
-        .then(function(r){
-          if(r.status===401){
-            syncStatus='error';syncErr='token 无效或无权限，请到设置页重新填写';markPendingSync();
-          }else if(r.status===403||r.status===404){
-            // 推送被拒：多半是 token 未勾选该仓库或 Contents 权限不足，给出具体排查指引
-            syncStatus='error';syncErr='token 权限不足：请检查是否勾选了 star-points-data 仓库且 Contents 为 Read and write';markPendingSync();
-          }else if(r.ok){
-            syncStatus='synced';syncErr='';clearPendingSync();
-            if(merged.changed){ // 合并吸收了远端独有数据：回写本地并刷新界面
-              try{localStorage.setItem(userKey(currentUser),JSON.stringify(merged.data))}catch(e){}
-              if(ad===data)ad=merged.data;
-              render();
-            }
-          }else{
-            syncStatus='error';syncErr='同步失败（HTTP '+r.status+'），本地数据不受影响';markPendingSync();
-          }
-          updateSyncUI();
-        });
-    })
-    .catch(function(){
-      syncStatus='error';syncErr='网络异常，同步失败，本地数据不受影响';
+    }else{
+      syncStatus='error';
+      syncErr=(res.code===401)?'token 无效或无权限，请到设置页重新填写'
+            :(res.code===403||res.code===404)?'token 权限不足：请检查是否勾选了 star-points-data 仓库且 Contents 为 Read and write'
+            :(res.code?'同步失败（HTTP '+res.code+'），本地数据不受影响':'网络异常，同步失败，本地数据不受影响');
       markPendingSync();
-      updateSyncUI();
-    });
+    }
+    updateSyncUI();
+  });
 }
 // ===== 宠物数据同步（独立文件 sync-pet.json，孩子端允许推送） =====
 //   宠物是孩子端专属功能，syncPush 对孩子端禁推（防旧账本覆盖云端），故宠物走独立文件：
@@ -1610,42 +1650,28 @@ function petSyncPush(){
   var local0=petLocalState();
   if(!local0)return;
   petSyncBusy=true;
-  var tries=0;
-  var fail=function(msg){petSyncBusy=false;markPetPending();petSyncErr=msg;if(curTab==='pet')petSyncBar()};
-  var attempt=function(){
-    tries++;
-    var local=petLocalState()||local0;
-    fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
-      .then(function(r){
-        if(r.status===404)return {sha:'',content:null};
-        if(!r.ok)return r.json().then(function(){throw {code:r.status,resp:r}}).catch(function(e){throw (e&&e.code)?e:{code:r.status,resp:r}});
-        return r.json();
-      })
-      .then(function(meta){
-        petSyncSHA=meta.sha||'';
-        var allData={};
-        if(meta.content){try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
-        var remote=allData[currentUser]||null;
-        /* 按时间戳/只进不退合并后推回云端（绝不简单覆盖） */
-        var merged=petMerge(local,remote);
-        var needAdopt=!!(remote&&local&&((remote.updatedAt||0)>(local.updatedAt||0)||(remote.created&&local.created&&remote.created<local.created)));
-        allData[currentUser]=merged;
-        return fetch(GH_PET_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:ghPutBody('pet-sync:'+currentUser,utf8ToB64(JSON.stringify(allData)),petSyncSHA)})
-          .then(function(r2){return {r:r2,merged:merged,needAdopt:needAdopt}});
-      })
-      .then(function(res){
-        if(res.r.ok){petSyncBusy=false;clearPetPending();petSyncErr='';
-          if(res.needAdopt&&typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(res.merged);
-          if(curTab==='pet')petSyncBar();return}
-        if(res.r.status===409&&tries<4)return attempt(); // sha 冲突（并发写入）：重新拉最新内容合并后再推，最多 4 次
-        return res.r.json().then(function(j){fail('宠物同步推送失败（HTTP '+res.r.status+(j&&j.message?'：'+j.message:'')+'）')}).catch(function(){fail('宠物同步推送失败（HTTP '+res.r.status+'）')});
-      })
-      .catch(function(e){
-        if(e&&e.code)return e.resp.json().then(function(j){fail('宠物同步失败（HTTP '+e.code+(j&&j.message?'：'+j.message:'')+'）')}).catch(function(){fail('宠物同步失败（HTTP '+e.code+'）')});
-        fail('宠物同步网络异常（GitHub API 连不上）');
-      });
-  };
-  attempt();
+  syncChannelPush({
+    api:GH_PET_API, msg:'pet-sync:'+currentUser, maxRetry:4,
+    local:function(){return petLocalState()||local0},
+    merge:function(local,remoteAll){
+      var remote=remoteAll[currentUser]||null;
+      var merged=petMerge(local,remote); // 按时间戳/只进不退合并，绝不简单覆盖
+      var needAdopt=!!(remote&&local&&((remote.updatedAt||0)>(local.updatedAt||0)||(remote.created&&local.created&&remote.created<local.created)));
+      var all={};for(var k in remoteAll)all[k]=remoteAll[k];
+      all[currentUser]=merged;
+      return {all:all,merged:merged,needAdopt:needAdopt};
+    }
+  }).then(function(res){
+    petSyncBusy=false;
+    if(res.ok){
+      clearPetPending();petSyncErr='';
+      if(res.extra&&res.extra.needAdopt&&typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(res.merged);
+    }else{
+      markPetPending();
+      petSyncErr=res.code?('宠物同步推送失败（HTTP '+res.code+(res.msg?'：'+res.msg:'')+'）'):('宠物同步网络异常（GitHub API 连不上）');
+    }
+    if(curTab==='pet')petSyncBar();
+  });
 }
 function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收；有待推改动则补推
   if(!currentUser||!getSyncToken())return;
@@ -3091,26 +3117,21 @@ function sessionNickname(){var s=readKidSession();return (s&&s.nickname)||'孩�
 function pullRequests(){
   var token=getSyncToken();
   if(!token)return Promise.resolve(null);
-  return fetch(GH_REQ_API,{headers:{'Authorization':'token '+token}})
-    .then(function(r){
-      if(r.status===404){reqSHA='';return {}}
-      if(!r.ok)return null;
-      return r.json().then(function(meta){
-        reqSHA=meta.sha||'';
-        try{return JSON.parse(b64ToUtf8(meta.content))||{}}catch(e){return {}}
-      });
+  return ghApiGet(GH_REQ_API)
+    .then(function(g){
+      reqSHA=g.sha||'';
+      return g.obj||{}; /* 404 → 空对象（新用户无申请，正常态） */
     })
-    .catch(function(){return null});
+    .catch(function(){return null}); /* 网络/权限失败返回 null：调用方按失败处理，绝不用空对象覆盖云端 */
 }
 // 整体写入 requests.json（last-write-wins，家庭规模可接受）
 function pushRequests(obj){
   var token=getSyncToken();
   if(!token)return Promise.resolve(false);
-  return fetch(GH_REQ_API,{method:'PUT',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:ghPutBody('sync:requests',utf8ToB64(JSON.stringify(obj)),reqSHA)})
-    .then(function(r){
-      if(!r.ok)return false;
-      return r.json().then(function(m){reqSHA=m.sha||reqSHA;return true}).catch(function(){return true});
-    })
+  /* 整体写入 requests.json（last-write-wins，家庭规模可接受）：先取最新 sha 再写，避免 sha 冲突 */
+  return ghApiGet(GH_REQ_API)
+    .then(function(g){ return ghApiPut(GH_REQ_API,obj,g.sha,'sync:requests'); })
+    .then(function(p){ return !!p.ok; })
     .catch(function(){return false});
 }
 
@@ -3996,32 +4017,25 @@ function ckQueue(){ // 状态变更防抖上云（4 秒）
 function ckSyncPush(){
   if(ckSyncTimer){clearTimeout(ckSyncTimer);ckSyncTimer=null}
   if(ckSyncBusy||!hasCkPending()||!currentUser||!getSyncToken())return;
-  var local=ckBucket();
   ckSyncBusy=true;ckSyncErr='';
   if(curTab==='checkin')ckShow();
-  fetch(GH_CK_API,{headers:{'Authorization':'token '+getSyncToken()}})
-    .then(function(r){
-      if(r.status===404){ckSyncSHA='';ckCloudCnt=0;return {sha:'',content:null}}
-      if(!r.ok){markCkPending();ckSyncErr='同步失败（HTTP '+r.status+'）';return null}
-      return r.json();
-    })
-    .then(function(meta){
-      if(!meta){ckSyncBusy=false;if(curTab==='checkin')ckShow();return}
-      ckSyncSHA=meta.sha||'';
-      var all={};
-      if(meta.content){try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
-      ckCloudCnt=ckDateKeys(all[currentUser]);
-      var merged=ckMergeAll(local,all[currentUser]||{});
+  syncChannelPush({
+    api:GH_CK_API, msg:'ck-sync:'+currentUser, maxRetry:3,
+    local:function(){return ckBucket()},
+    merge:function(local,remoteAll){
+      var remote=remoteAll[currentUser]||{};
+      var merged=ckMergeAll(local,remote); // 只进不退合并，不覆盖
       ckSaveBucket(merged);
+      var all={};for(var k in remoteAll)all[k]=remoteAll[k];
       all[currentUser]=merged;
-      return fetch(GH_CK_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:ghPutBody('ck-sync:'+currentUser,utf8ToB64(JSON.stringify(all)),ckSyncSHA)})
-        .then(function(r){
-          ckSyncBusy=false;
-          if(r.ok){ckSyncErr='';clearCkPending();ckCloudCnt=ckDateKeys(merged)}else{markCkPending();ckSyncErr='同步失败（HTTP '+r.status+'）'}
-          if(curTab==='checkin')ckShow();
-        });
-    })
-    .catch(function(){ckSyncBusy=false;ckSyncErr='网络异常，稍后自动重试';markCkPending();if(curTab==='checkin')ckShow()});
+      return {all:all,merged:merged};
+    }
+  }).then(function(res){
+    ckSyncBusy=false;
+    if(res.ok){ckSyncErr='';clearCkPending();ckCloudCnt=ckDateKeys(res.merged)}
+    else{markCkPending();ckSyncErr=res.code?('同步失败（HTTP '+res.code+(res.msg?'：'+res.msg:'')+'）'):'网络异常，稍后自动重试'}
+    if(curTab==='checkin')ckShow();
+  });
 }
 function ckSyncPull(cb){ // 进打卡页拉取：合并云端申请/完成状态后刷新；cb=合并完成后的回调（必打卡结算挂在此处，避免本地缺孩子端申请状态被误扣）
   if(!currentUser)return;
@@ -4120,30 +4134,23 @@ function fxQueue(){ // 破纪录防抖上云（2 秒）
 function fxSyncPush(){
   if(fxSyncTimer){clearTimeout(fxSyncTimer);fxSyncTimer=null}
   if(fxSyncBusy||!hasFxPending()||!currentUser||!getSyncToken()){fxUpdateSyncUI();return}
-  var local=fxBucket();
   fxSyncBusy=true;fxUpdateSyncUI();
-  fetch(GH_FX_API,{headers:{'Authorization':'token '+getSyncToken()}})
-    .then(function(r){
-      if(r.status===404){fxSyncSHA='';return {sha:'',content:null}}
-      if(!r.ok){markFxPending();fxSyncErr='同步失败（HTTP '+r.status+'）';fxUpdateSyncUI();return null}
-      return r.json();
-    })
-    .then(function(meta){
-      if(!meta){fxSyncBusy=false;fxUpdateSyncUI();return}
-      fxSyncSHA=meta.sha||'';
-      var all={};
-      if(meta.content){try{all=JSON.parse(b64ToUtf8(meta.content))}catch(e){}}
-      var merged=fxMergeAll(local,all[currentUser]||{});
+  syncChannelPush({
+    api:GH_FX_API, msg:'fx-sync:'+currentUser, maxRetry:3,
+    local:function(){return fxBucket()},
+    merge:function(local,remoteAll){
+      var merged=fxMergeAll(local,remoteAll[currentUser]||{});
       fxSaveBucket(merged.data);
+      var all={};for(var k in remoteAll)all[k]=remoteAll[k];
       all[currentUser]=merged.data;
-      return fetch(GH_FX_API,{method:'PUT',headers:{'Authorization':'token '+getSyncToken(),'Content-Type':'application/json'},body:ghPutBody('fx-sync:'+currentUser,utf8ToB64(JSON.stringify(all)),fxSyncSHA)})
-        .then(function(r){
-          fxSyncBusy=false;
-          if(r.ok){fxSyncErr='';clearFxPending()}else{markFxPending();fxSyncErr='同步失败（HTTP '+r.status+'）'}
-          fxUpdateSyncUI();
-        });
-    })
-    .catch(function(){fxSyncBusy=false;fxSyncErr='网络异常，稍后自动重试';markFxPending();fxUpdateSyncUI()});
+      return {all:all,merged:merged.data};
+    }
+  }).then(function(res){
+    fxSyncBusy=false;
+    if(res.ok){fxSyncErr='';clearFxPending()}
+    else{markFxPending();fxSyncErr=res.code?('同步失败（HTTP '+res.code+(res.msg?'：'+res.msg:'')+'）'):'网络异常，稍后自动重试'}
+    fxUpdateSyncUI();
+  });
 }
 function fxSyncPull(){
   if(!currentUser||!getSyncToken()){fxUpdateSyncUI();return Promise.resolve(false);}
