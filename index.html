@@ -778,13 +778,28 @@ body.kid-mode{padding-bottom:72px}
     </div>
     <div class="sec">
       <div class="sg">
+        <div class="sgh" style="cursor:default"><div class="sgt">数据体检</div></div>
+        <div style="padding:0 16px 16px">
+          <div class="sync-hint" style="margin-top:12px">一键检查总分、明细、必打卡扣分与各同步通道；发现异常可一键修复，不用再逐页排查。</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+            <button class="bn bn-q" style="height:44px" onclick="dataAuditRun()">开始体检</button>
+            <button class="bn bn-p" style="height:44px" onclick="dataFixRun()">一键修复</button>
+          </div>
+          <div id="auditList" style="margin-top:12px"></div>
+          <div class="sync-line" id="chanList" style="margin-top:12px"></div>
+          <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="retryAllChannels()">同步全部重试</button>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sg">
         <div class="sgh" style="cursor:default"><div class="sgt">数据管理</div></div>
         <div style="padding:0 16px 16px">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
             <button class="bn bn-q" style="height:44px" onclick="exportBackup()">导出备份</button>
             <button class="bn bn-q" style="height:44px" onclick="document.getElementById('importFile').click()">导入恢复</button>
           </div>
-          <div class="sync-hint" style="margin-top:10px">导出包含积分账本、刷题进度与自定义题库的 JSON 文件；导入将覆盖当前账号的本机数据并同步到云端。建议定期导出，防浏览器缓存清理丢数据。</div>
+          <div class="sync-hint" style="margin-top:10px">导出包含积分账本、打卡状态、宠物、专注成绩、刷题进度与自定义题库的 JSON 文件；导入将覆盖当前账号的本机数据并同步到云端。建议定期导出，防浏览器缓存清理丢数据。</div>
           <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importBackupFile(this)">
           <button class="bn-danger" style="margin-top:12px" onclick="ccd()">清除所有数据</button>
         </div>
@@ -3690,6 +3705,94 @@ function openRdEx(){
   rdShow('兑换明细（'+rdStart.replace(/-/g,'/')+' ~ '+rdEndDate().replace(/-/g,'/')+'）',h);
 }
 
+/* ===== 数据体检 + 同步通道状态（家长端）：把"事后救火"变成"可自查" ===== */
+function dataAudit(){ // 返回检查项列表：{name,ok,detail}
+  var out=[];
+  var acc=loadBucket(currentUser)||{};
+  var recs=acc.records||[];
+  var del=acc.del||{};
+  /* ① 总分恒等于明细加总 */
+  var sum=rdSumScore(acc);
+  out.push({name:'总分与明细一致',ok:(acc.totalPoints||0)===sum,detail:'当前 '+(acc.totalPoints||0)+' · 明细加总 '+sum});
+  /* ② 已删除记录不应残留在账本里（否则"总分含、明细看不见"） */
+  var ghost=0;
+  for(var i=0;i<recs.length;i++){var r=recs[i];if(r&&r.id&&del['r:'+r.id])ghost++;}
+  out.push({name:'无已删除残留记录',ok:ghost===0,detail:ghost?(ghost+' 条已删除记录仍在账本中'):'正常'});
+  /* ③ 必打卡：已标记扣分但账本缺流水 */
+  var b=ckBucket(),missing=0,miss=[];
+  for(var ds in b){
+    if(ds==='_cfg')continue;
+    var day=b[ds];
+    for(var id in day){
+      var st=day[id];
+      if(st&&st.m===1&&!recs.some(function(x){return x&&x.id==='ckm_'+ds+'_'+id})){
+        missing++;
+        if(miss.length<3)miss.push(ds+' '+id);
+      }
+    }
+  }
+  out.push({name:'必打卡扣分记录齐全',ok:missing===0,detail:missing?(missing+' 条缺扣分流水'+(miss.length?('（如 '+miss.join('、')+'）'):'')):'正常'});
+  /* ④ 宠物数据完整性 */
+  var pet=null;
+  try{pet=JSON.parse(localStorage.getItem('sp_pet__'+currentUser))||null}catch(e){}
+  if(pet)out.push({name:'宠物数据完整',ok:!!pet.name&&!!pet.created,detail:'起始 '+(pet.created||'未知')+' · 累计喂食 '+(pet.eaten||0)});
+  else out.push({name:'宠物数据完整',ok:true,detail:'本机暂无宠物数据'});
+  return out;
+}
+function renderChannelStates(){ // 各同步通道状态一览（家长端排查用）
+  var el=document.getElementById('chanList');
+  if(!el)return;
+  var list=[
+    {n:'账本',bad:!!syncErr,txt:syncErr||(syncStatus==='loading'?'同步中…':(hasPendingSync()?'有改动待补推':'已同步'))},
+    {n:'打卡',bad:!!ckSyncErr,txt:ckSyncErr||(hasCkPending()?'有改动待补推':'已同步')},
+    {n:'宠物',bad:!!petSyncErr,txt:petSyncErr||(hasPetPending()?'有改动待补推':'已同步')},
+    {n:'专注',bad:!!fxSyncErr,txt:fxSyncErr||(hasFxPending()?'有改动待补推':'已同步')},
+    {n:'兑换请求',bad:false,txt:'按需拉取'}
+  ];
+  var h='<div style="font-size:12px;color:var(--dim);font-weight:700;margin-bottom:4px">同步通道</div>';
+  for(var i=0;i<list.length;i++) h+='<div class="sync-line">'+(list[i].bad?'🔴 ':'🟢 ')+list[i].n+' — '+escHtml(list[i].txt)+'</div>';
+  el.innerHTML=h;
+}
+function dataAuditRun(){
+  var items=dataAudit();
+  var h='',bad=0;
+  for(var i=0;i<items.length;i++){
+    if(!items[i].ok)bad++;
+    h+='<div class="sync-line">'+(items[i].ok?'✅ ':'⚠️ ')+items[i].name+' — '+escHtml(items[i].detail)+'</div>';
+  }
+  h+='<div class="sync-hint" style="margin-top:8px">'+(bad?('发现 '+bad+' 项异常，可点「一键修复」处理。'):'全部正常 ✅')+'</div>';
+  var box=document.getElementById('auditList');
+  if(box)box.innerHTML=h;
+  renderChannelStates();
+  toast(bad?('体检完成：'+bad+' 项异常'):'体检完成：一切正常',bad?'err':'ok');
+}
+function dataFixRun(){ // 一键修复：重算总分 + 清理已删除残留 + 补记缺失扣分流水 + 推送各通道
+  if(sessionRole!=='parent'){toast('仅家长端可修复','err');return}
+  var fixed=[];
+  var acc=loadBucket(currentUser);
+  if(acc){
+    var before=acc.totalPoints||0;
+    var del=acc.del||{};
+    acc.records=(acc.records||[]).filter(function(r){return !(r&&r.id&&del['r:'+r.id])});
+    acc.exchanges=(acc.exchanges||[]).filter(function(e){return !(e&&e.id&&del['e:'+e.id])});
+    acc.totalPoints=rdSumScore(acc);
+    try{localStorage.setItem(userKey(currentUser),JSON.stringify(acc));ad=acc;fixed.push('总分重算 '+before+' → '+acc.totalPoints);}catch(e){}
+  }
+  try{ckMustSweep(new Date());fixed.push('已重新结算必打卡');}catch(e){}
+  markPendingSync();
+  retryAllChannels();
+  dataAuditRun();
+  toast(fixed.length?('已处理：'+fixed.join('；')):'已执行修复流程','ok');
+}
+function retryAllChannels(){ // 触发各通道拉取与推送
+  if(sessionRole!=='parent')return;
+  try{syncPull(currentUser);}catch(e){}
+  try{ckSyncPush();}catch(e){}
+  try{petSyncPush();}catch(e){}
+  try{fxSyncPush();}catch(e){}
+  toast('已触发各通道同步','ok');
+}
+
 // ===== 本地备份（#2）：导出当前账号账本+刷题进度+自定义题库为 JSON；导入覆盖本机并上云 =====
 function exportBackup(){
   if(!currentUser){toast('请先登录','err');return}
@@ -3699,6 +3802,9 @@ function exportBackup(){
     phone:currentUser,
     users:getUsers(),
     bucket:loadBucket(currentUser),
+    checkin:(function(){try{return JSON.parse(localStorage.getItem('sp_ck__'+currentUser))||null}catch(e){return null}})(),
+    pet:(function(){try{return JSON.parse(localStorage.getItem('sp_pet__'+currentUser))||null}catch(e){return null}})(),
+    focus:(function(){try{var r={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf('sp_fx__'+currentUser+':')===0)r[k]=localStorage.getItem(k)}return r}catch(e){return null}})(),
     quiz:(typeof qzAccStore==='function')?qzAccStore():null,
     customBanks:(typeof qzCustomBanks==='function')?qzCustomBanks():null
   };
@@ -3723,9 +3829,19 @@ function importBackupFile(inp){
     var obj=null;
     try{obj=JSON.parse(rd.result)}catch(e){}
     if(!obj||obj.app!=='star-points'||!obj.bucket||typeof obj.bucket!=='object'){toast('备份文件格式不正确','err');return}
-    sc2('导入备份','将用备份覆盖当前账号「'+currentUser+'」的本机数据（含刷题进度与自定义题库），并同步到云端。确定继续吗？',function(){
+    sc2('导入备份','将用备份覆盖当前账号「'+currentUser+'」的本机数据（含打卡、宠物、专注成绩、刷题进度与自定义题库），并同步到云端。确定继续吗？',function(){
       try{localStorage.setItem(userKey(currentUser),JSON.stringify(obj.bucket))}
       catch(e){toast('导入失败：存储空间不足','err');return}
+      /* 打卡 / 宠物 / 专注：一并恢复（此前只恢复账本+刷题+题库） */
+      if(obj.checkin&&typeof obj.checkin==='object'){
+        try{localStorage.setItem('sp_ck__'+currentUser,JSON.stringify(obj.checkin))}catch(e){}
+      }
+      if(obj.pet&&typeof obj.pet==='object'){
+        try{localStorage.setItem('sp_pet__'+currentUser,JSON.stringify(obj.pet))}catch(e){}
+      }
+      if(obj.focus&&typeof obj.focus==='object'){
+        for(var fk in obj.focus){try{localStorage.setItem(fk,obj.focus[fk])}catch(e){}}
+      }
       if(obj.quiz&&typeof obj.quiz==='object'&&(typeof qzAccKey==='function')){
         try{localStorage.setItem(qzAccKey(),JSON.stringify(obj.quiz))}catch(e){}
       }
