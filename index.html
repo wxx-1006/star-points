@@ -662,6 +662,9 @@ body.kid-mode{padding-bottom:72px}
 .ck-b.p{background:#E8F5E4;color:#3E7D33}
 .ck-b:active{opacity:.75}
 .ck-prog{display:flex;align-items:center;gap:10px;margin:12px 16px 0}
+.ck-motivate{margin:10px 16px 0;padding:8px 12px;border-radius:12px;background:rgba(255,205,90,.16);border:1px solid rgba(255,205,90,.42);color:var(--txt);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ck-motivate b{color:var(--red-deep)}
+.ck-motivate-msg{font-weight:600;color:var(--dim)}
 .ck-bar{flex:1;height:9px;border-radius:99px;background:#F0EADF;overflow:hidden}
 .ck-bar i{display:block;height:100%;border-radius:99px;background:#7FC26E;transition:width .3s}
 .ck-pct{font:800 13px/1 var(--ff);color:#5B8A4E;min-width:40px;text-align:right}
@@ -4069,6 +4072,41 @@ function ckTasksFor(ds){ // 按日期 + 循环规则生成当日任务清单（�
 }
 function ckTaskById(id){var tasks=ckCfg().tasks;for(var i=0;i<tasks.length;i++){if(tasks[i].id===id)return tasks[i]}return null}
 function ckFmtD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function ckDayDone(b,ds){ // 某天是否有任务完成（奖励标记不算）
+  var day=b[ds];if(!day)return false;
+  for(var id in day){
+    if(id==='_bonus'||id==='_mbonus')continue;
+    if(day[id]&&day[id].d)return true;
+  }
+  return false;
+}
+function ckStreak(){ // 连续有完成记录的天数（从今天往前）
+  var b=ckBucket(),n=0,d=new Date();
+  for(var i=0;i<400;i++){
+    if(!ckDayDone(b,ckFmtD(d)))break;
+    n++;d.setDate(d.getDate()-1);
+  }
+  return n;
+}
+function ckWeekDone(){ // 本周（周一至今）完成的天数
+  var b=ckBucket(),n=0,d=new Date(),dow=d.getDay();
+  d.setDate(d.getDate()-((dow===0)?6:(dow-1)));
+  for(var i=0;i<7;i++){
+    if(ckDayDone(b,ckFmtD(d)))n++;
+    d.setDate(d.getDate()+1);
+  }
+  return n;
+}
+function ckMotivate(){ // 正向激励徽章：连续打卡 + 本周完成 + 里程碑鼓励
+  var st=ckStreak(),wk=ckWeekDone();
+  if(!st&&!wk)return '';
+  var msg='';
+  if(st>=30)msg='满月坚持，太了不起了！';
+  else if(st>=14)msg='两周坚持，很稳！';
+  else if(st>=7)msg='连续一周，超棒！';
+  else if(st>=3)msg='坚持三天啦，继续加油！';
+  return '<div class="ck-motivate">🔥 已连续打卡 <b>'+st+'</b> 天 · 本周完成 <b>'+wk+'</b> 天'+(msg?'<span class="ck-motivate-msg">'+msg+'</span>':'')+'</div>';
+}
 function ckAddDays(ds,n){var d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return ckFmtD(d)}
 function ckStateKey(ds){ // 周末任务两天共用状态（以周六为锚）：周六完成→周日同显已完成，且只加一次分
   var d=new Date(ds+'T00:00:00');
@@ -4596,7 +4634,8 @@ function ckShow(){
   if(hasBonus)earned+=20;
   var pct=Math.round(done/tasks.length*100);
   html+='<div class="ck-prog"><div class="ck-bar"><i style="width:'+pct+'%"></i></div><span class="ck-pct">'+pct+'%</span></div>'
-    +'<div class="ck-sum">完成 <b>'+done+'</b>/'+tasks.length+' 项 · 已得 <b>'+earned+'</b> 分'+(hasBonus?'<span class="ck-bn">（含全勤 +10）</span>':'')+'</div>';
+    +'<div class="ck-sum">完成 <b>'+done+'</b>/'+tasks.length+' 项 · 已得 <b>'+earned+'</b> 分'+(hasBonus?'<span class="ck-bn">（含全勤 +20）</span>':'')+'</div>'
+    +ckMotivate();
   for(i=0;i<tasks.length;i++){
     var t=tasks[i],k=ckKeyFor(ckDate,t),st=(b[k]&&b[k][t.id])||{};
     var sm=CK_SUBJ[t.subj]||CK_SUBJ.other;

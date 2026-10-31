@@ -123,3 +123,32 @@ test('系统流水不可删除（打卡扣分/补卡/奖励）', async () => {
   w.deleteRecord('ckmk_y');
   assert.equal(w.ad.records.length, 2, '打卡系统流水不应被删除');
 });
+
+test('激励：连续打卡天数与本周完成天数统计正确', async () => {
+  const w = await setup();
+  const b = w.ckBucket();
+  for (const off of [0, 1, 2]) {
+    const ds = w.ckAddDays(w.today(), -off);
+    b[ds] = b[ds] || {};
+    b[ds]['6'] = { c: 1, d: 1, r: 1, t: Date.now() };
+  }
+  w.ckSaveBucket(b);
+  assert.equal(w.ckStreak(), 3, '连续 3 天');
+  assert.ok(w.ckWeekDone() >= 1, '本周至少完成 1 天');
+});
+
+test('激励：徽章在打卡页渲染（含连续天数与鼓励语）', async () => {
+  const w = await setup();
+  const b = w.ckBucket();
+  for (const off of [0, 1, 2]) {
+    const ds = w.ckAddDays(w.today(), -off);
+    b[ds] = b[ds] || {};
+    b[ds]['6'] = { c: 1, d: 1, r: 1, t: Date.now() };
+  }
+  w.ckSaveBucket(b);
+  w.ckShow();
+  const html = w.document.getElementById('ckList').innerHTML;
+  assert.ok(html.includes('ck-motivate'), '应渲染激励徽章');
+  assert.ok(html.includes('已连续打卡'), '应显示连续天数');
+  assert.ok(html.includes('本周完成'), '应显示本周完成天数');
+});
