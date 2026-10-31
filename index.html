@@ -1225,6 +1225,9 @@ function rdSumScore(d){ // 总分唯一口径：Σrecords.score − Σexchanges.
   if(es)for(i=0;i<es.length;i++){var e=es[i];if(e&&(!e.id||!del['e:'+e.id]))tp-=(e.cost)||0;}
   return tp;
 }
+/* ★ 总分是【派生值】，不是独立存储值：唯一口径 = Σrecords.score − Σexchanges.cost（已删除记录不计）。
+   业务代码请只写流水（records/exchanges），总分行上的 += / -= 仅作即时显示用，
+   保存时一律由本函数重算——历史上多次"总分对不上"都源于同一处被改了两遍。 */
 function sd(d){if(sessionRole==='kid')return;var phone=currentUser;if(!phone)return;
   var del=d.del||{}; // 删除墓碑清理：已删记录不留在账本里（防"总分含、明细看不见"的幽灵记录）
   if(d.records)d.records=d.records.filter(function(r){return !(r&&r.id&&del['r:'+r.id])});
