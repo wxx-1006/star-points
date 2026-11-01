@@ -728,7 +728,7 @@ function pushHistory(rec){
     notifyBestUpdated('history'); /* 触发主应用云同步 */
   } catch (e){}
 }
-function recordHistory(g, v, sub, best){
+function recordHistory(g, v, sub, best, pass){
   const d = new Date();
   const p2 = (n) => (n < 10 ? '0' : '') + n;
   pushHistory({
@@ -741,6 +741,16 @@ function recordHistory(g, v, sub, best){
     best: best ? 1 : 0,
     u: Math.random().toString(36).slice(2, 8) + Date.now().toString(36)
   });
+  return maybeAchieve(pass); // 连续达标成就文案（挑战模式）
+}
+function maybeAchieve(pass){ // 连续达标里程碑：达标局累加、未达标清零
+  const k = 'ach.streak';
+  let n = pass ? (parseInt(store.get(k) || '0', 10) + 1) : 0;
+  store.set(k, String(n));
+  if (pass && n === 3) return '🎯 连续 3 局达标，很稳！';
+  if (pass && n === 10) return '🏅 连续 10 局达标，专注力小达人！';
+  if (pass && n === 30) return '🏆 连续 30 局达标，太强了！';
+  return '';
 }
 /* ---------- 成绩分析：按游戏汇总 + 近10次趋势（家长端额外标注近7天练得最少的游戏） ---------- */
 let recSelGame = null;
@@ -1431,9 +1441,9 @@ function finish(){
   }
   store.set(skey, String(cnt));
 
-  recordHistory('schulte', cost, '错误 ' + state.errors + ' 次 · ' + state.size + '×' + state.size + ' ' + (state.type === 'num' ? '数字' : '字母'), r.isNew);
+  const ach1 = recordHistory('schulte', cost, '错误 ' + state.errors + ' 次 · ' + state.size + '×' + state.size + ' ' + (state.type === 'num' ? '数字' : '字母'), r.isNew, state.errors <= 2);
   showResult('完成！用时 ' + formatTime(cost),
-    (comboStr() === 'none' ? '' : comboLabel() + ' · ') + '错误 ' + state.errors + ' 次 · ' + r.cmp + adv,
+    (comboStr() === 'none' ? '' : comboLabel() + ' · ') + '错误 ' + state.errors + ' 次 · ' + r.cmp + adv + (ach1 ? ' · ' + ach1 : ''),
     r.isNew,
     () => { render(); deal(); });
 }
@@ -1586,9 +1596,9 @@ function finishTrack(){
   if (r.isNew) saveJSON(key, { ms: cost, errors: trackSt.errors, at: Date.now() });
   trackUpdateStats();
 
-  recordHistory('track', cost, '错误 ' + trackSt.errors + ' 次 · ' + (trackSt.level === 1 ? '简单' : trackSt.level === 2 ? '中等' : '困难'), r.isNew);
+  const ach2 = recordHistory('track', cost, '错误 ' + trackSt.errors + ' 次 · ' + (trackSt.level === 1 ? '简单' : trackSt.level === 2 ? '中等' : '困难'), r.isNew, trackSt.errors <= 2);
   showResult('完成！总用时 ' + formatTime(cost),
-    '10 轮 · 错误 ' + trackSt.errors + ' 次 · ' + r.cmp,
+    '10 轮 · 错误 ' + trackSt.errors + ' 次 · ' + r.cmp + (ach2 ? ' · ' + ach2 : ''),
     r.isNew,
     startTrack);
   $('btnTrackStart').disabled = false;
@@ -2461,9 +2471,9 @@ function finishCancel(){
   if (r.isNew) saveJSON(key, { ms: cost, wrong: cxSt.wrong, at: Date.now() });
   cxUpdateStats();
 
-  recordHistory('cancel', cost, '误点 ' + cxSt.wrong + ' 次', r.isNew);
+  const ach3 = recordHistory('cancel', cost, '误点 ' + cxSt.wrong + ' 次', r.isNew, cxSt.wrong <= 2);
   showResult('全部找到！用时 ' + formatTime(cost),
-    '误点 ' + cxSt.wrong + ' 次 · ' + r.cmp,
+    '误点 ' + cxSt.wrong + ' 次 · ' + r.cmp + (ach3 ? ' · ' + ach3 : ''),
     r.isNew,
     () => { renderCancel(); cxDeal(); });
 }

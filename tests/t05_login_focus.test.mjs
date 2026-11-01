@@ -95,3 +95,13 @@ test('专注页：休息提醒——弹窗期间不重复提醒，点确定后�
   w.document.getElementById('modalOk').click();
   assert.equal(called, 1, '点确定触发重置回调');
 });
+
+test('专注页：连续达标成就——3局达标解锁、未达标清零', async () => {
+  const w = await loadFocus({ url: 'https://star.test/?acct=ach' });
+  w.localStorage.setItem('sp_fx__ach:ach.streak', '0');
+  assert.equal(w.maybeAchieve(true), '');   // 第 1 局
+  assert.equal(w.maybeAchieve(true), '');   // 第 2 局
+  assert.ok(w.maybeAchieve(true).includes('连续 3 局达标'), '第 3 局应解锁成就');
+  assert.equal(w.maybeAchieve(false), '', '未达标应清零且无成就');
+  assert.equal(w.maybeAchieve(true), '', '清零后重新计数');
+});
