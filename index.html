@@ -126,6 +126,14 @@ body.kid-mode{padding-bottom:72px}
 
 /* —— 统计三宫格：数字即信息，无图标块、无阴影 —— */
 .qs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-top:12px}
+.kid-goal{margin:12px 16px 0;display:flex;flex-direction:column;gap:8px}
+.kg-lv{font-size:13px;font-weight:700;color:var(--txt);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.kg-wish{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.kg-wt{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:7px}
+.kg-bar{height:10px;border-radius:6px;background:var(--card2);overflow:hidden}
+.kg-bar i{display:block;height:100%;background:linear-gradient(90deg,#F4B942,#F0813D);transition:width .4s}
+.kg-wd{font-size:12px;color:var(--dim);margin-top:6px}
+.kg-wd b{color:var(--red-deep)}
 .sc{background:var(--card);border:var(--bd);border-radius:var(--r-m);padding:12px 8px;text-align:center}
 .sc .sv{font:var(--f-h2);font-variant-numeric:tabular-nums;color:var(--ink)}
 .qs .sc:nth-child(1) .sv{color:var(--grn-deep)}
@@ -528,6 +536,7 @@ body.kid-mode{padding-bottom:72px}
     <div class="sc"><div class="sv" id="td">0</div><div class="sl">今日扣分</div></div>
     <div class="sc"><div class="sv" id="ts">0</div><div class="sl">连续天数</div></div>
   </div>
+  <div id="kidGoal" style="display:none"></div>
   <div class="sec"><div class="sec-h"><div class="st-t">近一周概览</div></div><div class="wb" id="wb"></div></div>
   <div class="sec" id="ctaSec">
     <div class="cta-row">
@@ -791,6 +800,17 @@ body.kid-mode{padding-bottom:72px}
           <div id="auditList" style="margin-top:12px"></div>
           <div class="sync-line" id="chanList" style="margin-top:12px"></div>
           <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="retryAllChannels()">同步全部重试</button>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sg">
+        <div class="sgh" style="cursor:default"><div class="sgt">孩子愿望 / 目标</div></div>
+        <div style="padding:0 16px 16px">
+          <div class="sync-hint" style="margin-top:12px">设定一个孩子想攒积分兑换的目标，孩子端首页会显示进度条（还差多少星）。</div>
+          <div class="fg" style="margin:10px 0 0"><label class="fl">目标名称</label><input class="fi" id="wishName" placeholder="例如：乐高积木"></div>
+          <div class="fg" style="margin:10px 0 0"><label class="fl">所需积分</label><input class="fi" id="wishCost" type="number" min="1" placeholder="例如：100"></div>
+          <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="saveWish()">保存愿望</button>
         </div>
       </div>
     </div>
@@ -2534,8 +2554,41 @@ function render(){
   renderSettings();
   // 孩子端商城页在屏时，跟随数据刷新总积分与奖励列表
   if(sessionRole==='kid'&&curTab==='shop')renderShopKid();
+  renderKidGoal();
 }
 
+function totalEarned(acc){ // 累计获得（所有正分流水之和，等级只升不降的依据）
+  return ((acc&&acc.records)||[]).reduce(function(s,r){return s+((r&&r.score>0)?r.score:0)},0);
+}
+function kidLevel(earned){ // 累计积分 → 等级称号
+  if(earned>=500)return {lv:4,name:'传奇星',icon:'🌟'};
+  if(earned>=200)return {lv:3,name:'璀璨星',icon:'✨'};
+  if(earned>=50)return {lv:2,name:'闪耀星',icon:'⭐'};
+  return {lv:1,name:'新星',icon:'☆'};
+}
+function renderKidGoal(){ // 孩子端首页：等级 + 愿望进度（家长端隐藏）
+  var el=document.getElementById('kidGoal');
+  var cta=document.getElementById('ctaSec');
+  if(sessionRole!=='kid'){
+    if(el)el.style.display='none';
+    return;
+  }
+  if(cta)cta.style.display='none'; // 孩子端不显示「记录分数/兑换积分」入口
+  if(!el)return;
+  el.style.display='';
+  var earned=totalEarned(ad),lv=kidLevel(earned);
+  var h='<div class="kg-lv">'+lv.icon+' '+lv.name+' · 累计获得 '+earned+' 星</div>';
+  var w=ad.wish;
+  if(w&&w.name&&w.cost>0){
+    var cur=Math.max(0,Math.min(ad.totalPoints,w.cost));
+    var pct=Math.min(100,Math.round(ad.totalPoints/w.cost*100));
+    var left=Math.max(0,w.cost-ad.totalPoints);
+    h+='<div class="kg-wish"><div class="kg-wt">🎯 目标：'+escHtml(w.name)+'（'+w.cost+' 星）</div>'
+      +'<div class="kg-bar"><i style="width:'+pct+'%"></i></div>'
+      +'<div class="kg-wd">'+(left>0?('还差 <b>'+left+'</b> 星'):'🎉 目标达成！')+'</div></div>';
+  }
+  el.innerHTML=h;
+}
 function renderHome(){
   var tpEl=document.getElementById('tp');
   tpEl.textContent=ad.totalPoints;
@@ -2743,6 +2796,16 @@ function renderRecords(){
   }
 }
 
+function saveWish(){ // 家长端设置孩子愿望/目标（存账本，随同步到孩子端）
+  if(sessionRole!=='parent'){toast('仅家长端可设置','err');return}
+  var name=document.getElementById('wishName').value.trim();
+  var cost=parseInt(document.getElementById('wishCost').value,10)||0;
+  if(!name||cost<=0){toast('请填写目标名称和积分','err');return}
+  ad.wish={name:name,cost:cost};
+  sd(ad);
+  render();
+  toast('愿望已保存，孩子端可见','ok');
+}
 function renderSettings(){
   if(sessionRole==='kid')return; // 孩子端不渲染设置页（含云端 token，绝不让孩子看到）
   document.getElementById('upCnt').textContent=ad.upItems.length+' 项';
@@ -2951,6 +3014,7 @@ function onExSelectChange(){
 }
 
 function confirmExchange(){
+  if(sessionRole!=='parent')return; // 孩子端只能「申请兑换」，由家长审批扣分
   var sel=document.getElementById('exSelect');
   var itemId=sel.value;
   if(!itemId){toast('请选择兑换项','err');return}
@@ -2968,6 +3032,7 @@ function confirmExchange(){
 }
 
 function deleteRecord(id){
+  if(sessionRole!=='parent')return; // 孩子端不可删除记录（UI 已隐藏按钮，函数层双保险）
   var r=null;
   for(var i=0;i<ad.records.length;i++){if(ad.records[i].id===id){r=ad.records[i];break}}
   if(!r)return;
@@ -3107,6 +3172,7 @@ function deleteItem(type,id){
 }
 
 function ccd(){
+  if(sessionRole!=='parent')return; // 清除所有数据仅家长端可用
   sc2('清除所有数据','这将删除所有积分记录、兑换记录和自定义项目，总分归零。确定要继续吗？',function(){
     ad=gd();sd(ad);toast('数据已清除');render();
   });
