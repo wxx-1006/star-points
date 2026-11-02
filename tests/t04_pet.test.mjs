@@ -23,16 +23,36 @@ test('petMerge：陪伴起始日取最早（天数只增不减）', async () => 
   assert.equal(m.created, '2026-10-08');
 });
 
-test('petMerge：累计资源取大（不倒退）', async () => {
+test('petMerge：累计值取大、余额/库存按较新侧', async () => {
   const w = await setupPet();
   const m = w.petMerge(
     { coins: 30, eaten: 50, food: 2, cans: 1, strips: 0, hungryDays: 3, created: '2026-10-08', updatedAt: 1000 },
     { coins: 10, eaten: 2, food: 0, cans: 0, strips: 0, hungryDays: 0, created: '2026-10-08', updatedAt: 2000 }
   );
-  assert.equal(m.coins, 30);
-  assert.equal(m.eaten, 50);
-  assert.equal(m.food, 2);
-  assert.equal(m.hungryDays, 3);
+  assert.equal(m.eaten, 50, '累计喂食取大');
+  assert.equal(m.hungryDays, 3, '累计挨饿取大');
+  assert.equal(m.coins, 10, '金币余额按较新侧');
+  assert.equal(m.food, 0, '猫粮库存按较新侧');
+});
+
+test('petMerge：喂食后的猫粮消耗不被云端旧值顶回', async () => {
+  const w = await setupPet();
+  const m = w.petMerge(
+    { food: 1, cans: 2, strips: 3, coins: 100, eaten: 10, created: '2026-10-08', updatedAt: 1000 },
+    { food: 0.75, cans: 1, strips: 3, coins: 100, eaten: 10.25, created: '2026-10-08', updatedAt: 2000 }
+  );
+  assert.equal(m.food, 0.75, '喂过一餐：0.75 不应回退到 1');
+  assert.equal(m.cans, 1, '吃过罐头：不应回退');
+  assert.equal(m.eaten, 10.25, '累计喂食取大');
+});
+
+test('petMerge：买东西花掉的金币不被旧快照顶回', async () => {
+  const w = await setupPet();
+  const m = w.petMerge(
+    { coins: 100, created: '2026-10-08', updatedAt: 1000 },
+    { coins: 60, created: '2026-10-08', updatedAt: 2000 }
+  );
+  assert.equal(m.coins, 60, '花掉的 40 金币不应回退');
 });
 
 test('petMerge：当日状态（今日已喂/抚摸/玩具）按较新侧，不取大', async () => {
