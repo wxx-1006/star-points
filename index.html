@@ -3477,13 +3477,10 @@ function kidAchieveCard(){ // 孩子端报告顶部「我的成就」：本周�
   var startStr=f(start);
   var recs=(ad.records||[]).filter(function(r){return r.date>=startStr});
   var up=recs.filter(function(r){return r.score>0}).reduce(function(s,r){return s+r.score},0);
-  var lv=kidLevel(totalEarned(ad));
   return '<div class="sec" style="margin-top:16px"><div class="sec-h"><div class="st-t">我的成就</div></div>'
     +'<div class="qs rp-grid">'
     +'<div class="sc"><div class="sv num" style="color:var(--green)">+'+up+'</div><div class="sl">本周获得</div></div>'
     +'<div class="sc"><div class="sv num">'+ckStreak()+'</div><div class="sl">连续打卡</div></div>'
-    +'<div class="sc"><div class="sv num">'+lv.icon+'</div><div class="sl">'+lv.name+'</div></div>'
-    +'<div class="sc"><div class="sv num">'+totalEarned(ad)+'</div><div class="sl">累计星数</div></div>'
     +'</div></div>';
 }
 function renderReport(){
@@ -4181,15 +4178,10 @@ function ckWeekDone(){ // 本周（周一至今）完成的天数
   }
   return n;
 }
-function ckMotivate(){ // 正向激励徽章：连续打卡 + 本周完成 + 里程碑鼓励
+function ckMotivate(){ // 正向激励徽章：连续打卡天数 + 本周完成天数
   var st=ckStreak(),wk=ckWeekDone();
   if(!st&&!wk)return '';
-  var msg='';
-  if(st>=30)msg='满月坚持，太了不起了！';
-  else if(st>=14)msg='两周坚持，很稳！';
-  else if(st>=7)msg='连续一周，超棒！';
-  else if(st>=3)msg='坚持三天啦，继续加油！';
-  return '<div class="ck-motivate">🔥 已连续打卡 <b>'+st+'</b> 天 · 本周完成 <b>'+wk+'</b> 天'+(msg?'<span class="ck-motivate-msg">'+msg+'</span>':'')+'</div>';
+  return '<div class="ck-motivate">🔥 已连续打卡 <b>'+st+'</b> 天 · 本周完成 <b>'+wk+'</b> 天</div>';
 }
 function ckAddDays(ds,n){var d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return ckFmtD(d)}
 function ckStateKey(ds){ // 周末任务两天共用状态（以周六为锚）：周六完成→周日同显已完成，且只加一次分
