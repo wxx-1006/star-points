@@ -2560,8 +2560,7 @@ function render(){
 function totalEarned(acc){ // 累计获得（所有正分流水之和，等级只升不降的依据）
   return ((acc&&acc.records)||[]).reduce(function(s,r){return s+((r&&r.score>0)?r.score:0)},0);
 }
-function kidLevel(earned){ // 累计积分 → 等级称号
-  if(earned>=500)return {lv:4,name:'传奇星',icon:'🌟'};
+function kidLevel(earned){ // 累计积分 → 等级称号（三档：新星/闪耀星/璀璨星）
   if(earned>=200)return {lv:3,name:'璀璨星',icon:'✨'};
   if(earned>=50)return {lv:2,name:'闪耀星',icon:'⭐'};
   return {lv:1,name:'新星',icon:'☆'};

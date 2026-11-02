@@ -19,7 +19,7 @@ test('等级：累计积分到档位对应称号', async () => {
   assert.equal(w.kidLevel(0).name, '新星');
   assert.equal(w.kidLevel(50).name, '闪耀星');
   assert.equal(w.kidLevel(200).name, '璀璨星');
-  assert.equal(w.kidLevel(500).name, '传奇星');
+  assert.equal(w.kidLevel(500).name, '璀璨星', '500+ 也归入璀璨星（已无传奇星档）');
 });
 
 test('累计获得：只统计正分流水（等级只升不降）', async () => {
