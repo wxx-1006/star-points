@@ -1072,6 +1072,7 @@ function ptConfirmRename() {
   if (n.length > 6) { toast('名字最多 6 个字哦~'); return; }
   var old = ptS.name;
   ptS.name = n;
+  ptS.nameAt = Date.now(); /* 名字的独立修改时间：合并时按它取新侧，避免被其他设备的 updatedAt 覆盖 */
   ptSave();
   ptRender();
   ptCloseModal('ptMoRename');

@@ -1650,6 +1650,13 @@ function petMerge(local,remote){ // 较新者为基础，累计资源取两设�
   ['eaten','hungryDays'].forEach(function(k2){
     if(typeof other[k2]==='number'&&typeof m[k2]==='number')m[k2]=Math.max(m[k2],other[k2]);
   });
+  /* 宠物名字：显式设置字段，按各自修改时间 nameAt 取新侧——
+     否则"在 A 改名、B 打开过（updatedAt 变新但名字仍旧）"会把名字覆盖回旧值（名字不同步的根因） */
+  var na=(a.nameAt||0),nb=(b.nameAt||0);
+  if(na||nb){
+    m.name=(na>=nb)?a.name:b.name;
+    m.nameAt=Math.max(na,nb);
+  }
   /* 陪伴起始日：取更早——陪伴天数只增不减，绝不能被重置设备的新宠物覆盖（本轮事故根因） */
   var c1=a.created||'',c2=b.created||'';
   if(c1&&c2)m.created=(c1<c2)?c1:c2;else m.created=c1||c2||m.created;
@@ -4918,6 +4925,6 @@ function ckTokSave(){
   });
 })();
 </script>
-<script src="pet.js?v=20261029a"></script>
+<script src="pet.js?v=20261105a"></script>
 </body>
 </html>

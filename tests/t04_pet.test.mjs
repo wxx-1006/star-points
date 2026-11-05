@@ -159,3 +159,31 @@ test('宠物同步：409 冲突自动重新拉取合并后重试', async () => {
   assert.equal(cloud[PHONE].coins, 99, '合并取大');
   assert.equal(cloud[PHONE].created, '2026-10-08', '陪伴起始取最早');
 });
+
+test('petMerge：宠物名字按自身修改时间取新侧（不被其他设备的 updatedAt 覆盖）', async () => {
+  const w = await setupPet();
+  /* A 设备改了名（nameAt=2000，updatedAt=2000）；B 设备之后打开过（updatedAt=3000，但名字还是旧的） */
+  const m = w.petMerge(
+    { name: '新名字', nameAt: 2000, created: '2026-10-08', updatedAt: 2000 },
+    { name: '团子', created: '2026-10-08', updatedAt: 3000 }
+  );
+  assert.equal(m.name, '新名字', '改名应保留，不被更新的旧名覆盖');
+});
+
+test('petMerge：两端都有 nameAt 时取更晚的那次改名', async () => {
+  const w = await setupPet();
+  const m = w.petMerge(
+    { name: '甲', nameAt: 1000, created: '2026-10-08', updatedAt: 1000 },
+    { name: '乙', nameAt: 5000, created: '2026-10-08', updatedAt: 5000 }
+  );
+  assert.equal(m.name, '乙');
+});
+
+test('petMerge：老数据无 nameAt 时按较新侧（兼容）', async () => {
+  const w = await setupPet();
+  const m = w.petMerge(
+    { name: '旧', created: '2026-10-08', updatedAt: 1000 },
+    { name: '新', created: '2026-10-08', updatedAt: 2000 }
+  );
+  assert.equal(m.name, '新');
+});
