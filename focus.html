@@ -113,7 +113,6 @@ try {
 
   .fx-empty-tip{ padding:22px 0; text-align:center; font-size:13.5px; color:var(--dim); }
   .hh-row{ display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
-  #histList{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
   .rec-title{ font-size:13px; font-weight:700; color:var(--dim); margin:12px 0 6px; }
   #recSummary{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
   .rs-card{ flex:1 0 auto; min-width:104px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:7px 9px; cursor:pointer; }
@@ -122,9 +121,6 @@ try {
   .rs-card .rs-b{ font-size:13px; font-weight:800; color:var(--accent-deep); font-variant-numeric:tabular-nums; }
   .rs-card .rs-c{ font-size:11px; color:var(--dim); }
   .rs-weak{ width:100%; font-size:12px; color:var(--bad); font-weight:700; padding:2px 2px 0; }
-  #recTrend{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; margin-bottom:8px; }
-  #recTrend .rt-h{ font-size:12px; font-weight:700; color:var(--dim); margin-bottom:4px; }
-  #recTrend svg{ display:block; width:100%; height:auto; }
   .hh-l{ flex:1; min-width:0; }
   .hh-g{ font-weight:700; font-size:14px; color:var(--txt); }
   .hh-s{ font-size:11.5px; color:var(--dim); margin-top:2px; }
@@ -540,7 +536,6 @@ try {
   <section class="panel" id="panel-history">
     <p class="hint">成绩总览：点某个游戏看近 10 次走势；「新纪录」是刷新个人最好成绩的那一次。</p>
     <div id="recSummary"></div>
-    <div id="recTrend"></div>
     <div class="rec-title">全部记录</div>
     <div id="histList"></div>
   </section>
@@ -773,23 +768,6 @@ function summarizeHistory(a){
   for (const g in sum) sum[g].last10.reverse(); /* 旧 → 新 */
   return sum;
 }
-function sparklineSvg(vals, mm){
-  if (!vals || vals.length < 2) return '';
-  const W = 260, H = 46, P = 5;
-  const min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
-  const range = (max - min) || 1;
-  const n = vals.length;
-  const pts = vals.map((v, i) => {
-    const x = P + (W - 2 * P) * (i / (n - 1));
-    const y = (mm === 'min') ? P + (H - 2 * P) * ((v - min) / range) : P + (H - 2 * P) * ((max - v) / range);
-    return [x.toFixed(1), y.toFixed(1)];
-  });
-  const line = pts.map((p) => p[0] + ',' + p[1]).join(' ');
-  const last = pts[pts.length - 1];
-  return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">'
-    + '<polyline points="' + line + '" fill="none" stroke="var(--accent-deep)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'
-    + '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="3.5" fill="var(--accent-deep)"/></svg>';
-}
 function renderRecSummary(a){
   const host = $('recSummary');
   if (!host) return;
@@ -827,14 +805,13 @@ function renderHistory(){
   const a = loadHistory();
   a.sort((x, y) => (y.ts || 0) - (x.ts || 0) || (y.tm || '').localeCompare(x.tm || '')); /* 渲染前再排序：任何来源（云合并/注入）都保证最新在前 */
   if (!a.length){
-    $('recSummary').innerHTML = ''; $('recTrend').innerHTML = '';
+    $('recSummary').innerHTML = '';
     host.innerHTML = '<div class="fx-empty-tip" style="padding:30px 0">暂无成绩记录，先去玩一局吧</div>';
     fitHistory();
     return;
   }
   if (!recSelGame || !summarizeHistory(a)[recSelGame]) recSelGame = a[0].g;
   renderRecSummary(a);
-  renderRecTrend(a, recSelGame);
   /* 新纪录标动态判定：只标每个游戏当前最好成绩的那条（耗时类取最小，题数/格数类取最大），过往旧标不再显示 */
   const bestV = {};
   for (let i = 0; i < a.length; i++){
@@ -856,7 +833,6 @@ function renderHistory(){
       + '<div class="hh-v">' + g.f(r.v) + '<span class="hh-t">' + when + '</span></div></div>';
   }
   host.innerHTML = h;
-  fitHistory(); /* 渲染后按当前可视区重算列表限高，页面整体不缩放 */
 }
 
 /* ---------- 视觉追踪：生成一轮谜图 ---------- */
@@ -1204,11 +1180,10 @@ $('resultModal').addEventListener('click', (e) => {
 function fitOneScreen(){
   const app = document.querySelector('.app');
   if (!app) return;
-  /* 历史页是长列表：整页不缩放，改为列表内部滚动（fitHistory 限高） */
+  /* 历史页是长列表：保持原始字号整页平铺滚动（不缩放、不做列表内滚动） */
   const hp = document.getElementById('panel-history');
   if (hp && hp.classList.contains('on')){
     app.style.zoom = '';
-    fitHistory();
     return;
   }
   const hl = $('histList');
@@ -1224,16 +1199,6 @@ function fitOneScreen(){
   }
   if (z !== prev){ app.style.zoom = z; }
   else if (prev){ app.style.zoom = prev; } /* 值未变则原样恢复，避免布局抖动 */
-}
-/* 历史列表限高：列表自己滚动，页面整体保持原始字号不再缩小 */
-function fitHistory(){
-  const host = $('histList');
-  if (!host) return;
-  const app = document.querySelector('.app');
-  const padB = app ? (parseFloat(getComputedStyle(app).paddingBottom) || 0) : 0; /* 扣掉 .app 底部内边距，否则页面总高超出视口必然可滚 */
-  const top = host.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || 0); /* 文档坐标：不受当前滚动位置影响 */
-  const avail = window.innerHeight - top - 10 - padB;
-  host.style.maxHeight = Math.max(180, Math.floor(avail)) + 'px';
 }
 window.addEventListener('resize', fitOneScreen);
 window.addEventListener('orientationchange', fitOneScreen);

@@ -80,8 +80,9 @@ test('专注页：成绩分析汇总与趋势曲线', async () => {
   assert.equal(sum.corsi.best, 7, '格数类最佳取最大');
   assert.equal(w.document.querySelectorAll('#recSummary .rs-card').length, 2);
   assert.ok(w.document.getElementById('recSummary').textContent.includes('练得最少'), '家长端应显示最弱项提示');
-  assert.ok(w.sparklineSvg([8000, 7800, 7600], 'min').includes('polyline'));
-  assert.equal(w.sparklineSvg([8000], 'min'), '', '不足 2 次不生成曲线');
+  assert.equal(w.document.getElementById('recTrend'), null, '近十次走势区已移除');
+  /* 历史列表整页平铺：不应有内部滚动限高 */
+  assert.ok(!w.document.getElementById('histList').style.maxHeight, '列表不应设置内部滚动高度');
 });
 
 test('专注页：休息提醒——弹窗期间不重复提醒，点确定后重新计 20 分钟', async () => {
