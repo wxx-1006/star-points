@@ -837,7 +837,6 @@ body.kid-mode{padding-bottom:72px}
   <div class="ti" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
   <div class="ti" onclick="st('checkin')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">打卡</span></div>
   <div class="ti" id="tabFocus" onclick="st('focus')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">专注</span></div>
-  <div class="ti" id="tabQuiz" onclick="st('quiz')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">刷题</span></div>
   <div class="ti" id="tabReport" onclick="st('report')"><span class="t-ico"><span class="tico-chart" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">报告</span></div>
   <div class="ti" id="tabSettings" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
 </div>
@@ -2537,7 +2536,7 @@ function st(tab){
   var tabs=document.querySelectorAll('.ti');
   for(var i=0;i<tabs.length;i++) tabs[i].classList.remove('on');
   document.getElementById('p-'+tab).classList.add('on');
-  document.querySelector('.tb .ti:nth-child('+({'home':1,'records':2,'checkin':3,'focus':4,'quiz':5,'report':6,'settings':7}[tab]||1)+')').classList.add('on');
+  document.querySelector('.tb .ti:nth-child('+({'home':1,'records':2,'checkin':3,'focus':4,'report':5,'settings':6}[tab]||1)+')').classList.add('on');
   curTab=tab;
   // 切换页签时同步
   if(currentUser){
