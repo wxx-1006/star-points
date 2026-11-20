@@ -647,9 +647,7 @@ body.kid-mode{padding-bottom:72px}
 .ck-sync{margin-left:auto;font:600 10.5px/1.5 var(--ff);color:#A99F90;white-space:nowrap}
 .ck-sync.err{color:#B5544E;cursor:pointer}
 .ck-subj{display:inline-block;font:700 9.5px/1 var(--ff);color:#fff;border-radius:5px;padding:2.5px 5px;margin-right:5px;vertical-align:1px}
-.ck-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 16px 0}
-.ck-navb{width:40px;height:34px;border-radius:10px;border:1.5px solid #E8E0D2;background:#fff;font:700 17px/1 var(--ff);color:#6B5E4F;cursor:pointer}
-.ck-navb:disabled{opacity:.35}
+.ck-day-title{text-align:center;font-size:13px;font-weight:700;color:var(--dim);margin:10px 16px 2px}
 .ck-dt{font:700 14px/1.3 var(--ff);color:#4A3F35}
 .ck-sum{margin:10px 16px 0;font:600 12px/1.5 var(--ff);color:#8F8578}
 .ck-sum b{color:#D89A28}
@@ -684,8 +682,8 @@ body.kid-mode{padding-bottom:72px}
 .ck-cal-h .ck-ym{font-size:13px;font-weight:700;color:var(--txt)}
 .ck-cal-h button{border:0;background:transparent;font-size:19px;line-height:1;color:var(--dim);padding:2px 10px;cursor:pointer}
 .ck-badge-note{font-size:11px;color:var(--dim);margin:6px 16px 0}
-.ck-badges{display:flex;gap:8px;margin:10px 16px 0}
-.ck-badge{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--card2);font-size:17px;filter:grayscale(1);opacity:.45}
+.ck-badges{display:flex;gap:6px;margin:10px 16px 0;flex-wrap:wrap}
+.ck-badge{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--card2);font-size:15px;filter:grayscale(1);opacity:.45}
 .ck-badge.on{filter:none;opacity:1;background:rgba(255,205,90,.22);border:1px solid rgba(255,205,90,.5)}
 .ck-bar{flex:1;height:9px;border-radius:99px;background:#F0EADF;overflow:hidden}
 .ck-bar i{display:block;height:100%;border-radius:99px;background:#7FC26E;transition:width .3s}
@@ -798,6 +796,19 @@ body.kid-mode{padding-bottom:72px}
           <div class="fg" style="margin:10px 0 0"><label class="fl">GitHub Token</label><input type="password" class="fi" id="syncTokenInput" placeholder="github_pat_ 开头" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
           <button class="bn bn-q" style="height:44px;margin-top:12px" onclick="saveSyncToken()">保存</button>
           <div class="sync-line" id="syncStateLine"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sg">
+        <div class="sgh" style="cursor:default"><div class="sgt">满勤盲盒奖励</div></div>
+        <div style="padding:0 16px 16px">
+          <div class="sync-hint" style="margin-top:12px">上周（周一至周日）全勤可抽一次盲盒，这里配置盲盒里有哪些奖励（名称 + 分值），抽中哪项是随机的。</div>
+          <div id="blindPoolBox" style="margin-top:10px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+            <button class="bn bn-q" style="height:40px" onclick="ckBlindPoolAdd()">+ 添加一项</button>
+            <button class="bn bn-p" style="height:40px" onclick="ckBlindPoolSave()">保存盲盒</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1769,6 +1780,7 @@ function updateSyncUI(){
   else c+=' off';
   el.className=c;
   renderSyncSettings();
+  ckBlindPoolRender();
 }
 // ===== 设置页「云端同步」区块 =====
 function renderSyncSettings(){
@@ -4182,9 +4194,9 @@ function ckDayDone(b,ds){ // 某天是否有任务完成（奖励标记不算）
   }
   return false;
 }
-function ckStreak(){ // 连续有完成记录的天数（从今天往前）
+function ckStreak(){ // 连续有完成记录的天数（从今天往前，上限 1500 天以覆盖 1000 天徽章）
   var b=ckBucket(),n=0,d=new Date();
-  for(var i=0;i<400;i++){
+  for(var i=0;i<1500;i++){
     if(!ckDayDone(b,ckFmtD(d)))break;
     n++;d.setDate(d.getDate()-1);
   }
@@ -4199,14 +4211,14 @@ function ckWeekDone(){ // 本周（周一至今）完成的天数
   }
   return n;
 }
-var CK_MILESTONES=[{d:3,icon:'🌱'},{d:7,icon:'⭐'},{d:14,icon:'🔥'},{d:30,icon:'🏆'}]; // 里程碑徽章（纯视觉）
+var CK_MILESTONES=[{d:3,icon:'🌱'},{d:7,icon:'⭐'},{d:14,icon:'🔥'},{d:30,icon:'🏆'},{d:90,icon:'💎'},{d:180,icon:'👑'},{d:360,icon:'🌈'},{d:500,icon:'🥇'},{d:1000,icon:'🎖️'}]; // 里程碑徽章（纯视觉）
 function ckBadgesHtml(){ // 连续打卡徽章：达到即点亮，不写文字
   var st=ckStreak(),h='';
   for(var i=0;i<CK_MILESTONES.length;i++){
     var m=CK_MILESTONES[i];
     h+='<span class="ck-badge'+(st>=m.d?' on':'')+'" title="连续打卡 '+m.d+' 天">'+m.icon+'</span>';
   }
-  return '<div class="ck-badges">'+h+'</div><div class="ck-badge-note">连续打卡 3 / 7 / 14 / 30 天依次点亮</div>';
+  return '<div class="ck-badges">'+h+'</div><div class="ck-badge-note">连续打卡 3 / 7 / 14 / 30 / 90 / 180 / 360 / 500 / 1000 天依次点亮</div>';
 }
 var ckCalYM=null; // 日历当前显示的年月（可翻看历史月份）
 function ckCalendarHtml(){ // 打卡日历：可切月份、点日期跳到那天、高亮跟随所选日期
@@ -4263,16 +4275,64 @@ function ckBlindboxHtml(){
   if(sessionRole!=='parent')return '<div class="sync-hint" style="margin:10px 16px 0">🎁 上周全勤达成！让家长帮你抽盲盒吧</div>';
   return '<div style="margin:10px 16px 0"><button class="bn bn-p" style="height:42px;width:100%" onclick="ckBlindboxOpen()">🎁 抽全勤盲盒（上周全勤）</button></div>';
 }
-function ckBlindboxOpen(){ // 家长端抽盲盒：随机 +5/+10/+20，写入系统流水（不可删）
+function ckBlindPool(){ // 盲盒奖励池（家长端可在设置页配置；未配置时用默认）
+  var p=(ad&&ad.ckBlindPool);
+  if(p&&p.length)return p;
+  return [{n:'+5 分',p:5},{n:'+10 分',p:10},{n:'+20 分',p:20}];
+}
+function ckBlindPoolRead(){ // 读取设置页当前输入
+  var box=document.getElementById('blindPoolBox');
+  if(!box)return ckBlindPool();
+  var rows=box.querySelectorAll('[data-i]'),pool=[];
+  for(var i=0;i<rows.length;i++){
+    var n=((document.getElementById('bpN'+i)||{}).value||'').trim();
+    var p=parseInt(((document.getElementById('bpP'+i)||{}).value||''),10)||0;
+    if(n&&p>0)pool.push({n:n,p:p});
+  }
+  return pool;
+}
+function ckBlindPoolRender(){ // 设置页：盲盒奖励列表
+  var box=document.getElementById('blindPoolBox');
+  if(!box)return;
+  if(box.contains(document.activeElement))return; /* 正在输入时不重排，避免打断 */
+  var pool=ckBlindPool(),h='';
+  for(var i=0;i<pool.length;i++){
+    h+='<div style="display:flex;gap:6px;margin-bottom:6px" data-i="'+i+'">'
+      +'<input class="fi" style="flex:2;min-width:0" id="bpN'+i+'" value="'+escHtml(pool[i].n||'')+'" placeholder="奖励名称，如 +10 分">'
+      +'<input class="fi" style="flex:0 0 78px" id="bpP'+i+'" type="number" min="1" value="'+(pool[i].p||0)+'" placeholder="分值">'
+      +'<button class="bn bn-q" style="flex:0 0 40px;padding:0" onclick="ckBlindPoolDel('+i+')" aria-label="删除">✕</button>'
+      +'</div>';
+  }
+  box.innerHTML=h;
+}
+function ckBlindPoolAdd(){
+  var pool=ckBlindPoolRead();pool.push({n:'',p:5});
+  ad.ckBlindPool=pool;sd(ad);ckBlindPoolRender();
+}
+function ckBlindPoolDel(i){
+  var pool=ckBlindPoolRead();pool.splice(i,1);
+  ad.ckBlindPool=pool.length?pool:[{n:'+5 分',p:5}];sd(ad);ckBlindPoolRender();
+}
+function ckBlindPoolSave(){
+  if(sessionRole!=='parent')return;
+  var pool=ckBlindPoolRead();
+  if(!pool.length){toast('至少保留一项有效奖励','err');return}
+  ad.ckBlindPool=pool;sd(ad);ckBlindPoolRender();
+  toast('盲盒奖励已保存（共 '+pool.length+' 项）','ok');
+}
+function ckBlindboxOpen(){ // 家长端抽盲盒：从配置的奖励池随机一项，写入系统流水（不可删）
   if(sessionRole!=='parent')return;
   if(!ckLastWeekFull()){toast('上周未全勤，暂无盲盒','err');return}
   var w=ckWeekTag();
   if(ad.ckBlindWeek===w){toast('本周盲盒已抽过','err');return}
-  var pts=[5,10,20][Math.floor(Math.random()*3)];
-  ad.records.push({id:'ckb_'+w,date:today(),timestamp:Date.now(),type:'up',itemId:'ck_blindbox',name:'满勤盲盒',category:'打卡',score:pts,note:'上周全勤奖励（随机 '+pts+' 分）'});
+  var pool=ckBlindPool(),pick=pool[Math.floor(Math.random()*pool.length)];
+  var pts=parseInt(pick.p,10)||0;
+  if(pts<=0){toast('盲盒奖励未配置有效分值','err');return}
+  var nm=pick.n||('+'+pts+' 分');
+  ad.records.push({id:'ckb_'+w,date:today(),timestamp:Date.now(),type:'up',itemId:'ck_blindbox',name:nm,category:'打卡',score:pts,note:'上周全勤盲盒（'+nm+'）'});
   ad.ckBlindWeek=w;
   sd(ad);render();ckShow();
-  toast('🎁 抽到 +'+pts+' 分！','ok');
+  toast('🎁 抽到「'+nm+'」！','ok');
 }
 function ckMotivate(){ // 正向激励徽章：连续打卡天数 + 本周完成天数
   var st=ckStreak(),wk=ckWeekDone();
@@ -4824,11 +4884,7 @@ function ckShow(){
   else if(hasCkPending())syncHtml='<span class="ck-sync">待同步…</span>'; // 已同步时不显示任何状态文字
   if(petSyncErr)syncHtml+='<span class="ck-sync err" onclick="petSyncPush()" title="点击立即重试">'+escHtml(petSyncErr)+'</span>'; // 宠物同步失败独立显示（孩子端主要数据通道，静默失败难排查）
   var maxD=ckAddDays(today(),7);
-  var html='<div class="ck-nav">'
-    +'<button class="ck-navb" onclick="ckShift(-1)" aria-label="前一天">‹</button>'
-    +'<div class="ck-dt">'+fd(ckDate)+(ckDate===today()?' · 今天':'')+'</div>'
-    +'<button class="ck-navb" onclick="ckShift(1)" aria-label="后一天"'+(ckDate>=maxD?' disabled':'')+'>›</button>'
-    +'</div>';
+  var html='<div class="ck-day-title">'+fd(ckDate)+(ckDate===today()?' · 今天':'')+'</div>'; /* 日期由下方日历选择，这里只做一行提示 */
   if(!tasks.length){ // 全新账号：无任务，引导家长自行创建
     html+='<div class="es" style="padding:40px 16px">'+esBricks()+'<div class="et">'+(sessionRole==='parent'?'还没有打卡任务，点右上角「管理任务」创建':'家长还没有创建打卡任务哦')+'</div></div>';
     host.innerHTML=html;

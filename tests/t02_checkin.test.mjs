@@ -267,3 +267,42 @@ test('日历：可翻上/下月，点日期后任务列表跟随该日期', asyn
   w.ckCalPick(target);
   assert.equal(w.ckDate, target, '所选日期生效');
 });
+
+test('徽章：9 档，连续 1000 天可点亮最后一档', async () => {
+  const w = await setup();
+  const b = w.ckBucket();
+  for (let i = 0; i <= 1000; i++) {
+    b[w.ckAddDays(w.today(), -i)] = { '6': { c: 1, d: 1, r: 1, t: Date.now() } };
+  }
+  w.ckSaveBucket(b);
+  assert.equal(w.ckStreak(), 1001, '连续天数应能统计到 1000+');
+  const html = w.ckBadgesHtml();
+  assert.equal((html.match(/ck-badge on/g) || []).length, 9, '9 档全部点亮');
+});
+
+test('盲盒：按家长配置的奖励池抽取（不再硬编码 5/10/20）', async () => {
+  const w = await setup('parent');
+  const b = w.ckBucket();
+  const d = new Date();
+  const back = d.getDay() === 0 ? 7 : d.getDay();
+  d.setDate(d.getDate() - back - 6);
+  for (let i = 0; i < 7; i++) {
+    b[w.ckFmtD(d)] = { '6': { c: 1, d: 1, r: 1, t: Date.now() } };
+    d.setDate(d.getDate() + 1);
+  }
+  w.ckSaveBucket(b);
+  w.ad.ckBlindPool = [{ n: '宠物零食一份', p: 15 }];
+  w.ckBlindboxOpen();
+  const r = w.ad.records.find((x) => x.itemId === 'ck_blindbox');
+  assert.ok(r, '应写入盲盒流水');
+  assert.equal(r.score, 15, '采用配置的分值');
+  assert.equal(r.name, '宠物零食一份', '采用配置的名称');
+});
+
+test('打卡页：日期导航已移除（改由日历选日期）', async () => {
+  const w = await setup();
+  w.ckShow();
+  const html = w.document.getElementById('ckList').innerHTML;
+  assert.ok(!html.includes('ck-nav'), '不应再有 ‹ 日期 › 导航');
+  assert.ok(html.includes('ck-day-title'), '保留一行日期提示');
+});
