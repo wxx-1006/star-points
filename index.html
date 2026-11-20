@@ -1284,7 +1284,13 @@ function rdSumScore(d){ // 总分唯一口径：Σrecords.score − Σexchanges.
 /* ★ 总分是【派生值】，不是独立存储值：唯一口径 = Σrecords.score − Σexchanges.cost（已删除记录不计）。
    业务代码请只写流水（records/exchanges），总分行上的 += / -= 仅作即时显示用，
    保存时一律由本函数重算——历史上多次"总分对不上"都源于同一处被改了两遍。 */
+var gCfgSnap='';
 function sd(d){if(sessionRole==='kid')return;var phone=currentUser;if(!phone)return;
+  try{
+    var confNow=JSON.stringify([d.wish||null,d.shopItems||null,d.upItems||null,d.downItems||null]);
+    if(gCfgSnap&&gCfgSnap!==confNow)d.cfgAt=Date.now(); /* 配置变更打时间戳：多设备合并时据此取新侧 */
+    gCfgSnap=confNow;
+  }catch(e){}
   var del=d.del||{}; // 删除墓碑清理：已删记录不留在账本里（防"总分含、明细看不见"的幽灵记录）
   if(d.records)d.records=d.records.filter(function(r){return !(r&&r.id&&del['r:'+r.id])});
   if(d.exchanges)d.exchanges=d.exchanges.filter(function(e){return !(e&&e.id&&del['e:'+e.id])});
@@ -1479,6 +1485,24 @@ function mergeAccountData(loc,rem){
   m.quizStreak=mergeStreak(m.quizStreak,rem.quizStreak);
   var after=JSON.stringify([m.quizDone||null,m.quizWrong||null,m.quizExcluded||null,m.quizWrongMeta||null,m.quizStreak||null]);
   if(before!==after)changed=true;
+  // —— 配置类字段（记分项/兑换项/愿望/盲盒周标记）：此前完全没合并，导致"手机设了平板看不到、盲盒能重复抽" ——
+  //    规则：按配置最后修改时间 cfgAt 取较新的一侧整块覆盖（配置是"谁最后改谁说了算"，不做逐项并集）
+  var CONF_KEYS=['wish','shopItems','upItems','downItems'];
+  var lAt=m.cfgAt||0, rAt=rem.cfgAt||0;
+  if(rAt>lAt){
+    for(var ci=0;ci<CONF_KEYS.length;ci++){
+      var k2=CONF_KEYS[ci];
+      if(rem[k2]===undefined)continue;
+      if(JSON.stringify(m[k2])!==JSON.stringify(rem[k2])){
+        try{m[k2]=JSON.parse(JSON.stringify(rem[k2]))}catch(e){}
+        changed=true;
+      }
+    }
+    m.cfgAt=rAt;
+  }
+  /* 盲盒「本周已抽」标记：周编号单调递增，一律取更大者（防多设备各抽一次） */
+  if(rem.ckBlindWeek&&(!m.ckBlindWeek||rem.ckBlindWeek>m.ckBlindWeek)){m.ckBlindWeek=rem.ckBlindWeek;changed=true}
+  if(rem.ckBlindAt&&(!m.ckBlindAt||rem.ckBlindAt>(m.ckBlindAt||0))){m.ckBlindAt=rem.ckBlindAt;}
   // —— 账号字段：本地优先，缺失补云端 ——
   var fill=function(k){if((m[k]===undefined||m[k]===null||m[k]==='')&&rem[k]!==undefined&&rem[k]!==null&&rem[k]!==''){m[k]=rem[k];changed=true}};
   fill('ownerName');fill('pinSalt');fill('pinHash');fill('role');
@@ -4480,6 +4504,7 @@ function ckBlindboxOpen(){ // 家长端抽盲盒：从配置的奖励池随机�
   var nm=pick.n||('+'+pts+' 分');
   ad.records.push({id:'ckb_'+w,date:today(),timestamp:Date.now(),type:'up',itemId:'ck_blindbox',name:nm,category:'打卡',score:pts,note:'上周全勤盲盒（'+nm+'）'});
   ad.ckBlindWeek=w;
+  ad.ckBlindAt=Date.now();
   sd(ad);render();ckShow();
   toast('🎁 抽到「'+nm+'」！','ok');
 }

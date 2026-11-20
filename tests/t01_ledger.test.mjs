@@ -123,3 +123,47 @@ test('云端历史恢复：从历史版本补回缺失记录（不覆盖、不�
   assert.ok(!ids.includes('deleted'), '不应复活用户已删除的记录');
   assert.equal(after.totalPoints, 18, '总分按补回后重算（10+5+3）');
 });
+
+test('合并：配置字段按 cfgAt 取较新侧（愿望/兑换项多设备同步）', async () => {
+  const w = await loadIndex();
+  const base = { records: [], exchanges: [], totalPoints: 0, del: {} };
+  const local = Object.assign({}, base, { cfgAt: 1000, wish: { name: '旧愿望', cost: 10 }, shopItems: [{ id: 's1', name: 'A', cost: 5 }] });
+  const remote = Object.assign({}, base, { cfgAt: 2000, wish: { name: '新愿望', cost: 20 }, shopItems: [{ id: 's2', name: 'B', cost: 8 }] });
+  const m = w.mergeAccountData(local, remote).data;
+  assert.equal(m.wish.name, '新愿望', '取云端较新的配置');
+  assert.equal(m.shopItems.length, 1);
+  assert.equal(m.shopItems[0].id, 's2', '兑换项取较新侧');
+  assert.equal(m.cfgAt, 2000);
+});
+
+test('合并：本地配置更新时不被打包成旧云端覆盖', async () => {
+  const w = await loadIndex();
+  const base = { records: [], exchanges: [], totalPoints: 0, del: {} };
+  const local = Object.assign({}, base, { cfgAt: 3000, wish: { name: '本地新', cost: 30 } });
+  const remote = Object.assign({}, base, { cfgAt: 1000, wish: { name: '云端旧', cost: 10 } });
+  const m = w.mergeAccountData(local, remote).data;
+  assert.equal(m.wish.name, '本地新', '本地更新时保留本地配置');
+});
+
+test('合并：盲盒周标记取更大者（防多设备各抽一次）', async () => {
+  const w = await loadIndex();
+  const base = { records: [], exchanges: [], totalPoints: 0, del: {} };
+  const local = Object.assign({}, base, { ckBlindWeek: '2026-W46' });
+  const remote = Object.assign({}, base, { ckBlindWeek: '2026-W47' });
+  assert.equal(w.mergeAccountData(local, remote).data.ckBlindWeek, '2026-W47', '取更新的那一周');
+  const local2 = Object.assign({}, base, { ckBlindWeek: '2026-W50' });
+  const remote2 = Object.assign({}, base, { ckBlindWeek: '2026-W47' });
+  assert.equal(w.mergeAccountData(local2, remote2).data.ckBlindWeek, '2026-W50', '本地更新时不被回退');
+});
+
+test('sd：配置变更会写入 cfgAt 时间戳', async () => {
+  const w = await loadIndex();
+  w.currentUser = '13800000000';
+  w.sessionRole = 'parent';
+  const acc = mkAd();
+  acc.wish = { name: '甲', cost: 5 };
+  w.sd(acc);
+  acc.wish = { name: '乙', cost: 9 };
+  w.sd(acc);
+  assert.ok(acc.cfgAt > 0, '配置变化应打时间戳');
+});
