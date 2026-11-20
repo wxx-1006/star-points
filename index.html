@@ -3852,7 +3852,24 @@ function dataAudit(){ // 返回检查项列表：{name,ok,detail}
     }
   }
   out.push({name:'必打卡扣分记录齐全',ok:missing===0,detail:missing?(missing+' 条缺扣分流水'+(miss.length?('（如 '+miss.join('、')+'）'):'')):'正常'});
-  /* ④ 宠物数据完整性 */
+  /* ④ 打卡完成但账本缺加分流水（删任务/同步失败都可能造成；进打卡页会自动补回） */
+  var missAward=0,missList=[];
+  for(var ds3 in b){
+    if(ds3==='_cfg')continue;
+    var day3=b[ds3]||{};
+    for(var id3 in day3){
+      if(id3==='_bonus'||id3==='_mbonus')continue;
+      var st3=day3[id3];
+      if(!(st3&&st3.d&&st3.r))continue;
+      var rid3=(st3.mk!=null?'ckmk_':'ck_')+ds3+'_'+id3;
+      if(!recs.some(function(x){return x&&x.id===rid3})){
+        missAward++;
+        if(missList.length<3)missList.push(ds3+' '+id3);
+      }
+    }
+  }
+  out.push({name:'打卡加分记录齐全',ok:missAward===0,detail:missAward?(missAward+' 条完成记录缺加分流水（进打卡页会自动补回）'):'正常'});
+  /* ⑤ 宠物数据完整性 */
   var pet=null;
   try{pet=JSON.parse(localStorage.getItem('sp_pet__'+currentUser))||null}catch(e){}
   if(pet)out.push({name:'宠物数据完整',ok:!!pet.name&&!!pet.created,detail:'起始 '+(pet.created||'未知')+' · 累计喂食 '+(pet.eaten||0)});
@@ -4143,8 +4160,9 @@ function ckCfg(){ // 配置：已有 _cfg 直接用（含空任务列表，即�
 }
 function ckCfgSave(tasks){ // 家长端保存配置（孩子端只读，不会走到）；落库前按学科排序，使配置顺序=展示顺序
   tasks=ckSortTasks(tasks);
-  var b=ckBucket();
+  var b=ckBucket(),old=b._cfg||{};
   b._cfg={tasks:tasks,t:Date.now()};
+  if(old.retired&&old.retired.length)b._cfg.retired=old.retired; /* 退役任务快照必须保留：历史加分/名称靠它找回 */
   ckSaveBucket(b);ckQueue();
 }
 function ckSortTasks(list){ // 按学科排序：语→数→英→科→其他（同科内保持原顺序，稳定排序）
@@ -4187,7 +4205,13 @@ function ckTasksFor(ds){ // 按日期 + 循环规则生成当日任务清单（�
   }
   return ckSortTasks(list);
 }
-function ckTaskById(id){var tasks=ckCfg().tasks;for(var i=0;i<tasks.length;i++){if(tasks[i].id===id)return tasks[i]}return null}
+function ckTaskById(id){ // 当前任务优先；已删除（停用）的任务从退役快照里找，保证历史记录与补记能对上原名原分
+  var tasks=ckCfg().tasks;
+  for(var i=0;i<tasks.length;i++){if(tasks[i].id===id)return tasks[i]}
+  var b=ckBucket(),rt=(b._cfg&&b._cfg.retired)||[];
+  for(var j=0;j<rt.length;j++){if(rt[j]&&rt[j].id===id)return rt[j]}
+  return null;
+}
 function ckFmtD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function ckDayDone(b,ds){ // 某天是否有任务完成（奖励标记不算）
   var day=b[ds];if(!day)return false;
@@ -4747,7 +4771,7 @@ function ckDayBonus(ds){ // 当日完成率 100% → 额外 +20 分（ck_bonus �
 }
 function ckReconcileAwards(){ // 自愈：打卡状态已确认加分、但账本流水缺失（如加分后账本推送失败被云端覆盖）→ 补回流水与总分
   if(sessionRole!=='parent'||!currentUser||!ad||!ad.records)return;
-  var b=ckBucket(),changed=false,ds,id;
+  var b=ckBucket(),changed=false,ds,id,reAdd=0,tp0=ad.totalPoints||0;
   for(ds in b){
     if(ds==='_cfg')continue;
     var day=b[ds];
@@ -4758,23 +4782,28 @@ function ckReconcileAwards(){ // 自愈：打卡状态已确认加分、但账�
       var rid='ck_'+ds+'_'+id,has=false;
       for(var i=0;i<ad.records.length;i++){if(ad.records[i].id===rid){has=true;break}}
       if(has)continue;
-      var t=ckTaskById(id);if(!t)continue;
+      var t=ckTaskById(id);
+      if(!t){ /* 任务已删除且无快照（早期数据）：按完成时的分值兜底补回，绝不因删任务丢掉历史加分 */
+        var p0=(st.mk!=null)?st.mk:CK_PT;
+        ad.records.push({id:rid,date:st.dd||ds,timestamp:st.t||Date.now(),type:'up',itemId:'ck_reward',name:'打卡（历史任务）',category:'打卡',score:p0,note:'历史打卡补记（原任务已删除）'});
+        ad.totalPoints+=p0;changed=true;reAdd++;continue;
+      }
       if(st.mk!=null){ // 补卡状态：自愈补的是半分补卡流水（ckmk_），不按全分
         var mrid='ckmk_'+ds+'_'+id,mhas=false;
         for(var mi=0;mi<ad.records.length;mi++){if(ad.records[mi].id===mrid){mhas=true;break}}
-        if(!mhas){ad.records.push({id:mrid,date:ds,timestamp:st.t||Date.now(),type:'up',itemId:'ck_makeup',name:t.name+'（补卡）',category:'打卡',score:st.mk,note:'过期任务补卡，加原分值一半'});ad.totalPoints+=st.mk;changed=true}
+        if(!mhas){ad.records.push({id:mrid,date:ds,timestamp:st.t||Date.now(),type:'up',itemId:'ck_makeup',name:t.name+'（补卡）',category:'打卡',score:st.mk,note:'过期任务补卡，加原分值一半'});ad.totalPoints+=st.mk;changed=true;reAdd++}
         continue;
       }
       var pts=t.pt||CK_PT;
       ad.records.push({id:rid,date:st.dd||ds,timestamp:st.t||Date.now(),type:'up',itemId:'ck_reward',name:t.name+'（打卡）',category:'打卡',score:pts,note:'每日打卡·家长确认'});
-      ad.totalPoints+=pts;changed=true;
+      ad.totalPoints+=pts;changed=true;reAdd++;
     }
     if(day._mbonus&&day._mbonus.r){ // 必打卡档自愈
       var mbid='ckmb_'+ds,mhasB=false;
       for(var mj=0;mj<ad.records.length;mj++){if(ad.records[mj].id===mbid){mhasB=true;break}}
       if(!mhasB){
         ad.records.push({id:mbid,date:ds,timestamp:day._mbonus.t||Date.now(),type:'up',itemId:'ck_must_bonus',name:'当日必打卡全部完成',category:'打卡',score:10,note:'当日所有必打卡任务完成 额外奖励 10 分'});
-        ad.totalPoints+=10;changed=true;
+        ad.totalPoints+=10;changed=true;reAdd++;
       }
     }
     if(day._bonus&&day._bonus.r){
@@ -4782,11 +4811,12 @@ function ckReconcileAwards(){ // 自愈：打卡状态已确认加分、但账�
       for(var j=0;j<ad.records.length;j++){if(ad.records[j].id===bid){hasB=true;break}}
       if(!hasB){
         ad.records.push({id:bid,date:ds,timestamp:day._bonus.t||Date.now(),type:'up',itemId:'ck_bonus',name:'当日打卡全部完成',category:'打卡',score:20,note:'当日完成率100% 额外奖励 20 分'});
-        ad.totalPoints+=20;changed=true;
+        ad.totalPoints+=20;changed=true;reAdd++;
       }
     }
   }
-  if(changed){sd(ad);toast('已补回缺失的打卡积分','ok');if(curTab==='checkin')ckShow();else render();}
+  if(changed){sd(ad);var gain=(ad.totalPoints||0)-tp0;toast('已补回 '+reAdd+' 条打卡积分'+(gain>0?'（+'+gain+' 分）':''),'ok');if(curTab==='checkin')ckShow();else render();}
+  return reAdd;
 }
 // —— 渲染 ——
 function ckShift(n){ // 日视图 ±1 天；最多查看今天起 7 天内
@@ -5060,7 +5090,20 @@ function ckCfgSubmit(idx){
 function ckCfgDel(idx){
   var tasks=ckCfg().tasks;
   var name=tasks[idx]?tasks[idx].name:'';
-  sc2('删除打卡任务','删除「'+name+'」？已完成记录和已得积分将保留。',function(){
+  sc2('删除打卡任务','删除「'+name+'」？已完成的记录与积分都会保留，只是从今天起不再安排。',function(){
+    var del=tasks[idx];
+    if(del){
+      var b=ckBucket();
+      b._cfg=b._cfg||{};
+      b._cfg.retired=b._cfg.retired||[];
+      var snap={};for(var k in del)snap[k]=del[k];
+      snap.retiredAt=Date.now();
+      b._cfg.retired.push(snap);
+      var seen={},rr=[]; /* 同 id 只保留最新一份快照 */
+      for(var i=b._cfg.retired.length-1;i>=0;i--){var r0=b._cfg.retired[i];if(!r0||seen[r0.id])continue;seen[r0.id]=1;rr.unshift(r0);}
+      b._cfg.retired=rr;
+      ckSaveBucket(b);
+    }
     tasks.splice(idx,1);ckCfgSave(tasks);ckCfgRender();ckShow();
   });
 }

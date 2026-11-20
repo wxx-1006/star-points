@@ -327,3 +327,57 @@ test('日历：默认只显示本周 7 天，点击展开显示整月', async ()
   w.ckCalToggle();
   assert.equal((w.ckCalendarHtml().match(/class="ck-cd/g) || []).length, 7, '再点收起回周视图');
 });
+
+test('删除任务：历史加分与记录保留，任务定义转入退役快照', async () => {
+  const w = await setup();
+  /* 历史：昨天完成 t6 并已加分 */
+  const dsY = w.ckAddDays(w.today(), -1);
+  const b = w.ckBucket();
+  b[dsY] = { '6': { c: 1, d: 1, r: 1, dd: dsY, t: Date.now() } };
+  w.ckSaveBucket(b);
+  w.ad.records.push({ id: 'ck_' + dsY + '_6', date: dsY, timestamp: Date.now(), type: 'up', itemId: 'ck_reward', name: '必打卡任务（打卡）', category: '打卡', score: 5 });
+  w.ad.totalPoints = 5;
+  /* 删除任务（等价 ckCfgDel 的落库动作） */
+  const del = w.ckCfg().tasks[0];
+  const bb = w.ckBucket();
+  bb._cfg = bb._cfg || {};
+  bb._cfg.retired = (bb._cfg.retired || []).concat([Object.assign({}, del, { retiredAt: Date.now() })]);
+  w.ckSaveBucket(bb);
+  w.ckCfgSave(w.ckCfg().tasks.filter((t) => t.id !== '6'));
+  /* 断言：历史流水/总分不动；任务定义仍可查 */
+  assert.equal(w.ad.records.length, 1, '历史加分保留');
+  assert.equal(w.ad.totalPoints, 5, '总分不减少');
+  const t = w.ckTaskById('6');
+  assert.ok(t && t.name === '必打卡任务', '退役任务仍可查到（名称/分值可用于补记）');
+  assert.equal(w.ckTasksFor(w.today()).filter((x) => x.id === '6').length, 0, '从今天起不再安排该任务');
+});
+
+test('自愈：已删任务导致缺加分流水时，按原分值补回', async () => {
+  const w = await setup();
+  const dsY = w.ckAddDays(w.today(), -1);
+  const b = w.ckBucket();
+  b[dsY] = { '6': { c: 1, d: 1, r: 1, dd: dsY, t: Date.now() } };
+  b._cfg.retired = [{ id: '6', name: '旧任务', subj: 'other', must: 1, pt: 8, recur: { type: 'daily' } }];
+  b._cfg.tasks = []; /* 任务已删除 */
+  w.ckSaveBucket(b);
+  w.ad = { records: [], exchanges: [], totalPoints: 0, del: {}, quizStreak: {}, upItems: [], downItems: [], shopItems: {} };
+  w.ckReconcileAwards();
+  const r = w.ad.records.find((x) => x.id === 'ck_' + dsY + '_6');
+  assert.ok(r, '应补回历史加分流水');
+  assert.equal(r.score, 8, '按退役快照的原分值补回');
+  assert.equal(w.ad.totalPoints, 8);
+});
+
+test('自愈：连退役快照都没有时，按默认分值兜底补回（不丢历史分）', async () => {
+  const w = await setup();
+  const dsY = w.ckAddDays(w.today(), -1);
+  const b = w.ckBucket();
+  b[dsY] = { '6': { c: 1, d: 1, r: 1, dd: dsY, t: Date.now() } };
+  b._cfg.tasks = []; /* 无快照 */
+  w.ckSaveBucket(b);
+  w.ad = { records: [], exchanges: [], totalPoints: 0, del: {}, quizStreak: {}, upItems: [], downItems: [], shopItems: {} };
+  w.ckReconcileAwards();
+  const r = w.ad.records.find((x) => x.id === 'ck_' + dsY + '_6');
+  assert.ok(r, '兜底补回');
+  assert.ok(r.score > 0, '分值大于 0');
+});
