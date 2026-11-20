@@ -280,6 +280,17 @@ try {
   html.fx-embedded .result .line2{ color:#4A4238; }
   html.fx-embedded .stat.best .v{ color:#C9503F; }
   .cx-cell.wrong{ background:#fde9e7; border-color:var(--bad); animation:shake .28s; }
+  .df-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .df-grid{ display:grid; gap:4px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px; }
+  .df-cell{ aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; font-size:clamp(14px,4.2vw,22px); border-radius:8px; background:var(--card2); user-select:none; }
+  .df-cell.hit{ background:rgba(90,170,120,.45); }
+  .df-cell.wrong{ background:#fde9e7; animation:shake .28s; }
+  .mot-stage{ position:relative; height:clamp(240px,42vh,340px); background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .mot-ball{ position:absolute; left:0; top:0; border-radius:50%; background:var(--accent); will-change:transform; }
+  .mot-ball.target{ background:#e8a33d; box-shadow:0 0 0 4px rgba(232,163,61,.35); }
+  .mot-ball.picked{ outline:3px solid var(--accent-deep); outline-offset:2px; }
+  .mot-ball.ok{ background:#58b287; }
+  .mot-ball.bad{ background:#e06b65; }
 </style>
 </head>
 <body>
@@ -293,6 +304,8 @@ try {
     <button class="tab" data-tab="stroop" type="button">色词干扰</button>
     <button class="tab" data-tab="switch" type="button">快速切换</button>
     <button class="tab" data-tab="cancel" type="button">符号划消</button>
+    <button class="tab" data-tab="diff" type="button">找不同</button>
+    <button class="tab" data-tab="mot" type="button">多目标追踪</button>
     <button class="tab" data-tab="history" type="button">历史</button>
   </nav>
 
@@ -529,6 +542,45 @@ try {
     </div>
   </section>
 
+  <!-- ========== 找不同 ========== -->
+  <section class="panel" id="panel-diff">
+    <div class="toolbar">
+      <div class="field"><span>难度</span>
+        <div class="seg" id="dfLevel">
+          <button class="on" data-l="1" type="button">简单</button>
+          <button data-l="2" type="button">中等</button>
+          <button data-l="3" type="button">困难</button>
+        </div>
+      </div>
+      <div class="stats" style="margin:0;flex:1">
+        <div class="stat"><div class="k">用时</div><div class="v" id="dfTimer">--</div></div>
+        <div class="stat"><div class="k">错误</div><div class="v" id="dfErrors">0</div></div>
+        <div class="stat best"><div class="k">最佳</div><div class="v" id="dfBest">--</div></div>
+      </div>
+    </div>
+    <p class="hint" id="dfHint">左右两幅图有几处不同，点右图把它们找出来。点错会记错误，慢慢看更划算。</p>
+    <div class="df-wrap" id="dfWrap"></div>
+    <div class="actions">
+      <button class="btn primary" id="btnDfStart" type="button">开始</button>
+      <button class="btn" id="btnDfRestart" type="button" disabled>再来一局</button>
+    </div>
+  </section>
+
+  <!-- ========== 多目标追踪 ========== -->
+  <section class="panel" id="panel-mot">
+    <div class="stats">
+      <div class="stat"><div class="k">本轮</div><div class="v" id="motRound">0</div></div>
+      <div class="stat best"><div class="k">最佳</div><div class="v" id="motBest">--</div></div>
+    </div>
+    <p class="hint">先记住高亮的球，它们乱动之后，把刚才那几个点出来再提交。</p>
+    <div class="mot-stage" id="motStage"></div>
+    <div class="hint" id="motMsg" style="min-height:20px;font-weight:700;margin-top:6px"></div>
+    <div class="actions">
+      <button class="btn primary" id="btnMotStart" type="button">开始</button>
+      <button class="btn" id="btnMotSubmit" type="button" disabled>提交</button>
+    </div>
+  </section>
+
   <!-- ========== 9 历史成绩 ========== -->
   <section class="panel" id="panel-history">
     <p class="hint">成绩总览：点某个游戏看近 10 次走势；「新纪录」是刷新个人最好成绩的那一次。</p>
@@ -701,7 +753,9 @@ const HIST_FMT = {
   memory:{ n:'记忆翻牌', f:function(v){ return formatTime(v); }, mm:'min' },
   corsi:{ n:'空间方块', f:function(v){ return v + ' 格'; }, mm:'max' },
   switch:{ n:'快速切换', f:function(v){ return v + ' 题'; }, mm:'max' },
-  cancel:{ n:'符号划消', f:function(v){ return formatTime(v); }, mm:'min' }
+  cancel:{ n:'符号划消', f:function(v){ return formatTime(v); }, mm:'min' },
+  diff:{ n:'找不同', f:function(v){ return formatTime(v); }, mm:'min' },
+  mot:{ n:'多目标追踪', f:function(v){ return v + ' 轮'; }, mm:'max' }
 };
 function loadHistory(){
   try {
@@ -2446,7 +2500,7 @@ applyFocusVisibility(); /* 孩子端按家长配置过滤可见页签 */
 fitOneScreen(); /* 打开页面即做一屏适配 */
 
 /* ---------- 今日推荐：按类别每日轮换 3 个游戏（注意力/记忆/抑制各 1），点击直达 ---------- */
-const REC_GROUPS = [ ['schulte','track','cancel'], ['stroop','switch'] ];
+const REC_GROUPS = [ ['schulte','track','cancel'], ['stroop','switch'], ['mot','diff'] ];
 function dailyRecList(){
   const now = new Date();
   const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
@@ -2475,6 +2529,204 @@ $('recSummary').addEventListener('click', (e) => {
   recSelGame = c.dataset.g;
   renderHistory();
 });
+/* ========== 多目标追踪：记住高亮球，运动后点出来（注意分配/追踪） ========== */
+var motSt = { phase: 'idle', round: 0, balls: [], timer: null, t0: 0 };
+var MOT_W = 300, MOT_H = 260;
+function motBestKey(){ return 'focus.mot.best'; }
+function motUpdateStats(){
+  const b = loadJSON(motBestKey());
+  const rb = $('motBest'); if (rb) rb.textContent = b ? b.v + ' 轮' : '--';
+  const rr = $('motRound'); if (rr) rr.textContent = motSt.round;
+}
+function motLayout(){
+  const st = $('motStage'); if (!st) return;
+  MOT_W = st.clientWidth; MOT_H = st.clientHeight;
+}
+function startMot(){
+  motLayout();
+  if (!MOT_W || !MOT_H){ setTimeout(startMot, 100); return; }
+  motSt.phase = 'memo'; motSt.round = 0;
+  const btn = $('btnMotSubmit'); if (btn) btn.disabled = true;
+  motNextRound();
+}
+function motNextRound(){
+  motSt.round++;
+  const n = Math.min(12, 7 + motSt.round);
+  const tg = Math.min(5, 2 + Math.floor(motSt.round / 2));
+  const st = $('motStage');
+  if (!st) return;
+  st.innerHTML = '';
+  motSt.balls = [];
+  const size = 32;
+  for (let i = 0; i < n; i++){
+    const x = 6 + Math.random() * Math.max(1, MOT_W - size - 12);
+    const y = 6 + Math.random() * Math.max(1, MOT_H - size - 12);
+    const el = document.createElement('div');
+    el.className = 'mot-ball';
+    el.style.width = size + 'px'; el.style.height = size + 'px';
+    el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    st.appendChild(el);
+    motSt.balls.push({ el: el, x: x, y: y, size: size, isTarget: i < tg, vx: 0, vy: 0, picked: false });
+  }
+  motSt.balls.forEach((b) => { if (b.isTarget) b.el.classList.add('target'); });
+  $('motMsg').textContent = '记住高亮的 ' + tg + ' 个球';
+  motUpdateStats();
+  setTimeout(motMove, 2500);
+}
+function motMove(){
+  if (motSt.phase !== 'memo') return;
+  motSt.phase = 'move';
+  motSt.balls.forEach((b) => b.el.classList.remove('target'));
+  $('motMsg').textContent = '盯住它们…';
+  const speed = 1.1 + motSt.round * 0.3;
+  motSt.balls.forEach((b) => { b.vx = (Math.random() * 2 - 1) * speed; b.vy = (Math.random() * 2 - 1) * speed; });
+  if (motSt.timer) clearInterval(motSt.timer);
+  motSt.timer = setInterval(function(){
+    motSt.balls.forEach((b) => {
+      b.x += b.vx; b.y += b.vy;
+      const maxX = Math.max(0, MOT_W - b.size), maxY = Math.max(0, MOT_H - b.size);
+      if (b.x < 0){ b.x = 0; b.vx = Math.abs(b.vx); }
+      if (b.x > maxX){ b.x = maxX; b.vx = -Math.abs(b.vx); }
+      if (b.y < 0){ b.y = 0; b.vy = Math.abs(b.vy); }
+      if (b.y > maxY){ b.y = maxY; b.vy = -Math.abs(b.vy); }
+      b.el.style.transform = 'translate(' + b.x + 'px,' + b.y + 'px)';
+    });
+  }, 16);
+  setTimeout(motSelect, 4200);
+}
+function motSelect(){
+  if (motSt.timer){ clearInterval(motSt.timer); motSt.timer = null; }
+  motSt.phase = 'select';
+  $('motMsg').textContent = '点出刚才高亮的球，然后提交';
+  const btn = $('btnMotSubmit'); if (btn) btn.disabled = false;
+  motSt.balls.forEach((b) => {
+    b.el.onclick = function(){
+      if (motSt.phase !== 'select') return;
+      b.picked = !b.picked;
+      b.el.classList.toggle('picked', b.picked);
+    };
+  });
+}
+function motSubmit(){
+  if (motSt.phase !== 'select') return;
+  motSt.phase = 'judge';
+  const btn = $('btnMotSubmit'); if (btn) btn.disabled = true;
+  let ok = true;
+  motSt.balls.forEach((b) => {
+    if (!!b.isTarget !== !!b.picked) ok = false;
+    b.el.classList.toggle('ok', b.isTarget);
+    b.el.classList.toggle('bad', !b.isTarget && b.picked);
+  });
+  if (ok){
+    $('motMsg').textContent = '全对！继续下一轮';
+    setTimeout(function(){ if (motSt.phase === 'judge') motNextRound(); }, 900);
+  } else {
+    finishMot();
+  }
+}
+function finishMot(){
+  const round = motSt.round;
+  const prev = loadJSON(motBestKey());
+  const isNew = !prev || round > prev.v;
+  if (isNew) saveJSON(motBestKey(), { v: round, at: Date.now() });
+  motSt.phase = 'idle';
+  motUpdateStats();
+  recordHistory('mot', round, '通过 ' + round + ' 轮', isNew, true);
+  showResult('本局通过 ' + round + ' 轮', '球会越来越多、越来越快', isNew, startMot);
+}
+$('btnMotStart').addEventListener('click', startMot);
+$('btnMotSubmit').addEventListener('click', motSubmit);
+
+/* ========== 找不同：左右两幅 emoji 网格，点出右侧的差异 ========== */
+var DF_EMOJI = ['🍎','🍊','🍇','🍓','🍋','🍉','🥝','🍑','🥕','🌽','🍄','🌻','🐱','🐶','🐼','🦊'];
+var dfState = { level: 1, size: 4, need: 3, left: [], right: [], diffSet: {}, found: 0, errors: 0, started: false, finished: false, t0: 0, timerId: null };
+function dfCfg(l){ return l === 3 ? { size: 6, need: 5 } : l === 2 ? { size: 5, need: 4 } : { size: 4, need: 3 }; }
+function dfBestKey(){ return 'focus.diff.best.l' + dfState.level; }
+function dfUpdateStats(){
+  const b = loadJSON(dfBestKey());
+  const el = $('dfBest'); if (el) el.textContent = b ? formatTime(b.ms) : '--';
+  const e = $('dfErrors'); if (e) e.textContent = dfState.errors;
+}
+function dfDeal(){
+  const cfg = dfCfg(dfState.level), n = cfg.size * cfg.size;
+  dfState.size = cfg.size; dfState.need = cfg.need;
+  dfState.left = []; dfState.right = []; dfState.diffSet = {}; dfState.found = 0; dfState.errors = 0;
+  for (let i = 0; i < n; i++) dfState.left.push(DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)]);
+  dfState.right = dfState.left.slice();
+  const idx = [];
+  for (let i = 0; i < n; i++) idx.push(i);
+  for (let i = idx.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
+  for (let i = 0; i < cfg.need; i++){
+    const k = idx[i]; let nv = DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)];
+    while (nv === dfState.right[k]) nv = DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)];
+    dfState.right[k] = nv; dfState.diffSet[k] = 1;
+  }
+  dfRender(); dfUpdateStats();
+  const t = $('dfTimer'); if (t) t.textContent = '--';
+}
+function dfRender(){
+  const wrap = $('dfWrap'); if (!wrap) return;
+  const cols = dfState.size;
+  const mk = (arr, side) => {
+    let h = '<div class="df-grid" style="grid-template-columns:repeat(' + cols + ',1fr)">';
+    for (let i = 0; i < arr.length; i++){
+      h += '<button type="button" class="df-cell" data-i="' + i + '" data-side="' + side + '">' + arr[i] + '</button>';
+    }
+    return h + '</div>';
+  };
+  wrap.innerHTML = mk(dfState.left, 'L') + mk(dfState.right, 'R');
+}
+function finishDiff(){
+  dfState.finished = true;
+  if (dfState.timerId){ clearInterval(dfState.timerId); dfState.timerId = null; }
+  const cost = performance.now() - dfState.t0;
+  $('dfTimer').textContent = formatTime(cost);
+  $('btnDfRestart').disabled = false;
+  const prev = loadJSON(dfBestKey());
+  const r = timingResult(prev, cost, dfState.errors);
+  if (r.isNew) saveJSON(dfBestKey(), { ms: cost, errors: dfState.errors, at: Date.now() });
+  dfUpdateStats();
+  const ach = recordHistory('diff', cost, '错误 ' + dfState.errors + ' 次 · ' + dfState.size + '×' + dfState.size + ' · ' + dfState.need + ' 处', r.isNew, dfState.errors <= 2);
+  showResult('全部找到了！用时 ' + formatTime(cost),
+    '错误 ' + dfState.errors + ' 次 · ' + dfState.size + '×' + dfState.size + ' · ' + r.cmp + (ach ? ' · ' + ach : ''),
+    r.isNew,
+    startDiff);
+}
+function startDiff(){
+  dfDeal();
+  dfState.started = true; dfState.finished = false;
+  $('btnDfRestart').disabled = true;
+  dfState.t0 = performance.now();
+  if (dfState.timerId) clearInterval(dfState.timerId);
+  dfState.timerId = setInterval(function(){ $('dfTimer').textContent = formatTime(performance.now() - dfState.t0); }, 200);
+}
+$('dfLevel').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-l]'); if (!b) return;
+  dfState.level = parseInt(b.dataset.l, 10);
+  $('dfLevel').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+  if (!dfState.started) dfDeal();
+  dfUpdateStats();
+});
+$('dfWrap').addEventListener('click', (e) => {
+  const c = e.target.closest('.df-cell'); if (!c) return;
+  if (!dfState.started || dfState.finished) return;
+  if (c.dataset.side !== 'R'){ toast('请点右边的图哦'); return; }
+  const i = parseInt(c.dataset.i, 10);
+  if (dfState.diffSet[i] && !c.classList.contains('hit')){
+    c.classList.add('hit');
+    dfState.found++;
+    if (dfState.found >= dfState.need) finishDiff();
+  } else if (!dfState.diffSet[i]){
+    dfState.errors++;
+    dfUpdateStats();
+    c.classList.remove('wrong'); void c.offsetWidth; c.classList.add('wrong');
+    setTimeout(() => c.classList.remove('wrong'), 300);
+  }
+});
+$('btnDfStart').addEventListener('click', startDiff);
+$('btnDfRestart').addEventListener('click', startDiff);
+dfDeal();
+
 renderDailyRec();
 
 /* ---------- 护眼休息提醒：每累计使用 20 分钟提醒一次；点「确定」后才重新计 20 分钟 ---------- */

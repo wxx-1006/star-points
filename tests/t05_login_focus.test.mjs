@@ -53,9 +53,10 @@ test('专注页：timingResult 准确优先 + 与最佳对比', async () => {
 test('专注页：今日推荐按三类每日轮换，点击可直达对应游戏', async () => {
   const w = await loadFocus();
   const rec = w.dailyRecList();
-  assert.equal(rec.length, 2, '记忆/数学类已移出专注页，推荐为注意力 + 抑制两类');
+  assert.equal(rec.length, 3, '注意力 / 抑制 / 追踪搜索 三类各 1 个');
   assert.ok(['schulte', 'track', 'cancel'].includes(rec[0]));
   assert.ok(['stroop', 'switch'].includes(rec[1]));
+  assert.ok(['mot', 'diff'].includes(rec[2]));
   const box = w.document.getElementById('dailyRec');
   assert.equal(box.hidden, false);
   const chip = box.querySelector('.dr-chip');
@@ -114,4 +115,63 @@ test('专注页：24点/记忆翻牌/空间方块页签已移除', async () => {
   assert.ok(!tabs.includes('memory'), '记忆翻牌应移出');
   assert.ok(!tabs.includes('corsi'), '空间方块应移出');
   assert.ok(tabs.includes('schulte') && tabs.includes('track') && tabs.includes('cancel') && tabs.includes('stroop') && tabs.includes('switch'));
+});
+
+test('找不同：生成左右网格且差异数与难度一致', async () => {
+  const w = await loadFocus();
+  [1, 2, 3].forEach((lv) => {
+    w.dfState.level = lv;
+    w.dfDeal();
+    const cfg = lv === 3 ? { size: 6, need: 5 } : lv === 2 ? { size: 5, need: 4 } : { size: 4, need: 3 };
+    assert.equal(w.dfState.size, cfg.size, '尺寸正确');
+    assert.equal(w.dfState.need, cfg.need, '差异数正确');
+    const diffs = Object.keys(w.dfState.diffSet).length;
+    assert.equal(diffs, cfg.need, '实际差异数一致');
+    const cells = w.document.querySelectorAll('#dfWrap .df-cell');
+    assert.equal(cells.length, cfg.size * cfg.size * 2, '左右两幅网格格子总数');
+    /* 差异位置确实不同 */
+    Object.keys(w.dfState.diffSet).forEach((k) => {
+      assert.notEqual(w.dfState.left[+k], w.dfState.right[+k], '差异格内容不同');
+    });
+  });
+});
+
+test('找不同：点对差异计数、点错记错误', async () => {
+  const w = await loadFocus();
+  w.dfState.level = 1;
+  w.dfDeal();
+  w.dfState.started = true;
+  const diffIdx = Object.keys(w.dfState.diffSet).map(Number);
+  const sameIdx = w.dfState.right.map((_, i) => i).find((i) => !w.dfState.diffSet[i]);
+  const cell = (i) => w.document.querySelector('#dfWrap .df-cell[data-side="R"][data-i="' + i + '"]');
+  cell(sameIdx).click();
+  assert.equal(w.dfState.errors, 1, '点错记错误');
+  diffIdx.forEach((i) => cell(i).click());
+  assert.equal(w.dfState.found, w.dfState.need, '全部差异找到');
+});
+
+test('多目标追踪：球数与目标数随轮次递增', async () => {
+  const w = await loadFocus();
+  w.motSt.round = 0;
+  w.motNextRound(); /* 第 1 轮：8 球 / 2 目标 */
+  assert.equal(w.motSt.balls.length, 8);
+  assert.equal(w.motSt.balls.filter((b) => b.isTarget).length, 2);
+  w.motSt.phase = 'memo';
+  w.motNextRound(); /* 第 2 轮：9 球 / 3 目标 */
+  assert.equal(w.motSt.balls.length, 9);
+  assert.equal(w.motSt.balls.filter((b) => b.isTarget).length, 3);
+});
+
+test('多目标追踪：选错结束本局并记录轮数', async () => {
+  const w = await loadFocus();
+  w.motSt.round = 0;
+  w.motNextRound();
+  w.motSt.phase = 'select';
+  w.motSt.balls.forEach((b) => { b.picked = !b.isTarget; }); /* 全选错 */
+  w.motSubmit();
+  assert.equal(w.motSt.phase, 'idle', '判定失败后结束');
+  const hist = JSON.parse(w.localStorage.getItem('sp_fx__local:history') || '[]');
+  const rec = hist.find((r) => r.g === 'mot');
+  assert.ok(rec, '应写入多目标追踪记录');
+  assert.equal(rec.v, 1, '记录通过轮数');
 });
