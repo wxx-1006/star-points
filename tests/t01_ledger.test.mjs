@@ -89,3 +89,37 @@ test('ghPutBody：新建文件不带空 sha（否则 GitHub 返回 422），更�
   assert.equal(JSON.parse(w.ghPutBody('m', 'Yw==', null)).sha, undefined);
   assert.equal(JSON.parse(w.ghPutBody('m', 'Yw==', 'abc')).sha, 'abc');
 });
+
+test('云端历史恢复：从历史版本补回缺失记录（不覆盖、不复活已删除）', async () => {
+  const w = await loadIndex();
+  const PHONE = '13800000000';
+  w.currentUser = PHONE;
+  w.sessionRole = 'parent';
+  w.localStorage.setItem('sp_gh_token', 'tok');
+  const cur = { records: [{ id: 'keep', date: '2026-11-20', score: 10 }], exchanges: [], totalPoints: 10, del: { 'r:deleted': Date.now() } };
+  w.localStorage.setItem(w.userKey(PHONE), JSON.stringify(cur));
+  const ver = {
+    [PHONE]: {
+      records: [
+        { id: 'keep', date: '2026-11-20', score: 10 },
+        { id: 'lost1', date: '2026-11-18', score: 5 },
+        { id: 'lost2', date: '2026-11-17', score: 3 },
+        { id: 'deleted', date: '2026-11-16', score: 7 }
+      ],
+      exchanges: [], totalPoints: 25
+    }
+  };
+  w.fetch = (url) => {
+    const u = String(url);
+    if (u.indexOf('/commits') >= 0) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ sha: 'abc', commit: { author: { date: '2026-11-18T10:00:00Z' }, message: 'sync' } }]) });
+    if (u.indexOf('ref=abc') >= 0) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ content: Buffer.from(JSON.stringify(ver)).toString('base64') }) });
+    return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+  };
+  w.ghHistRestore('abc');
+  await new Promise((r) => setTimeout(r, 300));
+  const after = JSON.parse(w.localStorage.getItem(w.userKey(PHONE)));
+  const ids = after.records.map((r) => r.id);
+  assert.ok(ids.includes('lost1') && ids.includes('lost2'), '应补回缺失记录：' + ids.join(','));
+  assert.ok(!ids.includes('deleted'), '不应复活用户已删除的记录');
+  assert.equal(after.totalPoints, 18, '总分按补回后重算（10+5+3）');
+});

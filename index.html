@@ -817,6 +817,16 @@ body.kid-mode{padding-bottom:72px}
     </div>
     <div class="sec">
       <div class="sg">
+        <div class="sgh" style="cursor:default"><div class="sgt">数据恢复（云端历史）</div></div>
+        <div style="padding:0 16px 16px">
+          <div class="sync-hint" style="margin-top:12px">每次同步都会在 GitHub 留下历史版本。若记录被误删，可从旧版本把「当前缺失的记录」补回来（不会覆盖现有数据，也不会复活你主动删除的记录）。</div>
+          <button class="bn bn-q" style="height:44px;width:100%;margin-top:12px" onclick="ghHistoryScan()">扫描云端历史（最近 15 次）</button>
+          <div id="ghHistList" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sg">
         <div class="sgh" style="cursor:default"><div class="sgt">数据体检</div></div>
         <div style="padding:0 16px 16px">
           <div class="sync-hint" style="margin-top:12px">一键检查总分、明细、必打卡扣分与各同步通道；发现异常可一键修复，不用再逐页排查。</div>
@@ -3928,6 +3938,98 @@ function retryAllChannels(){ // 触发各通道拉取与推送
   try{petSyncPush();}catch(e){}
   try{fxSyncPush();}catch(e){}
   toast('已触发各通道同步','ok');
+}
+
+/* ===== 云端历史恢复：每次同步都会在 GitHub 产生一个历史版本，用于找回误删的记录 ===== */
+function ghCommits(file, per){
+  var api='https://api.github.com/repos/'+GH_REPO+'/commits?path='+encodeURIComponent(file)+'&per_page='+(per||15);
+  return fetch(api,{headers:{'Authorization':'token '+getSyncToken()}}).then(function(r){
+    if(!r.ok)return r.json().then(function(j){throw {code:r.status,msg:(j&&j.message)||''}}).catch(function(e){throw (e&&e.code)?e:{code:r.status,msg:''}});
+    return r.json();
+  }).then(function(list){
+    return (list||[]).map(function(c){
+      var d=(c.commit&&c.commit.author&&c.commit.author.date)||'';
+      return { sha:c.sha, date:d, msg:(c.commit&&c.commit.message)||'' };
+    });
+  });
+}
+function ghReadAtSha(file, sha){
+  var api='https://api.github.com/repos/'+GH_REPO+'/contents/'+file+'?ref='+sha;
+  return fetch(api,{headers:{'Authorization':'token '+getSyncToken()}}).then(function(r){
+    if(!r.ok)throw {code:r.status};
+    return r.json();
+  }).then(function(meta){
+    if(!meta||!meta.content)return null;
+    try{return JSON.parse(b64ToUtf8(meta.content))}catch(e){return null}
+  });
+}
+function ghHistoryScan(){ // 扫描账本文件的最近提交
+  if(!currentUser){toast('请先登录','err');return}
+  if(!getSyncToken()){toast('请先配置同步令牌','err');return}
+  var box=document.getElementById('ghHistList');
+  if(box)box.innerHTML='<div class="sync-hint">正在扫描云端历史…</div>';
+  ghCommits(GH_FILE,15).then(function(list){
+    if(!list.length){if(box)box.innerHTML='<div class="sync-hint">云端暂无历史版本</div>';return}
+    var h='';
+    list.forEach(function(c,i){
+      var t=c.date?c.date.slice(0,16).replace('T',' '):'—';
+      h+='<div class="sync-line" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+        +'<span style="flex:1;min-width:150px">'+t+' · '+(c.msg?escHtml(c.msg.slice(0,24)):'')+'</span>'
+        +'<button class="bn bn-q" style="height:30px;padding:0 10px;font-size:12px" onclick="ghHistPreview(\''+c.sha+'\',\''+t+'\')">查看</button>'
+        +'<button class="bn bn-p" style="height:30px;padding:0 10px;font-size:12px" onclick="ghHistRestore(\''+c.sha+'\')">补回缺失</button>'
+        +'</div>';
+    });
+    if(box)box.innerHTML='<div class="sync-hint" style="margin-bottom:6px">选择历史版本可查看当时的数据并把「当前缺失的记录」补回来（不会覆盖现有数据）</div>'+h;
+  }).catch(function(e){
+    if(box)box.innerHTML='<div class="sync-hint" style="color:var(--red-deep)">扫描失败：'+(e&&e.code?('HTTP '+e.code):'网络异常')+'</div>';
+  });
+}
+function ghHistPreview(sha,t){ // 查看某历史版本该账号的记录数与总分
+  ghReadAtSha(GH_FILE,sha).then(function(all){
+    var v=all&&all[currentUser];
+    if(!v||!v.records){toast('该版本没有当前账号的数据','err');return}
+    var recs=v.records||[],exs=v.exchanges||[];
+    var sum=recs.reduce(function(a,r){return a+((r&&r.score)||0)},0)-exs.reduce(function(a,e){return a+((e&&e.cost)||0)},0);
+    var box=document.getElementById('ghHistList');
+    var tip=document.createElement('div');
+    tip.className='sync-hint';
+    tip.innerHTML='<b>'+t+'</b>：记录 '+recs.length+' 条 · 兑换 '+exs.length+' 条 · 当时总分 '+sum;
+    if(box)box.insertBefore(tip,box.firstChild);
+  }).catch(function(){toast('读取该版本失败','err')});
+}
+function ghHistRestore(sha){ // 把该历史版本里「当前缺失」的记录补回来（不覆盖、不复活已删除的墓碑记录）
+  if(sessionRole!=='parent'){toast('仅家长端可操作','err');return}
+  if(!currentUser)return;
+  ghReadAtSha(GH_FILE,sha).then(function(all){
+    var v=all&&all[currentUser];
+    if(!v||!v.records){toast('该版本没有当前账号的数据','err');return}
+    var cur=loadBucket(currentUser)||{records:[],exchanges:[],totalPoints:0,del:{}};
+    cur.del=cur.del||{};
+    var have={},haveE={};
+    (cur.records||[]).forEach(function(r){if(r&&r.id)have[r.id]=1});
+    (cur.exchanges||[]).forEach(function(e){if(e&&e.id)haveE[e.id]=1});
+    var addR=0,addE=0;
+    (v.records||[]).forEach(function(r){
+      if(!r||!r.id)return;
+      if(have[r.id])return;
+      if(cur.del['r:'+r.id])return; /* 用户主动删除过的不复活 */
+      cur.records.push(r);have[r.id]=1;addR++;
+    });
+    (v.exchanges||[]).forEach(function(e){
+      if(!e||!e.id)return;
+      if(haveE[e.id])return;
+      if(cur.del['e:'+e.id])return;
+      cur.exchanges.push(e);haveE[e.id]=1;addE++;
+    });
+    if(!addR&&!addE){toast('该版本没有可补回的记录','ok');return}
+    cur.totalPoints=rdSumScore(cur);
+    try{localStorage.setItem(userKey(currentUser),JSON.stringify(cur))}catch(err){toast('本地存储空间不足','err');return}
+    ad=cur;
+    markPendingSync();
+    render();
+    if(typeof syncPush==='function')syncPush(cur);
+    toast('已补回 '+addR+' 条记录、'+addE+' 条兑换（总分 '+cur.totalPoints+'）','ok');
+  }).catch(function(){toast('读取该版本失败','err')});
 }
 
 // ===== 本地备份（#2）：导出当前账号账本+刷题进度+自定义题库为 JSON；导入覆盖本机并上云 =====
