@@ -572,7 +572,7 @@ try {
       <div class="stat"><div class="k">本轮</div><div class="v" id="motRound">0</div></div>
       <div class="stat best"><div class="k">最佳</div><div class="v" id="motBest">--</div></div>
     </div>
-    <p class="hint">先记住高亮的球，它们乱动之后，把刚才那几个点出来再提交。</p>
+    <p class="hint"><b>怎么玩</b>：① 开始后先出现几个<b>橙色高亮</b>的球，记住它们 → ② 高亮消失，所有球一起乱动几秒 → ③ 停下来后，把刚才高亮的球<b>全部点出来</b>（点错可再点一次取消），再点「提交」。<br><b>过关条件</b>：<b>一个不漏、一个不错</b>才算过关，进入下一轮（球更多、动得更快）；漏选或选错，本局结束，成绩为已通过的轮数。</p>
     <div class="mot-stage" id="motStage"></div>
     <div class="hint" id="motMsg" style="min-height:20px;font-weight:700;margin-top:6px"></div>
     <div class="actions">
@@ -2597,22 +2597,35 @@ function motMove(){
 function motSelect(){
   if (motSt.timer){ clearInterval(motSt.timer); motSt.timer = null; }
   motSt.phase = 'select';
-  $('motMsg').textContent = '点出刚才高亮的球，然后提交';
+  motUpdatePickMsg();
   const btn = $('btnMotSubmit'); if (btn) btn.disabled = false;
   motSt.balls.forEach((b) => {
     b.el.onclick = function(){
       if (motSt.phase !== 'select') return;
       b.picked = !b.picked;
       b.el.classList.toggle('picked', b.picked);
+      motUpdatePickMsg();
     };
   });
+}
+function motPickCount(){
+  let n = 0;
+  motSt.balls.forEach((b) => { if (b.picked) n++; });
+  return n;
+}
+function motUpdatePickMsg(){
+  const tg = motSt.balls.filter((b) => b.isTarget).length;
+  const msg = $('motMsg');
+  if (msg) msg.textContent = '把刚才高亮的 ' + tg + ' 个球全部点出来（已选 ' + motPickCount() + ' / ' + tg + '），选好后点「提交」';
 }
 function motSubmit(){
   if (motSt.phase !== 'select') return;
   motSt.phase = 'judge';
   const btn = $('btnMotSubmit'); if (btn) btn.disabled = true;
-  let ok = true;
+  let ok = true, miss = 0, extra = 0;
   motSt.balls.forEach((b) => {
+    if (b.isTarget && !b.picked) miss++;
+    if (!b.isTarget && b.picked) extra++;
     if (!!b.isTarget !== !!b.picked) ok = false;
     b.el.classList.toggle('ok', b.isTarget);
     b.el.classList.toggle('bad', !b.isTarget && b.picked);
@@ -2621,7 +2634,8 @@ function motSubmit(){
     $('motMsg').textContent = '全对！继续下一轮';
     setTimeout(function(){ if (motSt.phase === 'judge') motNextRound(); }, 900);
   } else {
-    finishMot();
+    $('motMsg').textContent = (miss ? ('漏选了 ' + miss + ' 个') : '') + (miss && extra ? '，' : '') + (extra ? ('多选了 ' + extra + ' 个') : '');
+    setTimeout(function(){ finishMot(); }, 900); /* 先让玩家看清哪些是目标（绿色）哪些点多（红色） */
   }
 }
 function finishMot(){

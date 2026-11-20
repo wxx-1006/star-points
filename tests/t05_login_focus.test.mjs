@@ -169,6 +169,7 @@ test('多目标追踪：选错结束本局并记录轮数', async () => {
   w.motSt.phase = 'select';
   w.motSt.balls.forEach((b) => { b.picked = !b.isTarget; }); /* 全选错 */
   w.motSubmit();
+  await new Promise((r) => setTimeout(r, 1100)); /* 失败会先展示对错约 0.9s 再结算 */
   assert.equal(w.motSt.phase, 'idle', '判定失败后结束');
   const hist = JSON.parse(w.localStorage.getItem('sp_fx__local:history') || '[]');
   const rec = hist.find((r) => r.g === 'mot');
