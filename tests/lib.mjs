@@ -56,7 +56,8 @@ export function mkAd(extra = {}) {
 
 /** 打卡任务配置：写入本地桶 */
 export function seedCkTasks(w, phone, tasks) {
-  w.localStorage.setItem('sp_ck__' + phone, JSON.stringify({ _cfg: { tasks, t: Date.now() } }));
+  /* 配置时间设为 30 天前：模拟"任务早已配置好"，否则配置日隔离会让历史日期不参与结算 */
+  w.localStorage.setItem('sp_ck__' + phone, JSON.stringify({ _cfg: { tasks, t: Date.now() - 30 * 86400000 } }));
 }
 
 /** 记一条流水 */

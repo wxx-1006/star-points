@@ -674,11 +674,16 @@ body.kid-mode{padding-bottom:72px}
 .ck-motivate{margin:10px 16px 0;padding:8px 12px;border-radius:12px;background:rgba(255,205,90,.16);border:1px solid rgba(255,205,90,.42);color:var(--txt);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ck-motivate b{color:var(--red-deep)}
 .ck-motivate-msg{font-weight:600;color:var(--dim)}
-.ck-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:2px 16px 0}
-.ck-day{height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;border-radius:6px;background:var(--card2);color:var(--dim)}
-.ck-day.on{background:rgba(90,170,120,.55);color:#fff;font-weight:700}
-.ck-day.today{outline:2px solid var(--red-deep);outline-offset:-2px}
-.ck-day.empty{background:transparent}
+.ck-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:2px 16px 0}
+.ck-cd{height:28px;display:flex;align-items:center;justify-content:center;font-size:11.5px;border-radius:8px;background:var(--card2);color:var(--dim);cursor:pointer;user-select:none}
+.ck-cd.on{background:linear-gradient(180deg,#5FC98A,#42A76C);color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(66,167,108,.28)}
+.ck-cd.cur{box-shadow:inset 0 0 0 2px #E8763F}
+.ck-cd.on.cur{box-shadow:inset 0 0 0 2px #E8763F,0 2px 6px rgba(66,167,108,.28)}
+.ck-cd.empty{background:transparent;cursor:default}
+.ck-cal-h{display:flex;align-items:center;justify-content:center;gap:16px;margin:6px 16px 5px}
+.ck-cal-h .ck-ym{font-size:13px;font-weight:700;color:var(--txt)}
+.ck-cal-h button{border:0;background:transparent;font-size:19px;line-height:1;color:var(--dim);padding:2px 10px;cursor:pointer}
+.ck-badge-note{font-size:11px;color:var(--dim);margin:6px 16px 0}
 .ck-badges{display:flex;gap:8px;margin:10px 16px 0}
 .ck-badge{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--card2);font-size:17px;filter:grayscale(1);opacity:.45}
 .ck-badge.on{filter:none;opacity:1;background:rgba(255,205,90,.22);border:1px solid rgba(255,205,90,.5)}
@@ -4201,21 +4206,38 @@ function ckBadgesHtml(){ // 连续打卡徽章：达到即点亮，不写文字
     var m=CK_MILESTONES[i];
     h+='<span class="ck-badge'+(st>=m.d?' on':'')+'" title="连续打卡 '+m.d+' 天">'+m.icon+'</span>';
   }
-  return '<div class="ck-badges">'+h+'</div>';
+  return '<div class="ck-badges">'+h+'</div><div class="ck-badge-note">连续打卡 3 / 7 / 14 / 30 天依次点亮</div>';
 }
-function ckCalendarHtml(){ // 本月打卡日历墙：完成日点亮（纯视觉，"不断链"动力）
-  var b=ckBucket(),now=new Date(),y=now.getFullYear(),m=now.getMonth();
+var ckCalYM=null; // 日历当前显示的年月（可翻看历史月份）
+function ckCalendarHtml(){ // 打卡日历：可切月份、点日期跳到那天、高亮跟随所选日期
+  var b=ckBucket(),now=new Date();
+  if(!ckCalYM)ckCalYM={y:now.getFullYear(),m:now.getMonth()};
+  var y=ckCalYM.y,m=ckCalYM.m;
   var days=new Date(y,m+1,0).getDate();
   var firstDow=new Date(y,m,1).getDay();
   var p2=function(n){return (n<10?'0':'')+n};
   var cells='';
-  for(var i=0;i<firstDow;i++)cells+='<span class="ck-day empty"></span>';
+  for(var i=0;i<firstDow;i++)cells+='<span class="ck-cd empty"></span>';
   for(var d=1;d<=days;d++){
     var ds=y+'-'+p2(m+1)+'-'+p2(d);
-    cells+='<span class="ck-day'+(ckDayDone(b,ds)?' on':'')+(d===now.getDate()?' today':'')+'">'+d+'</span>';
+    cells+='<span class="ck-cd'+(ckDayDone(b,ds)?' on':'')+(ds===ckDate?' cur':'')+'" onclick="ckCalPick(\''+ds+'\')">'+d+'</span>';
   }
-  return '<div class="sec" style="margin-top:14px"><div class="sec-h"><div class="st-t">'+(m+1)+' 月打卡</div></div>'
+  return '<div class="sec" style="margin-top:14px"><div class="sec-h"><div class="st-t">打卡日历</div></div>'
+    +'<div class="ck-cal-h"><button type="button" onclick="ckCalShift(-1)" aria-label="上个月">‹</button>'
+    +'<span class="ck-ym">'+y+' 年 '+(m+1)+' 月</span>'
+    +'<button type="button" onclick="ckCalShift(1)" aria-label="下个月">›</button></div>'
     +'<div class="ck-cal">'+cells+'</div></div>';
+}
+function ckCalShift(n){ // 翻月（上/下）
+  if(!ckCalYM)return;
+  var m=ckCalYM.m+n,y=ckCalYM.y;
+  if(m<0){m=11;y--;} else if(m>11){m=0;y++;}
+  ckCalYM={y:y,m:m};
+  ckShow();
+}
+function ckCalPick(ds){ // 点日历某天：下方任务列表切到该日期
+  ckDate=ds;
+  ckShow();
 }
 /* 满勤盲盒：上周（周一~周日）7 天全完成 → 本周可抽一次（家长端操作，孩子端只提示） */
 function ckLastWeekFull(){
@@ -4689,16 +4711,51 @@ function ckShift(n){ // 日视图 ±1 天；最多查看今天起 7 天内
   if(ds>ckAddDays(today(),7))return;
   ckDate=ds;ckShow();
 }
+function ckRollbackWrongPenalties(){ // 回滚「修改任务配置后被按新配置重算补扣」的历史扣分（幂等）
+  if(sessionRole!=='parent'||!currentUser||!ad||!ad.records)return 0;
+  var cfg=ckCfg(),cfgT=cfg.t||0;
+  if(!cfgT)return 0;
+  var cfgDay=ckFmtD(new Date(cfgT));
+  var b=ckBucket(),removed=0,ids=[];
+  for(var i=ad.records.length-1;i>=0;i--){
+    var r=ad.records[i];
+    if(!r||String(r.id||'').indexOf('ckm_')!==0)continue;
+    if(r.date>=cfgDay)continue;             /* 只看配置日之前的历史 */
+    if(!(r.timestamp>cfgT))continue;         /* 只看改配置之后才写进去的（=重算误扣） */
+    ad.del=ad.del||{};ad.del['r:'+r.id]=Date.now();
+    ad.records.splice(i,1);
+    ids.push(String(r.id).split('_').pop());
+    removed++;
+  }
+  if(!removed)return 0;
+  /* 清掉这些任务在历史日期上的「已扣」标记，避免再次被判已扣 */
+  for(var ds in b){
+    if(ds==='_cfg'||ds>=cfgDay)continue;
+    var day=b[ds];
+    for(var j=0;j<ids.length;j++){
+      var tid=ids[j];
+      if(day&&day[tid]&&day[tid].m){day[tid].m=0;}
+    }
+  }
+  ckSaveBucket(b);
+  ad.totalPoints=rdSumScore(ad);
+  sd(ad);
+  if(typeof markPendingSync==='function')markPendingSync();
+  return removed;
+}
 function ckMustSweep(now){ // 必打卡结算规则：只有"完全未动"（无家长确认d/无孩子申请c/未扣过m）才扣分；孩子已申请(c)不扣——24h未确认由 ckSweepStale 重置回初始状态，之后由本函数补扣；周末任务(两天共用)扣分时点=该周末周日24点后；now 供测试注入
   now=now||new Date();
   if(!currentUser)return;
   var tds=ckFmtD(now);
-  var tasks=ckCfg().tasks,musts=[];
+  var cfg0=ckCfg(),tasks=cfg0.tasks,musts=[];
+  var cfgDay=cfg0.t?ckFmtD(new Date(cfg0.t)):''; /* 配置最后修改日 */
+  /* 配置只会影响未来：修改任务前已过去的日子视为定稿，不再按新配置重算（否则改一次任务就批量补扣历史） */
   for(var i=0;i<tasks.length;i++){if(tasks[i].must)musts.push(tasks[i])}
   if(!musts.length)return;
   var isWk=function(t){return (t.recur&&t.recur.type==='weekend')||t.type==='weekend'};
   var b=ckBucket(),changed=false,anyPenalty=false;
   var scan=function(ds){
+    if(cfgDay&&ds<cfgDay)return; /* 历史日期已定稿：不按新配置补扣 */
     var day=ckTasksFor(ds),ids={},ti;
     for(ti=0;ti<day.length;ti++)ids[day[ti].id]=day[ti];
     for(var m=0;m<musts.length;m++){
@@ -4757,6 +4814,8 @@ function ckShow(){
      30 秒内已拉过则本地状态新鲜，直接结算。 */
   if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull(function(){ckSweepStale();ckMustSweep()})}
   else{ckSweepStale();ckMustSweep()}
+  var rb=ckRollbackWrongPenalties();
+  if(rb>0)toast('已回滚 '+rb+' 条因修改任务产生的历史误扣','ok');
   var tasks=ckTasksFor(ckDate),b=ckBucket();
   var syncHtml='';
   if(!getSyncToken())syncHtml='<span class="ck-sync err" onclick="ckTokOpen()" title="点击配置同步令牌">同步未开启，点击配置令牌</span>';

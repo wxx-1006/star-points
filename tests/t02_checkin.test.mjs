@@ -161,8 +161,8 @@ test('日历墙：当月每天一格，完成日点亮', async () => {
   w.ckSaveBucket(b);
   const html = w.ckCalendarHtml();
   assert.ok(html.includes('ck-cal'), '应渲染日历网格');
-  assert.ok(html.includes('ck-day on'), '完成日应点亮');
-  assert.ok(html.includes('today'), '今天应有标记');
+  assert.ok(html.includes('ck-cd on'), '完成日应点亮');
+  assert.ok(/class="ck-cd[^"]*cur/.test(html), '所选日期应有高亮');
 });
 
 test('里程碑徽章：连续天数达标即点亮', async () => {
@@ -177,6 +177,7 @@ test('里程碑徽章：连续天数达标即点亮', async () => {
   const html = w.ckBadgesHtml();
   const onCount = (html.match(/ck-badge on/g) || []).length;
   assert.equal(onCount, 1, '连续 3 天只点亮第一个徽章（3 天档）');
+  assert.ok(html.includes('ck-badge-note') && html.includes('3 / 7 / 14 / 30'), '徽章应注明点亮天数');
 });
 
 test('满勤盲盒：上周 7 天全完成才可抽，抽一次后标记本周已抽', async () => {
@@ -215,4 +216,54 @@ test('满勤盲盒：孩子端不能抽（只能提示家长）', async () => {
   w.ad.ckBlindWeek = undefined;
   w.ckBlindboxOpen();
   assert.equal(w.ad.records.filter((r) => r.itemId === 'ck_blindbox').length, 0);
+});
+
+test('修改任务配置不影响历史：配置日之前的日期不再按新配置补扣', async () => {
+  const w = await setup();
+  w.localStorage.setItem('sp_ck__' + PHONE, JSON.stringify({ _cfg: { tasks: TASKS, t: Date.now() } })); /* 今天刚改配置 */
+  w.ckMustSweep(new Date(w.today() + 'T00:30:00')); /* 尝试结算昨天 */
+  const dsY = w.ckAddDays(w.today(), -1);
+  const st = (w.ckBucket()[dsY] || {})['6'] || {};
+  assert.notEqual(st.m, 1, '历史日期不应被新配置重算');
+  assert.equal(w.ad.records.length, 0, '不应补扣历史');
+});
+
+test('回滚误扣：改配置后补扣的历史流水被删除且总分恢复', async () => {
+  const w = await setup();
+  const cfgT = Date.now() - 60000; /* 1 分钟前改的配置 */
+  w.localStorage.setItem('sp_ck__' + PHONE, JSON.stringify({ _cfg: { tasks: TASKS, t: cfgT } }));
+  const dsY = w.ckAddDays(w.today(), -1);
+  w.ad.records.push({ id: 'ckm_' + dsY + '_6', date: dsY, timestamp: cfgT + 30000, type: 'down', itemId: 'ck_must', name: '误扣', category: '打卡', score: -5 });
+  w.ad.records.push({ id: 'ok1', date: w.today(), timestamp: 1, type: 'up', category: '学习', name: '正常加分', score: 20 });
+  w.ad.totalPoints = 15;
+  const n = w.ckRollbackWrongPenalties();
+  assert.equal(n, 1, '应回滚 1 条误扣');
+  assert.equal(w.ad.records.filter((r) => r.id === 'ckm_' + dsY + '_6').length, 0, '误扣流水已删除');
+  assert.equal(w.ad.totalPoints, 20, '总分恢复');
+});
+
+test('回滚误扣：配置日之前就存在的合法扣分不动', async () => {
+  const w = await setup();
+  const cfgT = Date.now();
+  w.localStorage.setItem('sp_ck__' + PHONE, JSON.stringify({ _cfg: { tasks: TASKS, t: cfgT } }));
+  const dsOld = w.ckAddDays(w.today(), -5);
+  /* 合法扣分：产生于配置修改之前 */
+  w.ad.records.push({ id: 'ckm_' + dsOld + '_6', date: dsOld, timestamp: cfgT - 86400000, type: 'down', itemId: 'ck_must', name: '合法扣分', category: '打卡', score: -5 });
+  w.ad.totalPoints = -5;
+  const n = w.ckRollbackWrongPenalties();
+  assert.equal(n, 0, '不应回滚旧扣分');
+  assert.equal(w.ad.records.length, 1);
+});
+
+test('日历：可翻上/下月，点日期后任务列表跟随该日期', async () => {
+  const w = await setup();
+  w.ckShow();
+  const before = JSON.parse(JSON.stringify(w.ckCalYM));
+  w.ckCalShift(-1);
+  assert.equal(w.ckCalYM.m, (before.m + 11) % 12, '翻到上个月');
+  w.ckCalShift(1);
+  assert.equal(w.ckCalYM.m, before.m, '翻回本月');
+  const target = w.ckAddDays(w.today(), -3);
+  w.ckCalPick(target);
+  assert.equal(w.ckDate, target, '所选日期生效');
 });
