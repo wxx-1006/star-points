@@ -2551,6 +2551,7 @@ function startMot(){
 }
 function motNextRound(){
   motSt.round++;
+  motSt.phase = 'memo'; /* 每轮开始重置阶段：否则上一轮停留在 judge，motMove 的守卫会直接 return，第二轮卡住不动 */
   const n = Math.min(12, 7 + motSt.round);
   const tg = Math.min(5, 2 + Math.floor(motSt.round / 2));
   const st = $('motStage');

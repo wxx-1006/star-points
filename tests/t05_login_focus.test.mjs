@@ -176,3 +176,18 @@ test('多目标追踪：选错结束本局并记录轮数', async () => {
   assert.ok(rec, '应写入多目标追踪记录');
   assert.equal(rec.v, 1, '记录通过轮数');
 });
+
+test('多目标追踪：过关后能自动进入下一轮并开始运动（阶段正确重置）', async () => {
+  const w = await loadFocus();
+  w.motSt.round = 0;
+  w.motNextRound();
+  assert.equal(w.motSt.phase, 'memo', '第 1 轮记忆阶段');
+  w.motSt.phase = 'select';
+  w.motSt.balls.forEach((b) => { b.picked = b.isTarget; });
+  w.motSubmit(); /* 全对 → judge → 0.9s 后进入下一轮 */
+  await new Promise((r) => setTimeout(r, 1100));
+  assert.equal(w.motSt.round, 2, '应进入第 2 轮');
+  assert.equal(w.motSt.phase, 'memo', '第 2 轮应为记忆阶段（不能卡在 judge）');
+  await new Promise((r) => setTimeout(r, 2700));
+  assert.equal(w.motSt.phase, 'move', '记忆结束后应自动开始运动');
+});
