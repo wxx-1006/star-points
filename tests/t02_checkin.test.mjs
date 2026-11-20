@@ -308,3 +308,21 @@ test('打卡页：顶部日期/进度/统计整块已移除（改由日历选日
   assert.ok(!html.includes('ck-prog'), '进度条已移除');
   assert.ok(!html.includes('ck-sum'), '完成/已得统计行已移除');
 });
+
+test('日历：默认只显示本周 7 天，点击展开显示整月', async () => {
+  const w = await setup();
+  w.ckCalOpen = false;
+  const weekHtml = w.ckCalendarHtml();
+  assert.equal((weekHtml.match(/class="ck-cd/g) || []).length, 7, '默认周视图 7 格');
+  assert.ok(weekHtml.includes('展开月历'), '应有展开入口');
+  assert.ok(weekHtml.includes('ck-wd'), '周视图有星期标签');
+  w.ckCalToggle();
+  assert.equal(w.ckCalOpen, true);
+  const monthHtml = w.ckCalendarHtml();
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const blanks = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay();
+  assert.equal((monthHtml.match(/class="ck-cd/g) || []).length, daysInMonth + blanks, '月视图含当月全部日期与前置空格');
+  assert.ok(monthHtml.includes('收起'), '应有收起入口');
+  w.ckCalToggle();
+  assert.equal((w.ckCalendarHtml().match(/class="ck-cd/g) || []).length, 7, '再点收起回周视图');
+});

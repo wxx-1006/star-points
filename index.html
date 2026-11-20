@@ -678,6 +678,9 @@ body.kid-mode{padding-bottom:72px}
 .ck-cd.cur{box-shadow:inset 0 0 0 2px #E8763F}
 .ck-cd.on.cur{box-shadow:inset 0 0 0 2px #E8763F,0 2px 6px rgba(66,167,108,.28)}
 .ck-cd.empty{background:transparent;cursor:default}
+.ck-cal-toggle{font-size:12px;color:var(--accent-deep);font-weight:700;cursor:pointer;padding:2px 4px}
+.ck-cal-week{gap:5px}
+.ck-wd{text-align:center;font-size:11px;color:var(--dim);padding-bottom:2px}
 .ck-cal-h{display:flex;align-items:center;justify-content:center;gap:16px;margin:6px 16px 5px}
 .ck-cal-h .ck-ym{font-size:13px;font-weight:700;color:var(--txt)}
 .ck-cal-h button{border:0;background:transparent;font-size:19px;line-height:1;color:var(--dim);padding:2px 10px;cursor:pointer}
@@ -4221,10 +4224,28 @@ function ckBadgesHtml(){ // 连续打卡徽章：达到即点亮，不写文字
   return '<div class="ck-badges">'+h+'</div><div class="ck-badge-note">连续打卡 3 / 7 / 14 / 30 / 90 / 180 / 360 / 500 / 1000 天依次点亮</div>';
 }
 var ckCalYM=null; // 日历当前显示的年月（可翻看历史月份）
-function ckCalendarHtml(){ // 打卡日历：可切月份、点日期跳到那天、高亮跟随所选日期
+var ckCalOpen=false; // 默认只显示本周；点「展开月历」显示整月
+function ckCalToggle(){ ckCalOpen=!ckCalOpen; ckShow(); }
+function ckCalendarHtml(){ // 打卡日历：默认本周 7 天，展开为整月；点日期跳到那天、高亮跟随所选日期
   var b=ckBucket(),now=new Date();
   if(!ckCalYM)ckCalYM={y:now.getFullYear(),m:now.getMonth()};
   var y=ckCalYM.y,m=ckCalYM.m;
+  var head='<div class="sec-h"><div class="st-t">打卡日历</div>'
+    +'<span class="ck-cal-toggle" onclick="ckCalToggle()">'+(ckCalOpen?'收起 ▴':'展开月历 ▾')+'</span></div>';
+  if(!ckCalOpen){ /* 周视图：本周一 ~ 本周日 */
+    var wd=new Date(),dow=wd.getDay(),back=(dow===0)?6:(dow-1);
+    wd.setDate(wd.getDate()-back);
+    var labs='',cells='',names=['一','二','三','四','五','六','日'];
+    for(var wi=0;wi<7;wi++){
+      var wds=ckFmtD(wd);
+      labs+='<span class="ck-wd">'+names[wi]+'</span>';
+      cells+='<span class="ck-cd'+(ckDayDone(b,wds)?' on':'')+(wds===ckDate?' cur':'')+'" onclick="ckCalPick(\''+wds+'\')">'+wd.getDate()+'</span>';
+      wd.setDate(wd.getDate()+1);
+    }
+    return '<div class="sec" style="margin-top:14px">'+head
+      +'<div class="ck-cal ck-cal-week">'+labs+'</div>'
+      +'<div class="ck-cal ck-cal-week">'+cells+'</div></div>';
+  }
   var days=new Date(y,m+1,0).getDate();
   var firstDow=new Date(y,m,1).getDay();
   var p2=function(n){return (n<10?'0':'')+n};
@@ -4234,7 +4255,7 @@ function ckCalendarHtml(){ // 打卡日历：可切月份、点日期跳到那�
     var ds=y+'-'+p2(m+1)+'-'+p2(d);
     cells+='<span class="ck-cd'+(ckDayDone(b,ds)?' on':'')+(ds===ckDate?' cur':'')+'" onclick="ckCalPick(\''+ds+'\')">'+d+'</span>';
   }
-  return '<div class="sec" style="margin-top:14px"><div class="sec-h"><div class="st-t">打卡日历</div></div>'
+  return '<div class="sec" style="margin-top:14px">'+head
     +'<div class="ck-cal-h"><button type="button" onclick="ckCalShift(-1)" aria-label="上个月">‹</button>'
     +'<span class="ck-ym">'+y+' 年 '+(m+1)+' 月</span>'
     +'<button type="button" onclick="ckCalShift(1)" aria-label="下个月">›</button></div>'
