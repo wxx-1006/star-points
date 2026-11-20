@@ -26,6 +26,7 @@ try {
     --gap:10px;
   }
   html,body{ margin:0; padding:0; }
+  html,body{ overflow-x:hidden; }
   body{
     background:radial-gradient(900px 520px at 50% -20%, #cfe4f7 0%, rgba(230,241,250,0) 65%),
                radial-gradient(700px 420px at 90% 110%, #d5e9fa 0%, rgba(230,241,250,0) 60%),
@@ -280,26 +281,7 @@ try {
   html.fx-embedded .result .line2{ color:#4A4238; }
   html.fx-embedded .stat.best .v{ color:#C9503F; }
   .cx-cell.wrong{ background:#fde9e7; border-color:var(--bad); animation:shake .28s; }
-  /* 上下排列（传统找不同）：手机竖屏更自然，不需要横向滑动 */
-  .df-wrap{ display:flex; flex-direction:column; gap:10px; min-width:0; }
-  .df-panel{ min-width:0; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:8px; box-shadow:0 4px 16px rgba(31,45,61,.07); }
-  .df-cap{ display:flex; align-items:center; justify-content:center; gap:5px; font-size:11px; font-weight:800; letter-spacing:.5px; color:var(--dim); padding:1px 0 7px; }
-  .df-cap::before{ content:''; width:5px; height:5px; border-radius:50%; background:var(--dim); opacity:.6; }
-  .df-panel.right .df-cap{ color:var(--accent-deep); }
-  .df-panel.right .df-cap::before{ background:var(--accent-deep); opacity:1; }
-  .df-grid{ display:grid; gap:4px; min-width:0; }
-  .df-cell{ min-width:0; position:relative; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
-    font-size:clamp(13px,3.6vw,21px); border-radius:9px; background:#fff;
-    border:1px solid #E9EFF6; box-shadow:0 1px 2px rgba(31,45,61,.04); user-select:none; overflow:hidden;
-    transition:transform .12s ease, background .15s ease, box-shadow .15s ease; }
-  .df-cell:active{ transform:scale(.94); }
-  .df-cell.hit{ background:rgba(88,178,135,.22); border-color:#58b287; box-shadow:inset 0 0 0 2px #58b287; }
-  .df-cell.hit::after{ content:'✓'; position:absolute; top:0; right:3px; font-size:10px; font-weight:900; color:#2f7d5a; line-height:1.3; }
-  .df-cell.wrong{ background:#fde9e7; border-color:var(--bad); animation:shake .28s; }
-  /* 顶部工具栏：难度与统计各占一行，避免横向撑破 */
-  #panel-diff .toolbar{ flex-wrap:wrap; gap:8px; }
-  #panel-diff .toolbar .field{ flex:1 0 100%; }
-  #panel-diff .toolbar .stats{ flex:1 0 100%; margin-top:0; }
+  /* 4×4 / 5×5 左右并排（格子在手机上仍够大）；6×6 上下排列（并排会小到看不清） */
   .mot-stage{ position:relative; height:clamp(240px,42vh,340px); background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
   .mot-ball{ position:absolute; left:0; top:0; border-radius:50%; background:var(--accent); will-change:transform; }
   .mot-ball.target{ background:#e8a33d; box-shadow:0 0 0 4px rgba(232,163,61,.35); }
@@ -317,9 +299,9 @@ try {
     <button class="tab on" data-tab="schulte" type="button">舒尔特</button>
     <button class="tab" data-tab="track" type="button">视觉追踪</button>
     <button class="tab" data-tab="stroop" type="button">色词干扰</button>
+    <button class="tab" data-tab="p24" type="button">24点</button>
     <button class="tab" data-tab="switch" type="button">快速切换</button>
     <button class="tab" data-tab="cancel" type="button">符号划消</button>
-    <button class="tab" data-tab="diff" type="button">找不同</button>
     <button class="tab" data-tab="mot" type="button">多目标追踪</button>
     <button class="tab" data-tab="history" type="button">历史</button>
   </nav>
@@ -554,32 +536,6 @@ try {
 
     <div class="actions">
       <button class="btn primary" id="btnCxRestart" type="button">开始</button>
-    </div>
-  </section>
-
-  <!-- ========== 找不同 ========== -->
-  <section class="panel" id="panel-diff">
-    <div class="toolbar">
-      <div class="field"><span>难度</span>
-        <div class="seg" id="dfLevel">
-          <button class="on" data-l="1" type="button">简单</button>
-          <button data-l="2" type="button">中等</button>
-          <button data-l="3" type="button">困难</button>
-          <button data-l="4" type="button">超难</button>
-        </div>
-      </div>
-      <div class="stats" style="margin:0;flex:1">
-        <div class="stat"><div class="k">用时</div><div class="v" id="dfTimer">--</div></div>
-        <div class="stat"><div class="k">找到</div><div class="v" id="dfFound">0/3</div></div>
-        <div class="stat"><div class="k">错误</div><div class="v" id="dfErrors">0</div></div>
-        <div class="stat best"><div class="k">最佳</div><div class="v" id="dfBest">--</div></div>
-      </div>
-    </div>
-    <p class="hint" id="dfHint">左右两幅图有几处不同，点右图把它们找出来。点错会记错误，慢慢看更划算。</p>
-    <div class="df-wrap" id="dfWrap"></div>
-    <div class="actions">
-      <button class="btn primary" id="btnDfStart" type="button">开始</button>
-      <button class="btn" id="btnDfRestart" type="button" disabled>再来一局</button>
     </div>
   </section>
 
@@ -2517,7 +2473,7 @@ applyFocusVisibility(); /* 孩子端按家长配置过滤可见页签 */
 fitOneScreen(); /* 打开页面即做一屏适配 */
 
 /* ---------- 今日推荐：按类别每日轮换 3 个游戏（注意力/记忆/抑制各 1），点击直达 ---------- */
-const REC_GROUPS = [ ['schulte','track','cancel'], ['stroop','switch'], ['mot','diff'] ];
+const REC_GROUPS = [ ['schulte','track','cancel'], ['stroop','switch'], ['mot','p24'] ];
 function dailyRecList(){
   const now = new Date();
   const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
@@ -2668,124 +2624,6 @@ function finishMot(){
 }
 $('btnMotStart').addEventListener('click', startMot);
 $('btnMotSubmit').addEventListener('click', motSubmit);
-
-/* ========== 找不同：左右两幅 emoji 网格，点出右侧的差异 ========== */
-var DF_EMOJI = ['🍎','🍊','🍇','🍓','🍋','🍉','🥝','🍑','🥕','🌽','🍄','🌻','🐱','🐶','🐼','🦊'];
-/* 相似对：用相近的图形做差异，难度更高（而不是一眼看出换了东西） */
-var DF_PAIRS = [['🍎','🍏'],['🐱','🐶'],['🌻','🌼'],['🥕','🌽'],['🍊','🍋'],['🐼','🐨'],['🦊','🐺'],['🍇','🍓'],['🥝','🍑'],['🍄','🌰'],['🐶','🐕'],['🌷','🌹']];
-function dfRandEmoji(hard){ /* hard 时更高概率取相似对里的图形，保证差异格有"相似替换"可选 */
-  if (hard && Math.random() < 0.75){
-    var p = DF_PAIRS[Math.floor(Math.random() * DF_PAIRS.length)];
-    return p[Math.floor(Math.random() * 2)];
-  }
-  return DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)];
-}
-function dfSimilarOf(ch){
-  for (var i = 0; i < DF_PAIRS.length; i++){
-    var p = DF_PAIRS[i];
-    if (p[0] === ch) return p[1];
-    if (p[1] === ch) return p[0];
-  }
-  return null;
-}
-var dfState = { level: 1, size: 4, need: 3, left: [], right: [], diffSet: {}, found: 0, errors: 0, started: false, finished: false, t0: 0, timerId: null };
-function dfCfg(l){
-  if (l === 4) return { size: 6, need: 9, hard: 1 };   /* 超难：6×6，9 处，全部用相似图形 */
-  if (l === 3) return { size: 6, need: 6, hard: 1 };   /* 困难：6×6，6 处，全部相似 */
-  if (l === 2) return { size: 5, need: 5, hard: 0.5 }; /* 中等：5×5，5 处，一半相似 */
-  return { size: 4, need: 3, hard: 0 };                /* 简单：4×4，3 处 */
-}
-function dfBestKey(){ return 'focus.diff.best.l' + dfState.level; }
-function dfUpdateStats(){
-  const b = loadJSON(dfBestKey());
-  const el = $('dfBest'); if (el) el.textContent = b ? formatTime(b.ms) : '--';
-  const e = $('dfErrors'); if (e) e.textContent = dfState.errors;
-  const f = $('dfFound'); if (f) f.textContent = dfState.found + '/' + dfState.need;
-}
-function dfDeal(){
-  const cfg = dfCfg(dfState.level), n = cfg.size * cfg.size;
-  dfState.size = cfg.size; dfState.need = cfg.need;
-  dfState.left = []; dfState.right = []; dfState.diffSet = {}; dfState.found = 0; dfState.errors = 0;
-  for (let i = 0; i < n; i++) dfState.left.push(dfRandEmoji(cfg.hard));
-  dfState.right = dfState.left.slice();
-  const idx = [];
-  for (let i = 0; i < n; i++) idx.push(i);
-  for (let i = idx.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
-  for (let i = 0; i < cfg.need; i++){
-    const k = idx[i];
-    let nv = cfg.hard ? dfSimilarOf(dfState.right[k]) : null;  /* 优先换成"长得像"的图形 */
-    if (!nv || nv === dfState.right[k]){
-      do { nv = DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)]; } while (nv === dfState.right[k]);
-    }
-    dfState.right[k] = nv; dfState.diffSet[k] = 1;
-  }
-  dfRender(); dfUpdateStats();
-  const t = $('dfTimer'); if (t) t.textContent = '--';
-}
-function dfRender(){
-  const wrap = $('dfWrap'); if (!wrap) return;
-  const cols = dfState.size;
-  const mk = (arr, side, cap) => {
-    let h = '<div class="df-panel' + (side === 'R' ? ' right' : '') + '"><div class="df-cap">' + cap + '</div>'
-      + '<div class="df-grid" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">';
-    for (let i = 0; i < arr.length; i++){
-      h += '<button type="button" class="df-cell" data-i="' + i + '" data-side="' + side + '">' + arr[i] + '</button>';
-    }
-    return h + '</div></div>';
-  };
-  wrap.innerHTML = mk(dfState.left, 'L', '原图') + mk(dfState.right, 'R', '找不同');
-}
-function finishDiff(){
-  dfState.finished = true;
-  if (dfState.timerId){ clearInterval(dfState.timerId); dfState.timerId = null; }
-  const cost = performance.now() - dfState.t0;
-  $('dfTimer').textContent = formatTime(cost);
-  $('btnDfRestart').disabled = false;
-  const prev = loadJSON(dfBestKey());
-  const r = timingResult(prev, cost, dfState.errors);
-  if (r.isNew) saveJSON(dfBestKey(), { ms: cost, errors: dfState.errors, at: Date.now() });
-  dfUpdateStats();
-  const ach = recordHistory('diff', cost, '错误 ' + dfState.errors + ' 次 · ' + dfState.size + '×' + dfState.size + ' · ' + dfState.need + ' 处', r.isNew, dfState.errors <= 2);
-  showResult('全部找到了！用时 ' + formatTime(cost),
-    '错误 ' + dfState.errors + ' 次 · ' + dfState.size + '×' + dfState.size + ' · ' + r.cmp + (ach ? ' · ' + ach : ''),
-    r.isNew,
-    startDiff);
-}
-function startDiff(){
-  dfDeal();
-  dfState.started = true; dfState.finished = false;
-  $('btnDfRestart').disabled = true;
-  dfState.t0 = performance.now();
-  if (dfState.timerId) clearInterval(dfState.timerId);
-  dfState.timerId = setInterval(function(){ $('dfTimer').textContent = formatTime(performance.now() - dfState.t0); }, 200);
-}
-$('dfLevel').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-l]'); if (!b) return;
-  dfState.level = parseInt(b.dataset.l, 10);
-  $('dfLevel').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
-  if (!dfState.started) dfDeal();
-  dfUpdateStats();
-});
-$('dfWrap').addEventListener('click', (e) => {
-  const c = e.target.closest('.df-cell'); if (!c) return;
-  if (!dfState.started || dfState.finished) return;
-  if (c.dataset.side !== 'R'){ toast('请点右边的图哦'); return; }
-  const i = parseInt(c.dataset.i, 10);
-  if (dfState.diffSet[i] && !c.classList.contains('hit')){
-    c.classList.add('hit');
-    dfState.found++;
-    dfUpdateStats();
-    if (dfState.found >= dfState.need) finishDiff();
-  } else if (!dfState.diffSet[i]){
-    dfState.errors++;
-    dfUpdateStats();
-    c.classList.remove('wrong'); void c.offsetWidth; c.classList.add('wrong');
-    setTimeout(() => c.classList.remove('wrong'), 300);
-  }
-});
-$('btnDfStart').addEventListener('click', startDiff);
-$('btnDfRestart').addEventListener('click', startDiff);
-dfDeal();
 
 renderDailyRec();
 
