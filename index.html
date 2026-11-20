@@ -4247,8 +4247,9 @@ function ckCalendarHtml(){ // 打卡日历：默认本周 7 天，展开为整�
       +'<div class="ck-cal ck-cal-week">'+cells+'</div></div>';
   }
   var days=new Date(y,m+1,0).getDate();
-  var firstDow=new Date(y,m,1).getDay();
+  var firstDow=(new Date(y,m,1).getDay()+6)%7; /* 0=周一：与周视图、盲盒统计口径一致（周一为一周首日） */
   var p2=function(n){return (n<10?'0':'')+n};
+  var weekHead='<div class="ck-cal ck-cal-week"><span class="ck-wd">一</span><span class="ck-wd">二</span><span class="ck-wd">三</span><span class="ck-wd">四</span><span class="ck-wd">五</span><span class="ck-wd">六</span><span class="ck-wd">日</span></div>';
   var cells='';
   for(var i=0;i<firstDow;i++)cells+='<span class="ck-cd empty"></span>';
   for(var d=1;d<=days;d++){
@@ -4259,6 +4260,7 @@ function ckCalendarHtml(){ // 打卡日历：默认本周 7 天，展开为整�
     +'<div class="ck-cal-h"><button type="button" onclick="ckCalShift(-1)" aria-label="上个月">‹</button>'
     +'<span class="ck-ym">'+y+' 年 '+(m+1)+' 月</span>'
     +'<button type="button" onclick="ckCalShift(1)" aria-label="下个月">›</button></div>'
+    +weekHead
     +'<div class="ck-cal">'+cells+'</div></div>';
 }
 function ckCalShift(n){ // 翻月（上/下）
@@ -4273,7 +4275,7 @@ function ckCalPick(ds){ // 点日历某天：下方任务列表切到该日期
   ckShow();
 }
 /* 满勤盲盒：上周（周一~周日）7 天全完成 → 本周可抽一次（家长端操作，孩子端只提示） */
-function ckLastWeekFull(){
+function ckLastWeekFull(){ // 上周 = 周一为首日的 7 天（周一~周日），与日历展示口径一致
   var b=ckBucket(),d=new Date(),dow=d.getDay();
   var back=(dow===0)?7:dow;
   d.setDate(d.getDate()-back-6); // 上周一

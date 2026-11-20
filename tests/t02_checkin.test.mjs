@@ -320,8 +320,9 @@ test('日历：默认只显示本周 7 天，点击展开显示整月', async ()
   assert.equal(w.ckCalOpen, true);
   const monthHtml = w.ckCalendarHtml();
   const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  const blanks = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay();
-  assert.equal((monthHtml.match(/class="ck-cd/g) || []).length, daysInMonth + blanks, '月视图含当月全部日期与前置空格');
+  const blanks = (new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() + 6) % 7; /* 周一起始 */
+  assert.equal((monthHtml.match(/class="ck-cd/g) || []).length, daysInMonth + blanks, '月视图含当月全部日期与周一起始的前置空格');
+  assert.ok(monthHtml.includes('>一<') && monthHtml.includes('>日<'), '月视图应有周一~周日表头');
   assert.ok(monthHtml.includes('收起'), '应有收起入口');
   w.ckCalToggle();
   assert.equal((w.ckCalendarHtml().match(/class="ck-cd/g) || []).length, 7, '再点收起回周视图');
