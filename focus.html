@@ -558,6 +558,7 @@ try {
           <button class="on" data-l="1" type="button">简单</button>
           <button data-l="2" type="button">中等</button>
           <button data-l="3" type="button">困难</button>
+          <button data-l="4" type="button">超难</button>
         </div>
       </div>
       <div class="stats" style="margin:0;flex:1">
@@ -2663,8 +2664,30 @@ $('btnMotSubmit').addEventListener('click', motSubmit);
 
 /* ========== 找不同：左右两幅 emoji 网格，点出右侧的差异 ========== */
 var DF_EMOJI = ['🍎','🍊','🍇','🍓','🍋','🍉','🥝','🍑','🥕','🌽','🍄','🌻','🐱','🐶','🐼','🦊'];
+/* 相似对：用相近的图形做差异，难度更高（而不是一眼看出换了东西） */
+var DF_PAIRS = [['🍎','🍏'],['🐱','🐶'],['🌻','🌼'],['🥕','🌽'],['🍊','🍋'],['🐼','🐨'],['🦊','🐺'],['🍇','🍓'],['🥝','🍑'],['🍄','🌰'],['🐶','🐕'],['🌷','🌹']];
+function dfRandEmoji(hard){ /* hard 时更高概率取相似对里的图形，保证差异格有"相似替换"可选 */
+  if (hard && Math.random() < 0.75){
+    var p = DF_PAIRS[Math.floor(Math.random() * DF_PAIRS.length)];
+    return p[Math.floor(Math.random() * 2)];
+  }
+  return DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)];
+}
+function dfSimilarOf(ch){
+  for (var i = 0; i < DF_PAIRS.length; i++){
+    var p = DF_PAIRS[i];
+    if (p[0] === ch) return p[1];
+    if (p[1] === ch) return p[0];
+  }
+  return null;
+}
 var dfState = { level: 1, size: 4, need: 3, left: [], right: [], diffSet: {}, found: 0, errors: 0, started: false, finished: false, t0: 0, timerId: null };
-function dfCfg(l){ return l === 3 ? { size: 6, need: 5 } : l === 2 ? { size: 5, need: 4 } : { size: 4, need: 3 }; }
+function dfCfg(l){
+  if (l === 4) return { size: 6, need: 9, hard: 1 };   /* 超难：6×6，9 处，全部用相似图形 */
+  if (l === 3) return { size: 6, need: 6, hard: 1 };   /* 困难：6×6，6 处，全部相似 */
+  if (l === 2) return { size: 5, need: 5, hard: 0.5 }; /* 中等：5×5，5 处，一半相似 */
+  return { size: 4, need: 3, hard: 0 };                /* 简单：4×4，3 处 */
+}
 function dfBestKey(){ return 'focus.diff.best.l' + dfState.level; }
 function dfUpdateStats(){
   const b = loadJSON(dfBestKey());
@@ -2676,14 +2699,17 @@ function dfDeal(){
   const cfg = dfCfg(dfState.level), n = cfg.size * cfg.size;
   dfState.size = cfg.size; dfState.need = cfg.need;
   dfState.left = []; dfState.right = []; dfState.diffSet = {}; dfState.found = 0; dfState.errors = 0;
-  for (let i = 0; i < n; i++) dfState.left.push(DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)]);
+  for (let i = 0; i < n; i++) dfState.left.push(dfRandEmoji(cfg.hard));
   dfState.right = dfState.left.slice();
   const idx = [];
   for (let i = 0; i < n; i++) idx.push(i);
   for (let i = idx.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
   for (let i = 0; i < cfg.need; i++){
-    const k = idx[i]; let nv = DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)];
-    while (nv === dfState.right[k]) nv = DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)];
+    const k = idx[i];
+    let nv = cfg.hard ? dfSimilarOf(dfState.right[k]) : null;  /* 优先换成"长得像"的图形 */
+    if (!nv || nv === dfState.right[k]){
+      do { nv = DF_EMOJI[Math.floor(Math.random() * DF_EMOJI.length)]; } while (nv === dfState.right[k]);
+    }
     dfState.right[k] = nv; dfState.diffSet[k] = 1;
   }
   dfRender(); dfUpdateStats();

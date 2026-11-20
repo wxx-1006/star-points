@@ -119,10 +119,10 @@ test('专注页：24点/记忆翻牌/空间方块页签已移除', async () => {
 
 test('找不同：生成左右网格且差异数与难度一致', async () => {
   const w = await loadFocus();
-  [1, 2, 3].forEach((lv) => {
+  [1, 2, 3, 4].forEach((lv) => {
     w.dfState.level = lv;
     w.dfDeal();
-    const cfg = lv === 3 ? { size: 6, need: 5 } : lv === 2 ? { size: 5, need: 4 } : { size: 4, need: 3 };
+    const cfg = lv === 4 ? { size: 6, need: 9 } : lv === 3 ? { size: 6, need: 6 } : lv === 2 ? { size: 5, need: 5 } : { size: 4, need: 3 };
     assert.equal(w.dfState.size, cfg.size, '尺寸正确');
     assert.equal(w.dfState.need, cfg.need, '差异数正确');
     const diffs = Object.keys(w.dfState.diffSet).length;
