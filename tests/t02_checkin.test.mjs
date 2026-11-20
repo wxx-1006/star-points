@@ -299,10 +299,12 @@ test('盲盒：按家长配置的奖励池抽取（不再硬编码 5/10/20）', 
   assert.equal(r.name, '宠物零食一份', '采用配置的名称');
 });
 
-test('打卡页：日期导航已移除（改由日历选日期）', async () => {
+test('打卡页：顶部日期/进度/统计整块已移除（改由日历选日期）', async () => {
   const w = await setup();
   w.ckShow();
   const html = w.document.getElementById('ckList').innerHTML;
   assert.ok(!html.includes('ck-nav'), '不应再有 ‹ 日期 › 导航');
-  assert.ok(html.includes('ck-day-title'), '保留一行日期提示');
+  assert.ok(!html.includes('ck-day-title'), '日期标题已移除');
+  assert.ok(!html.includes('ck-prog'), '进度条已移除');
+  assert.ok(!html.includes('ck-sum'), '完成/已得统计行已移除');
 });
