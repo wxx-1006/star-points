@@ -4484,13 +4484,15 @@ function fxVisSave(){
   toast(tabs.length?('已开放 '+tabs.length+' 个练习给孩子端'):'已对孩子端隐藏全部练习','ok');
 }
 // —— 操作 ——
+var CK_CHEERS=['太棒了','做得真棒','今天又坚持啦','你真厉害','继续保持','为你点赞','好样的','自律小达人']; // 孩子提交打卡后的随机鼓励语
 function ckClaim(ds,id){ // 孩子端：我已完成（=申请，不计完成，待家长确认）
   if(sessionRole!=='kid')return;
   var b=ckBucket(),st=(b[ds]&&b[ds][id])||{};
   if(st.d)return;
   b[ds]=b[ds]||{};b[ds][id]={c:1,d:0,r:st.r||0,dd:today(),t:Date.now()}; /* dd=实际申请日：周末任务两天共用状态，加分记实际完成日 */
   ckSaveBucket(b);ckQueue();ckShow();
-  toast('已申请完成，等家长确认哦~','ok');
+  var cheer=CK_CHEERS[Math.floor(Math.random()*CK_CHEERS.length)];
+  toast(cheer+'！已申请完成，等家长确认哦~','ok');
 }
 function ckConfirm(ds,id){ // 家长端：确认完成（可不经孩子申请直接确认）→ 完成 + 发放 +5 分
   if(sessionRole!=='parent')return;
