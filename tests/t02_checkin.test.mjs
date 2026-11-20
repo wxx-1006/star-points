@@ -152,3 +152,67 @@ test('激励：徽章在打卡页渲染（含连续天数与鼓励语）', async
   assert.ok(html.includes('已连续打卡'), '应显示连续天数');
   assert.ok(html.includes('本周完成'), '应显示本周完成天数');
 });
+
+test('日历墙：当月每天一格，完成日点亮', async () => {
+  const w = await setup();
+  const b = w.ckBucket();
+  b[w.today()] = b[w.today()] || {};
+  b[w.today()]['6'] = { c: 1, d: 1, r: 1, t: Date.now() };
+  w.ckSaveBucket(b);
+  const html = w.ckCalendarHtml();
+  assert.ok(html.includes('ck-cal'), '应渲染日历网格');
+  assert.ok(html.includes('ck-day on'), '完成日应点亮');
+  assert.ok(html.includes('today'), '今天应有标记');
+});
+
+test('里程碑徽章：连续天数达标即点亮', async () => {
+  const w = await setup();
+  const b = w.ckBucket();
+  for (const off of [0, 1, 2]) {
+    const ds = w.ckAddDays(w.today(), -off);
+    b[ds] = b[ds] || {};
+    b[ds]['6'] = { c: 1, d: 1, r: 1, t: Date.now() };
+  }
+  w.ckSaveBucket(b);
+  const html = w.ckBadgesHtml();
+  const onCount = (html.match(/ck-badge on/g) || []).length;
+  assert.equal(onCount, 1, '连续 3 天只点亮第一个徽章（3 天档）');
+});
+
+test('满勤盲盒：上周 7 天全完成才可抽，抽一次后标记本周已抽', async () => {
+  const w = await setup('parent');
+  const b = w.ckBucket();
+  const d = new Date();
+  const dow = d.getDay();
+  const back = dow === 0 ? 7 : dow;
+  d.setDate(d.getDate() - back - 6); /* 上周一 */
+  for (let i = 0; i < 7; i++) {
+    const ds = w.ckFmtD(d);
+    b[ds] = b[ds] || {};
+    b[ds]['6'] = { c: 1, d: 1, r: 1, t: Date.now() };
+    d.setDate(d.getDate() + 1);
+  }
+  w.ckSaveBucket(b);
+  assert.equal(w.ckLastWeekFull(), true, '上周全勤');
+  w.ckBlindboxOpen();
+  const blind = w.ad.records.filter((r) => r.itemId === 'ck_blindbox');
+  assert.equal(blind.length, 1, '应写入一条盲盒流水');
+  assert.ok([5, 10, 20].includes(blind[0].score), '奖励为 5/10/20 之一');
+  assert.equal(w.ad.ckBlindWeek, w.ckWeekTag(), '标记本周已抽');
+  w.ckBlindboxOpen();
+  assert.equal(w.ad.records.filter((r) => r.itemId === 'ck_blindbox').length, 1, '重复抽应被拦截');
+});
+
+test('满勤盲盒：上周未全勤不可抽', async () => {
+  const w = await setup('parent');
+  assert.equal(w.ckLastWeekFull(), false);
+  w.ckBlindboxOpen();
+  assert.equal(w.ad.records.filter((r) => r.itemId === 'ck_blindbox').length, 0);
+});
+
+test('满勤盲盒：孩子端不能抽（只能提示家长）', async () => {
+  const w = await setup('kid');
+  w.ad.ckBlindWeek = undefined;
+  w.ckBlindboxOpen();
+  assert.equal(w.ad.records.filter((r) => r.itemId === 'ck_blindbox').length, 0);
+});

@@ -674,6 +674,14 @@ body.kid-mode{padding-bottom:72px}
 .ck-motivate{margin:10px 16px 0;padding:8px 12px;border-radius:12px;background:rgba(255,205,90,.16);border:1px solid rgba(255,205,90,.42);color:var(--txt);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ck-motivate b{color:var(--red-deep)}
 .ck-motivate-msg{font-weight:600;color:var(--dim)}
+.ck-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:2px 16px 0}
+.ck-day{height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;border-radius:6px;background:var(--card2);color:var(--dim)}
+.ck-day.on{background:rgba(90,170,120,.55);color:#fff;font-weight:700}
+.ck-day.today{outline:2px solid var(--red-deep);outline-offset:-2px}
+.ck-day.empty{background:transparent}
+.ck-badges{display:flex;gap:8px;margin:10px 16px 0}
+.ck-badge{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--card2);font-size:17px;filter:grayscale(1);opacity:.45}
+.ck-badge.on{filter:none;opacity:1;background:rgba(255,205,90,.22);border:1px solid rgba(255,205,90,.5)}
 .ck-bar{flex:1;height:9px;border-radius:99px;background:#F0EADF;overflow:hidden}
 .ck-bar i{display:block;height:100%;border-radius:99px;background:#7FC26E;transition:width .3s}
 .ck-pct{font:800 13px/1 var(--ff);color:#5B8A4E;min-width:40px;text-align:right}
@@ -3045,7 +3053,7 @@ function deleteRecord(id){
   if(!r)return;
   // 系统流水不可删除：答题奖励 / 连续打卡里程碑奖励 / 购买补签卡 / 每日打卡确认奖励 / 全勤奖励
   // （删除会破坏对应业务状态：奖励已发放、打卡已达成、补签卡已入库，故一律拦截）
-  if(r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward'||r.itemId==='ck_bonus'||r.itemId==='ck_must'||r.itemId==='ck_must_bonus'||r.itemId==='ck_makeup'){toast('系统积分流水不可删除','err');return}
+  if(r.itemId==='quiz_reward'||r.itemId==='quiz_streak_reward'||r.itemId==='quiz_card_buy'||r.itemId==='ck_reward'||r.itemId==='ck_bonus'||r.itemId==='ck_must'||r.itemId==='ck_must_bonus'||r.itemId==='ck_makeup'||r.itemId==='ck_blindbox'){toast('系统积分流水不可删除','err');return}
   var sign=r.score>0?'+':'';
   var action=r.score>0?'减少':'增加';
   sc2('删除记录','删除「'+r.name+'」('+sign+r.score+'分)？总分将'+action+Math.abs(r.score)+'分。',function(){
@@ -4186,6 +4194,64 @@ function ckWeekDone(){ // 本周（周一至今）完成的天数
   }
   return n;
 }
+var CK_MILESTONES=[{d:3,icon:'🌱'},{d:7,icon:'⭐'},{d:14,icon:'🔥'},{d:30,icon:'🏆'}]; // 里程碑徽章（纯视觉）
+function ckBadgesHtml(){ // 连续打卡徽章：达到即点亮，不写文字
+  var st=ckStreak(),h='';
+  for(var i=0;i<CK_MILESTONES.length;i++){
+    var m=CK_MILESTONES[i];
+    h+='<span class="ck-badge'+(st>=m.d?' on':'')+'" title="连续打卡 '+m.d+' 天">'+m.icon+'</span>';
+  }
+  return '<div class="ck-badges">'+h+'</div>';
+}
+function ckCalendarHtml(){ // 本月打卡日历墙：完成日点亮（纯视觉，"不断链"动力）
+  var b=ckBucket(),now=new Date(),y=now.getFullYear(),m=now.getMonth();
+  var days=new Date(y,m+1,0).getDate();
+  var firstDow=new Date(y,m,1).getDay();
+  var p2=function(n){return (n<10?'0':'')+n};
+  var cells='';
+  for(var i=0;i<firstDow;i++)cells+='<span class="ck-day empty"></span>';
+  for(var d=1;d<=days;d++){
+    var ds=y+'-'+p2(m+1)+'-'+p2(d);
+    cells+='<span class="ck-day'+(ckDayDone(b,ds)?' on':'')+(d===now.getDate()?' today':'')+'">'+d+'</span>';
+  }
+  return '<div class="sec" style="margin-top:14px"><div class="sec-h"><div class="st-t">'+(m+1)+' 月打卡</div></div>'
+    +'<div class="ck-cal">'+cells+'</div></div>';
+}
+/* 满勤盲盒：上周（周一~周日）7 天全完成 → 本周可抽一次（家长端操作，孩子端只提示） */
+function ckLastWeekFull(){
+  var b=ckBucket(),d=new Date(),dow=d.getDay();
+  var back=(dow===0)?7:dow;
+  d.setDate(d.getDate()-back-6); // 上周一
+  for(var i=0;i<7;i++){
+    if(!ckDayDone(b,ckFmtD(d)))return false;
+    d.setDate(d.getDate()+1);
+  }
+  return true;
+}
+function ckWeekTag(){
+  var d=new Date(),y=d.getFullYear();
+  var start=new Date(y,0,1);
+  var week=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);
+  return y+'-W'+week;
+}
+function ckBlindboxHtml(){
+  if(!ckLastWeekFull())return '';
+  var w=ckWeekTag();
+  if(ad&&ad.ckBlindWeek===w)return '<div class="sync-hint" style="margin:10px 16px 0">🎁 上周全勤，盲盒已抽过啦</div>';
+  if(sessionRole!=='parent')return '<div class="sync-hint" style="margin:10px 16px 0">🎁 上周全勤达成！让家长帮你抽盲盒吧</div>';
+  return '<div style="margin:10px 16px 0"><button class="bn bn-p" style="height:42px;width:100%" onclick="ckBlindboxOpen()">🎁 抽全勤盲盒（上周全勤）</button></div>';
+}
+function ckBlindboxOpen(){ // 家长端抽盲盒：随机 +5/+10/+20，写入系统流水（不可删）
+  if(sessionRole!=='parent')return;
+  if(!ckLastWeekFull()){toast('上周未全勤，暂无盲盒','err');return}
+  var w=ckWeekTag();
+  if(ad.ckBlindWeek===w){toast('本周盲盒已抽过','err');return}
+  var pts=[5,10,20][Math.floor(Math.random()*3)];
+  ad.records.push({id:'ckb_'+w,date:today(),timestamp:Date.now(),type:'up',itemId:'ck_blindbox',name:'满勤盲盒',category:'打卡',score:pts,note:'上周全勤奖励（随机 '+pts+' 分）'});
+  ad.ckBlindWeek=w;
+  sd(ad);render();ckShow();
+  toast('🎁 抽到 +'+pts+' 分！','ok');
+}
 function ckMotivate(){ // 正向激励徽章：连续打卡天数 + 本周完成天数
   var st=ckStreak(),wk=ckWeekDone();
   if(!st&&!wk)return '';
@@ -4721,7 +4787,10 @@ function ckShow(){
   var pct=Math.round(done/tasks.length*100);
   html+='<div class="ck-prog"><div class="ck-bar"><i style="width:'+pct+'%"></i></div><span class="ck-pct">'+pct+'%</span></div>'
     +'<div class="ck-sum">完成 <b>'+done+'</b>/'+tasks.length+' 项 · 已得 <b>'+earned+'</b> 分'+(hasBonus?'<span class="ck-bn">（含全勤 +20）</span>':'')+'</div>'
-    +ckMotivate();
+    +ckMotivate()
+    +ckBadgesHtml()
+    +ckCalendarHtml()
+    +ckBlindboxHtml();
   for(i=0;i<tasks.length;i++){
     var t=tasks[i],k=ckKeyFor(ckDate,t),st=(b[k]&&b[k][t.id])||{};
     var sm=CK_SUBJ[t.subj]||CK_SUBJ.other;

@@ -53,10 +53,9 @@ test('专注页：timingResult 准确优先 + 与最佳对比', async () => {
 test('专注页：今日推荐按三类每日轮换，点击可直达对应游戏', async () => {
   const w = await loadFocus();
   const rec = w.dailyRecList();
-  assert.equal(rec.length, 3);
+  assert.equal(rec.length, 2, '记忆/数学类已移出专注页，推荐为注意力 + 抑制两类');
   assert.ok(['schulte', 'track', 'cancel'].includes(rec[0]));
-  assert.ok(['memory', 'corsi'].includes(rec[1]));
-  assert.ok(['stroop', 'switch'].includes(rec[2]));
+  assert.ok(['stroop', 'switch'].includes(rec[1]));
   const box = w.document.getElementById('dailyRec');
   assert.equal(box.hidden, false);
   const chip = box.querySelector('.dr-chip');
@@ -105,4 +104,14 @@ test('专注页：连续达标成就——3局达标解锁、未达标清零', a
   assert.ok(w.maybeAchieve(true).includes('连续 3 局达标'), '第 3 局应解锁成就');
   assert.equal(w.maybeAchieve(false), '', '未达标应清零且无成就');
   assert.equal(w.maybeAchieve(true), '', '清零后重新计数');
+});
+
+
+test('专注页：24点/记忆翻牌/空间方块页签已移除', async () => {
+  const w = await loadFocus();
+  const tabs = [...w.document.querySelectorAll('#tabs .tab')].map((b) => b.dataset.tab);
+  assert.ok(!tabs.includes('p24'), '24点应移出');
+  assert.ok(!tabs.includes('memory'), '记忆翻牌应移出');
+  assert.ok(!tabs.includes('corsi'), '空间方块应移出');
+  assert.ok(tabs.includes('schulte') && tabs.includes('track') && tabs.includes('cancel') && tabs.includes('stroop') && tabs.includes('switch'));
 });

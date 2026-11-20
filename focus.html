@@ -291,9 +291,6 @@ try {
     <button class="tab on" data-tab="schulte" type="button">舒尔特</button>
     <button class="tab" data-tab="track" type="button">视觉追踪</button>
     <button class="tab" data-tab="stroop" type="button">色词干扰</button>
-    <button class="tab" data-tab="p24" type="button">24点</button>
-    <button class="tab" data-tab="memory" type="button">记忆翻牌</button>
-    <button class="tab" data-tab="corsi" type="button">空间方块</button>
     <button class="tab" data-tab="switch" type="button">快速切换</button>
     <button class="tab" data-tab="cancel" type="button">符号划消</button>
     <button class="tab" data-tab="history" type="button">历史</button>
@@ -2449,11 +2446,11 @@ applyFocusVisibility(); /* 孩子端按家长配置过滤可见页签 */
 fitOneScreen(); /* 打开页面即做一屏适配 */
 
 /* ---------- 今日推荐：按类别每日轮换 3 个游戏（注意力/记忆/抑制各 1），点击直达 ---------- */
-const REC_GROUPS = [ ['schulte','track','cancel'], ['memory','corsi'], ['stroop','switch'] ];
+const REC_GROUPS = [ ['schulte','track','cancel'], ['stroop','switch'] ];
 function dailyRecList(){
   const now = new Date();
   const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-  return [ REC_GROUPS[0][doy % REC_GROUPS[0].length], REC_GROUPS[1][doy % REC_GROUPS[1].length], REC_GROUPS[2][doy % REC_GROUPS[2].length] ];
+  return REC_GROUPS.map(function(g){ return g[doy % g.length]; }); /* 每类每日轮换 1 个 */
 }
 function renderDailyRec(){
   const host = $('dailyRec');
