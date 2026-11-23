@@ -4435,16 +4435,24 @@ function ckLastWeekFull(){ // 上周 = 周一为首日的 7 天（周一~周日�
   }
   return true;
 }
-function ckWeekTag(){
-  var d=new Date(),y=d.getFullYear();
-  var start=new Date(y,0,1);
-  var week=Math.ceil(((d-start)/86400000+start.getDay()+1)/7);
-  return y+'-W'+week;
+function ckWeekTagOf(date){ // ISO 周：周一为首日、周四决定所属年（跨年也正确）
+  var t=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
+  var day=t.getUTCDay()||7; /* 周日=7 */
+  t.setUTCDate(t.getUTCDate()+4-day); /* 移到本周四 */
+  var yearStart=new Date(Date.UTC(t.getUTCFullYear(),0,1));
+  var week=Math.ceil((((t-yearStart)/86400000)+1)/7);
+  return t.getUTCFullYear()+'-W'+String(week).padStart(2,'0');
+}
+function ckWeekTag(){ return ckWeekTagOf(new Date()); }
+function ckBlindIsThisWeek(){ // 本周是否已抽过盲盒：优先用抽取时间戳判断（绝对准确，不受周编号算法变更影响）
+  if(!ad)return false;
+  if(ad.ckBlindAt)return ckWeekTagOf(new Date(ad.ckBlindAt))===ckWeekTag();
+  return ad.ckBlindWeek===ckWeekTag(); /* 老数据没有时间戳时退回周标记 */
 }
 function ckBlindboxHtml(){
   if(!ckLastWeekFull())return '';
   var w=ckWeekTag();
-  if(ad&&ad.ckBlindWeek===w)return '<div class="sync-hint" style="margin:10px 16px 0">🎁 上周全勤，盲盒已抽过啦</div>';
+  if(ckBlindIsThisWeek())return '<div class="sync-hint" style="margin:10px 16px 0">🎁 上周全勤，盲盒已抽过啦</div>';
   if(sessionRole!=='parent')return '<div class="sync-hint" style="margin:10px 16px 0">🎁 上周全勤达成！让家长帮你抽盲盒吧</div>';
   return '<div style="margin:10px 16px 0"><button class="bn bn-p" style="height:42px;width:100%" onclick="ckBlindboxOpen()">🎁 抽全勤盲盒（上周全勤）</button></div>';
 }
@@ -4497,7 +4505,7 @@ function ckBlindboxOpen(){ // 家长端抽盲盒：从配置的奖励池随机�
   if(sessionRole!=='parent')return;
   if(!ckLastWeekFull()){toast('上周未全勤，暂无盲盒','err');return}
   var w=ckWeekTag();
-  if(ad.ckBlindWeek===w){toast('本周盲盒已抽过','err');return}
+  if(ckBlindIsThisWeek()){toast('本周盲盒已抽过','err');return}
   var pool=ckBlindPool(),pick=pool[Math.floor(Math.random()*pool.length)];
   var pts=parseInt(pick.p,10)||0;
   if(pts<=0){toast('盲盒奖励未配置有效分值','err');return}

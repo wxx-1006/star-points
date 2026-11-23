@@ -381,3 +381,37 @@ test('自愈：连退役快照都没有时，按默认分值兜底补回（不�
   assert.ok(r, '兜底补回');
   assert.ok(r.score > 0, '分值大于 0');
 });
+
+test('周标记：周日与次周一属于不同周（修复周日抽盲盒周一仍显示已抽）', async () => {
+  const w = await setup();
+  assert.equal(w.ckWeekTagOf(new Date('2026-11-22T12:00:00')), '2026-W47', '周日属 W47');
+  assert.equal(w.ckWeekTagOf(new Date('2026-11-23T12:00:00')), '2026-W48', '周一应进入新周 W48');
+  assert.notEqual(
+    w.ckWeekTagOf(new Date('2026-11-22T12:00:00')),
+    w.ckWeekTagOf(new Date('2026-11-23T12:00:00')),
+    '周日和周一不能是同一周'
+  );
+  /* 跨年也应正确 */
+  assert.equal(w.ckWeekTagOf(new Date('2026-12-31T12:00:00')), '2026-W53');
+  assert.equal(w.ckWeekTagOf(new Date('2027-01-04T12:00:00')), '2027-W01');
+});
+
+test('盲盒：上周日抽过，本周一应判定为「本周未抽」可再抽', async () => {
+  const w = await setup();
+  /* 模拟上周日（2026-11-22）抽过：ckBlindAt 是上周日的时间戳 */
+  w.ad.ckBlindAt = new Date('2026-11-22T12:00:00').getTime();
+  w.ad.ckBlindWeek = '2026-W47';
+  /* 把当前时间固定到本周一（2026-11-23）来判定 */
+  const RealDate = w.Date;
+  function MockDate(...args){
+    if (args.length === 0) return new RealDate('2026-11-23T12:00:00');
+    return new RealDate(...args);
+  }
+  MockDate.UTC = RealDate.UTC;
+  MockDate.now = () => new RealDate('2026-11-23T12:00:00').getTime();
+  MockDate.parse = RealDate.parse;
+  MockDate.prototype = RealDate.prototype;
+  w.Date = MockDate;
+  assert.equal(w.ckBlindIsThisWeek(), false, '新的一周应可重新抽盲盒，不再显示「已抽过」');
+  w.Date = RealDate;
+});
