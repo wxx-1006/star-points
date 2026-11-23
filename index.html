@@ -4444,17 +4444,18 @@ function ckWeekTagOf(date){ // ISO 周：周一为首日、周四决定所属年
   return t.getUTCFullYear()+'-W'+String(week).padStart(2,'0');
 }
 function ckWeekTag(){ return ckWeekTagOf(new Date()); }
-function ckBlindIsThisWeek(){ // 本周是否已抽过盲盒：优先用抽取时间戳判断（绝对准确，不受周编号算法变更影响）
-  if(!ad)return false;
-  if(ad.ckBlindAt)return ckWeekTagOf(new Date(ad.ckBlindAt))===ckWeekTag();
-  return ad.ckBlindWeek===ckWeekTag(); /* 老数据没有时间戳时退回周标记 */
+function ckBlindIsThisWeek(){ // 本周是否已抽过盲盒：账本时间戳优先（家长端），其次打卡桶标记（孩子端抽的会写这里），最后老周标记
+  var tw=ckWeekTag();
+  if(ad&&ad.ckBlindAt)return ckWeekTagOf(new Date(ad.ckBlindAt))===tw;
+  var bm=(ckBucket()._blind)||null;
+  if(bm&&bm.at)return ckWeekTagOf(new Date(bm.at))===tw;
+  return !!(ad&&ad.ckBlindWeek===tw); /* 老数据没有时间戳时退回周标记 */
 }
 function ckBlindboxHtml(){
   if(!ckLastWeekFull())return '';
   var w=ckWeekTag();
   if(ckBlindIsThisWeek())return '<div class="sync-hint" style="margin:10px 16px 0">🎁 上周全勤，盲盒已抽过啦</div>';
-  if(sessionRole!=='parent')return '<div class="sync-hint" style="margin:10px 16px 0">🎁 上周全勤达成！让家长帮你抽盲盒吧</div>';
-  return '<div style="margin:10px 16px 0"><button class="bn bn-p" style="height:42px;width:100%" onclick="ckBlindboxOpen()">🎁 抽全勤盲盒（上周全勤）</button></div>';
+  return '<div style="margin:10px 16px 0"><button class="bn bn-p" style="height:42px;width:100%" onclick="ckBlindboxOpen()">🎁 抽全勤盲盒（上周全勤）</button></div>'; /* 家长端和孩子端都能自己抽 */
 }
 function ckBlindPool(){ // 盲盒奖励池（家长端可在设置页配置；未配置时用默认）
   var p=(ad&&ad.ckBlindPool);
@@ -4501,20 +4502,30 @@ function ckBlindPoolSave(){
   ad.ckBlindPool=pool;sd(ad);ckBlindPoolRender();
   toast('盲盒奖励已保存（共 '+pool.length+' 项）','ok');
 }
-function ckBlindboxOpen(){ // 家长端抽盲盒：从配置的奖励池随机一项，写入系统流水（不可删）
-  if(sessionRole!=='parent')return;
+function ckBlindboxOpen(){ // 抽盲盒：家长端直接写账本；孩子端写打卡桶标记（孩子端不写账本），家长端加载时自动兑现成积分
+  if(!sessionRole||!currentUser){toast('请先登录','err');return}
   if(!ckLastWeekFull()){toast('上周未全勤，暂无盲盒','err');return}
-  var w=ckWeekTag();
   if(ckBlindIsThisWeek()){toast('本周盲盒已抽过','err');return}
+  var w=ckWeekTag();
   var pool=ckBlindPool(),pick=pool[Math.floor(Math.random()*pool.length)];
   var pts=parseInt(pick.p,10)||0;
   if(pts<=0){toast('盲盒奖励未配置有效分值','err');return}
   var nm=pick.n||('+'+pts+' 分');
-  ad.records.push({id:'ckb_'+w,date:today(),timestamp:Date.now(),type:'up',itemId:'ck_blindbox',name:nm,category:'打卡',score:pts,note:'上周全勤盲盒（'+nm+'）'});
-  ad.ckBlindWeek=w;
-  ad.ckBlindAt=Date.now();
-  sd(ad);render();ckShow();
-  toast('🎁 抽到「'+nm+'」！','ok');
+  var now=Date.now();
+  if(sessionRole==='kid'){
+    /* 孩子端数据不落账本：把抽取结果写进打卡桶（会同步），家长端进打卡页时自动兑现积分 */
+    var b=ckBucket();
+    b._blind={week:w,name:nm,pts:pts,at:now};
+    ckSaveBucket(b);ckQueue();
+    toast('🎁 抽到「'+nm+'」！积分会在家长端同步后到账','ok');
+  }else{
+    ad.records.push({id:'ckb_'+w,date:today(),timestamp:now,type:'up',itemId:'ck_blindbox',name:nm,category:'打卡',score:pts,note:'上周全勤盲盒（'+nm+'）'});
+    ad.ckBlindWeek=w;
+    ad.ckBlindAt=now;
+    sd(ad);
+  }
+  render();ckShow();
+  toast('🎁 抽到「'+nm+'」！'+(sessionRole==='kid'?'（家长端同步后到账）':''),'ok');
 }
 function ckMotivate(){ // 正向激励徽章：连续打卡天数 + 本周完成天数
   var st=ckStreak(),wk=ckWeekDone();
@@ -4907,8 +4918,19 @@ function ckDayBonus(ds){ // 当日完成率 100% → 额外 +20 分（ck_bonus �
 function ckReconcileAwards(){ // 自愈：打卡状态已确认加分、但账本流水缺失（如加分后账本推送失败被云端覆盖）→ 补回流水与总分
   if(sessionRole!=='parent'||!currentUser||!ad||!ad.records)return;
   var b=ckBucket(),changed=false,ds,id,reAdd=0,tp0=ad.totalPoints||0;
+  /* —— 兑现孩子端自己抽的盲盒：孩子端只写打卡桶 _blind，家长端在这里补写账本流水（幂等）—— */
+  var bm=b._blind;
+  if(bm&&bm.week&&bm.pts>0){
+    var bid='ckb_'+bm.week,hasB=false;
+    for(var bi=0;bi<ad.records.length;bi++){if(ad.records[bi]&&ad.records[bi].id===bid){hasB=true;break}}
+    if(!hasB){
+      ad.records.push({id:bid,date:today(),timestamp:bm.at||Date.now(),type:'up',itemId:'ck_blindbox',name:bm.name||('+'+bm.pts+' 分'),category:'打卡',score:bm.pts,note:'上周全勤盲盒（孩子端抽中，家长端兑现）'});
+      ad.totalPoints+=bm.pts;changed=true;reAdd++;
+      if(!ad.ckBlindAt||bm.at>ad.ckBlindAt){ad.ckBlindAt=bm.at;ad.ckBlindWeek=bm.week;}
+    }
+  }
   for(ds in b){
-    if(ds==='_cfg')continue;
+    if(ds==='_cfg'||ds==='_blind')continue;
     var day=b[ds];
     for(id in day){
       if(id==='_bonus')continue;

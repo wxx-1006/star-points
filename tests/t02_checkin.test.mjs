@@ -415,3 +415,48 @@ test('盲盒：上周日抽过，本周一应判定为「本周未抽」可再�
   assert.equal(w.ckBlindIsThisWeek(), false, '新的一周应可重新抽盲盒，不再显示「已抽过」');
   w.Date = RealDate;
 });
+
+test('孩子端可自行抽盲盒：结果显示、写入打卡桶、不直接写账本', async () => {
+  const w = await setup('kid');
+  /* 构造上周全勤 */
+  const b = w.ckBucket();
+  const d = new Date();
+  const back = d.getDay() === 0 ? 7 : d.getDay();
+  d.setDate(d.getDate() - back - 6);
+  for (let i = 0; i < 7; i++) {
+    b[w.ckFmtD(d)] = { '6': { c: 1, d: 1, r: 1, t: Date.now() } };
+    d.setDate(d.getDate() + 1);
+  }
+  w.ckSaveBucket(b);
+  w.ad.ckBlindPool = [{ n: '专属奖励', p: 15 }];
+  const before = w.ad.records.length;
+  w.ckBlindboxOpen();
+  const after = JSON.parse(w.localStorage.getItem('sp_ck__' + PHONE));
+  assert.ok(after._blind, '抽取结果写入打卡桶');
+  assert.equal(after._blind.pts, 15, '记录随机到的分值');
+  assert.equal(after._blind.name, '专属奖励');
+  assert.equal(w.ad.records.length, before, '孩子端不直接写账本流水');
+  assert.equal(w.ckBlindIsThisWeek(), true, '本周已抽，不能重复抽');
+  /* 孩子端也能看到抽盲盒按钮/已抽提示，而不是「让家长帮你抽」 */
+  w.ckShow();
+  const html = w.document.getElementById('ckList').innerHTML;
+  assert.ok(!html.includes('让家长帮你抽'), '不再提示家长代抽');
+});
+
+test('家长端自动兑现孩子抽的盲盒：补写账本流水且幂等', async () => {
+  const w = await setup('parent');
+  const b = w.ckBucket();
+  b._blind = { week: w.ckWeekTag(), name: '孩子抽的奖励', pts: 15, at: Date.now() };
+  w.ckSaveBucket(b);
+  w.ad = mkAd();
+  w.ckReconcileAwards();
+  const rec = w.ad.records.filter((r) => r.itemId === 'ck_blindbox');
+  assert.equal(rec.length, 1, '家长端兑现一条盲盒流水');
+  assert.equal(rec[0].score, 15, '分值正确');
+  assert.equal(w.ad.totalPoints, 15, '总分到账');
+  assert.equal(w.ad.ckBlindAt, b._blind.at, '同步已抽标记');
+  /* 再次自愈不应重复加分 */
+  w.ckReconcileAwards();
+  assert.equal(w.ad.records.filter((r) => r.itemId === 'ck_blindbox').length, 1, '幂等不重复');
+  assert.equal(w.ad.totalPoints, 15, '总分不重复累加');
+});
