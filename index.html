@@ -4546,11 +4546,11 @@ function ckKeyFor(ds,t){ // 仅周末任务共用周末状态键（周六为锚�
 var ckDate=today(),ckPullAt=0;
 function ckBucket(){try{return JSON.parse(localStorage.getItem('sp_ck__'+currentUser))||{}}catch(e){return {}}}
 function ckSaveBucket(b){try{localStorage.setItem('sp_ck__'+currentUser,JSON.stringify(b))}catch(e){}}
-function ckMergeAll(a,b){ // 双端合并：d/r 逐字段取大（完成/加分只进不退）；c（申请）以最后操作时间较新者为准（支持超时重置回退）；_cfg 配置取修改时间较新者
+function ckMergeAll(a,b){ // 双端合并：d/r 逐字段取大（完成/加分只进不退）；c（申请）以最后操作时间较新者为准；_cfg/_blind 是顶层标记，不当日期遍历
   var out={},ds,tid;
-  for(ds in a)if(ds!=='_cfg')out[ds]=a[ds];
+  for(ds in a)if(ds!=='_cfg'&&ds!=='_blind')out[ds]=a[ds];
   for(ds in b){
-    if(ds==='_cfg')continue;
+    if(ds==='_cfg'||ds==='_blind')continue; /* _blind 是盲盒抽取结果，按 at 整块取新，不能当日期逐字段拆（否则 pts/at 被改写成对象） */
     if(!out[ds]){out[ds]=b[ds];continue}
     for(tid in b[ds]){
       var x=out[ds][tid],y=b[ds][tid];
@@ -4562,12 +4562,15 @@ function ckMergeAll(a,b){ // 双端合并：d/r 逐字段取大（完成/加分�
   var ca=a?a._cfg:null,cb=b?b._cfg:null;
   if(ca&&(!cb||((ca.t||0)>=(cb.t||0))))out._cfg=ca;
   else if(cb)out._cfg=cb;
+  var ba=a?a._blind:null,bb=b?b._blind:null; /* 盲盒标记：整块取 at 较新的一侧 */
+  if(ba&&(!bb||((ba.at||0)>=(bb.at||0))))out._blind=ba;
+  else if(bb)out._blind=bb;
   return out;
 }
 function ckSweepStale(){ // 孩子申请（待家长确认）超过 24 小时未确认 → 自动重置回初始状态，可重新申请
   var b=ckBucket(),changed=false,now=Date.now();
   for(var ds in b){
-    if(ds==='_cfg')continue;
+    if(ds==='_cfg'||ds==='_blind')continue;
     var day=b[ds];
     for(var id in day){
       if(id==='_bonus')continue;
@@ -4583,7 +4586,7 @@ function ckSweepStale(){ // 孩子申请（待家长确认）超过 24 小时未
 var GH_CK_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-checkin.json';
 var CK_PENDING_KEY='sp_ck_sync_pending';
 var ckSyncSHA='',ckSyncTimer=null,ckSyncBusy=false,ckSyncErr='',ckCloudCnt=-1;
-function ckDateKeys(o){var n=0,k;if(!o||typeof o!=='object')return 0;for(k in o)if(k!=='_cfg')n++;return n}
+function ckDateKeys(o){var n=0,k;if(!o||typeof o!=='object')return 0;for(k in o)if(k!=='_cfg'&&k!=='_blind')n++;return n}
 function markCkPending(){try{localStorage.setItem(CK_PENDING_KEY,'1')}catch(e){}}
 function clearCkPending(){try{localStorage.removeItem(CK_PENDING_KEY)}catch(e){}}
 function hasCkPending(){try{return localStorage.getItem(CK_PENDING_KEY)==='1'}catch(e){return false}}

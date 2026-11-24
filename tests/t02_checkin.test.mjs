@@ -460,3 +460,49 @@ test('家长端自动兑现孩子抽的盲盒：补写账本流水且幂等', as
   assert.equal(w.ad.records.filter((r) => r.itemId === 'ck_blindbox').length, 1, '幂等不重复');
   assert.equal(w.ad.totalPoints, 15, '总分不重复累加');
 });
+
+test('复现：抽盲盒结果经过打卡桶合并后不应被破坏（孩子端反复抽不成功的根因）', async () => {
+  const w = await setup('kid');
+  const at = Date.now();
+  const local = { _cfg: { tasks: [], t: at }, _blind: { week: w.ckWeekTag(), name: '+15 分', pts: 15, at: at } };
+  const remote = JSON.parse(JSON.stringify(local)); /* 两端都有 _blind（已同步上去后再次拉取） */
+  const merged = w.ckMergeAll(local, remote);
+  assert.equal(typeof merged._blind.pts, 'number', 'pts 不应被合并逻辑改写成对象');
+  assert.equal(typeof merged._blind.at, 'number', 'at 不应被改写成对象');
+  assert.equal(merged._blind.pts, 15);
+});
+
+test('孩子端抽盲盒后经同步合并，家长端仍能正常兑现（完整链路）', async () => {
+  const kid = await setup('kid');
+  const b = kid.ckBucket();
+  const d = new Date();
+  const back = d.getDay() === 0 ? 7 : d.getDay();
+  d.setDate(d.getDate() - back - 6);
+  for (let i = 0; i < 7; i++) {
+    b[kid.ckFmtD(d)] = { '6': { c: 1, d: 1, r: 1, t: Date.now() } };
+    d.setDate(d.getDate() + 1);
+  }
+  kid.ckSaveBucket(b);
+  kid.ad.ckBlindPool = [{ n: '孩子奖励', p: 12 }];
+  kid.ckBlindboxOpen();
+  const saved = JSON.parse(kid.localStorage.getItem('sp_ck__' + PHONE));
+  /* 模拟同步往返：本地与云端都有 _blind */
+  const merged = kid.ckMergeAll(saved, JSON.parse(JSON.stringify(saved)));
+  assert.equal(typeof merged._blind.pts, 'number', '同步后分值仍是数字');
+  assert.equal(kid.ckWeekTagOf(new Date(merged._blind.at)), kid.ckWeekTag(), '同步后仍能判定本周已抽');
+
+  /* 家长端拿到这份打卡桶 → 兑现（只保留 _blind，避免打卡流水自愈混入本用例） */
+  const parent = await loadIndex();
+  parent.currentUser = PHONE;
+  parent.sessionRole = 'parent';
+  parent.localStorage.setItem('sp_ck__' + PHONE, JSON.stringify({
+    _cfg: merged._cfg,
+    _blind: merged._blind
+  }));
+  parent.ad = mkAd();
+  parent.ckReconcileAwards();
+  const rec = parent.ad.records.filter((r) => r.itemId === 'ck_blindbox');
+  assert.equal(rec.length, 1, '家长端成功兑现');
+  assert.equal(rec[0].score, 12, '分值是数字且正确');
+  assert.equal(parent.ad.totalPoints, 12);
+});
