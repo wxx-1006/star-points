@@ -291,12 +291,12 @@ test('盲盒：按家长配置的奖励池抽取（不再硬编码 5/10/20）', 
     d.setDate(d.getDate() + 1);
   }
   w.ckSaveBucket(b);
-  w.ad.ckBlindPool = [{ n: '宠物零食一份', p: 15 }];
+  w.ad.ckBlindPool = [{ n: '小玩具一份', p: 15 }];
   w.ckBlindboxOpen();
   const r = w.ad.records.find((x) => x.itemId === 'ck_blindbox');
   assert.ok(r, '应写入盲盒流水');
   assert.equal(r.score, 15, '采用配置的分值');
-  assert.equal(r.name, '宠物零食一份', '采用配置的名称');
+  assert.equal(r.name, '小玩具一份', '采用配置的名称');
 });
 
 test('打卡页：顶部日期/进度/统计整块已移除（改由日历选日期）', async () => {

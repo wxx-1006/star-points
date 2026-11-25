@@ -1,4 +1,4 @@
-/* 测试公共库：统一加载 index.html / pet.js / focus.html 到 jsdom，并提供断言辅助 */
+/* 测试公共库：统一加载 index.html / focus.html 到 jsdom，并提供断言辅助 */
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -9,7 +9,6 @@ const { JSDOM } = require('jsdom');
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const INDEX_PATH = path.join(ROOT, 'index.html');
-export const PET_PATH = path.join(ROOT, 'pet.js');
 export const FOCUS_PATH = path.join(ROOT, 'focus.html');
 
 export const notFoundFetch = () => Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
@@ -40,11 +39,6 @@ export async function loadFocus(opts = {}) {
   return dom.window;
 }
 
-/** 在已加载的 index 窗口里再执行 pet.js（宠物是外部脚本） */
-export function loadPetJs(w) {
-  w.eval(readFileSync(PET_PATH, 'utf8'));
-  return w;
-}
 
 /** 构造一份可用的账本（ad） */
 export function mkAd(extra = {}) {

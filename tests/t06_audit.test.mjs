@@ -83,19 +83,18 @@ test('同步通道状态：列出全部通道并标出失败项', async () => {
   w.ckSyncErr = '同步失败（HTTP 401）';
   w.renderChannelStates();
   const html = w.document.getElementById('chanList').innerHTML;
-  assert.ok(html.includes('账本') && html.includes('打卡') && html.includes('宠物') && html.includes('专注'));
+  assert.ok(html.includes('账本') && html.includes('打卡') && html.includes('专注'));
   assert.ok(html.includes('🔴'), '失败通道应标红');
   assert.ok(html.includes('401'), '应显示失败原因');
 });
 
-test('导出备份：覆盖账本/打卡/宠物/专注四类数据', async () => {
+test('导出备份：覆盖账本/打卡/专注三类数据', async () => {
   const w = await setup();
   const acc = mkAd();
   acc.records.push(rec(w, { id: 'r1', score: 10 }));
   acc.totalPoints = 10;
   setBucket(w, acc);
   w.localStorage.setItem('sp_ck__' + PHONE, JSON.stringify({ _cfg: { tasks: [] } }));
-  w.localStorage.setItem('sp_pet__' + PHONE, JSON.stringify({ name: '团子', created: '2026-10-08' }));
   w.localStorage.setItem('sp_fx__' + PHONE + ':history', '[]');
   let payload = null;
   const origBlob = w.Blob;
@@ -112,6 +111,5 @@ test('导出备份：覆盖账本/打卡/宠物/专注四类数据', async () =>
   assert.ok(payload, '应生成导出内容');
   assert.ok(payload.bucket, '含账本');
   assert.ok(payload.checkin, '含打卡状态');
-  assert.ok(payload.pet, '含宠物');
   assert.ok(payload.focus, '含专注成绩');
 });

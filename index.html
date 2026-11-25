@@ -702,7 +702,6 @@ body.kid-mode{padding-bottom:72px}
 .fx-vis-row{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;background:var(--fill);border:1.5px solid transparent;border-radius:12px;padding:11px 14px;margin-bottom:8px;font:600 14px/1.3 var(--ff);color:var(--ink);cursor:pointer;white-space:nowrap}
 .fx-vis-row.on{border-color:var(--red);background:var(--red-l)}
 .fx-vis-row input{width:18px;height:18px;flex:none;accent-color:var(--red)}
-.pet-sync-bar{font:600 11px/1.5 -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;color:var(--red-deep);background:var(--red-l);border-radius:8px;padding:5px 10px;margin:0 10px 8px;text-align:center;cursor:pointer}
 .ck-mustb{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--red-l);color:var(--red-deep);font:700 10px/1.6 var(--ff);vertical-align:1px;white-space:nowrap}
 .ck-item.must-pending{border-width:1.5px;border-style:solid}
 .ck-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
@@ -753,9 +752,6 @@ body.kid-mode{padding-bottom:72px}
     </div>
   </div>
 </div>
-
-<!-- 电子宠物（孩子端专属）：结构由 pet.js 构建注入；状态按账号存本机 sp_pet__<phone>，云同步 sync-pet.json -->
-<div class="pg" id="p-pet"></div>
 
 <!-- 设置 -->
 <div class="pg" id="p-settings">
@@ -859,7 +855,7 @@ body.kid-mode{padding-bottom:72px}
             <button class="bn bn-q" style="height:44px" onclick="exportBackup()">导出备份</button>
             <button class="bn bn-q" style="height:44px" onclick="document.getElementById('importFile').click()">导入恢复</button>
           </div>
-          <div class="sync-hint" style="margin-top:10px">导出包含积分账本、打卡状态、宠物、专注成绩、刷题进度与自定义题库的 JSON 文件；导入将覆盖当前账号的本机数据并同步到云端。建议定期导出，防浏览器缓存清理丢数据。</div>
+          <div class="sync-hint" style="margin-top:10px">导出包含积分账本、打卡状态、专注成绩、刷题进度与自定义题库的 JSON 文件；导入将覆盖当前账号的本机数据并同步到云端。建议定期导出，防浏览器缓存清理丢数据。</div>
           <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importBackupFile(this)">
           <button class="bn-danger" style="margin-top:12px" onclick="ccd()">清除所有数据</button>
         </div>
@@ -878,13 +874,12 @@ body.kid-mode{padding-bottom:72px}
   <div class="ti" id="tabSettings" onclick="st('settings')"><span class="t-ico"><span class="tico-sliders" aria-hidden="true"><i></i><i></i></span></span><span class="tl">设置</span></div>
 </div>
 
-<!-- Tab Bar（孩子端轻量导航：记录/商城/打卡/宠物/报告，applyRoleUI 切换显隐；宠物页为 pet.js 孩子端专属） -->
+<!-- Tab Bar（孩子端轻量导航：记录/商城/打卡/专注/报告，applyRoleUI 切换显隐） -->
 <div class="tb" id="kidTb" style="display:none">
   <div class="ti on" id="kt-records" onclick="st('records')"><span class="t-ico"><span class="tico-list" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">记录</span></div>
   <div class="ti" id="kt-shop" onclick="st('shop')"><span class="t-ico"><span class="tico-brick" aria-hidden="true"></span></span><span class="tl">商城</span></div>
   <div class="ti" id="kt-checkin" onclick="st('checkin')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">打卡</span></div>
   <div class="ti" id="kt-focus" onclick="st('focus')"><span class="t-ico"><span class="tico-quiz" aria-hidden="true"></span></span><span class="tl">专注</span></div>
-  <div class="ti" id="kt-pet" onclick="st('pet')"><span class="t-ico"><span class="tico-pet" aria-hidden="true"></span></span><span class="tl">宠物</span></div>
   <div class="ti" id="kt-report" onclick="st('report')"><span class="t-ico"><span class="tico-chart" aria-hidden="true"><i></i><i></i><i></i></span></span><span class="tl">报告</span></div>
 </div>
 
@@ -1137,47 +1132,6 @@ body.kid-mode{padding-bottom:72px}
       <button class="ml-close" onclick="cm('mRd')">✕</button>
     </div>
     <div class="ml-body" id="mRdBody"></div>
-  </div>
-</div>
-
-<!-- 宠物弹窗 ×2（内容均由 pet.js 动态填充）：猫商店 / 背单词（喂食玩耍无弹窗，点库存与玩具直接使用） -->
-<div class="mo" id="ptMoShop">
-  <div class="ml">
-    <span class="ml-handle" aria-hidden="true"></span>
-    <div class="ml-header">
-      <div class="ml-title">猫咪商店</div>
-      <button class="ml-close" onclick="ptCloseModal('ptMoShop')">✕</button>
-    </div>
-    <div class="ml-body"></div>
-  </div>
-</div>
-<div class="mo" id="ptMoQuiz">
-  <div class="ml">
-    <span class="ml-handle" aria-hidden="true"></span>
-    <div class="ml-header">
-      <div class="ml-title">背单词赚猫币</div>
-      <button class="ml-close" onclick="ptCloseModal('ptMoQuiz')">✕</button>
-    </div>
-    <div class="ml-body"></div>
-  </div>
-</div>
-
-<!-- 宠物改名弹窗（点宠物页头像旁的名字打开） -->
-<div class="mo" id="ptMoRename">
-  <div class="ml">
-    <span class="ml-handle" aria-hidden="true"></span>
-    <div class="ml-header">
-      <div class="ml-title">给宠物改名</div>
-      <button class="ml-close" onclick="ptCloseModal('ptMoRename')">✕</button>
-    </div>
-    <div class="ml-body">
-      <input type="text" id="ptRenameInput" class="pt-rename-input" maxlength="6" placeholder="输入新名字（最多 6 个字）" onkeydown="if(event.key==='Enter')ptConfirmRename()">
-      <div class="pt-rename-tip">名字会保存在本机，换个称呼换个心情～</div>
-      <div class="pt-rename-btns">
-        <button class="bn-pet p" onclick="ptConfirmRename()">确认</button>
-        <button class="bn-pet q" onclick="ptCloseModal('ptMoRename')">取消</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -1510,14 +1464,14 @@ function mergeAccountData(loc,rem){
 }
 function utf8ToB64(str){return btoa(unescape(encodeURIComponent(str)))}
 function b64ToUtf8(b64){return decodeURIComponent(escape(atob(b64)))}
-function ghPutBody(msg,contentB64,sha){ // GitHub Contents API：更新已有文件才带 sha；新建文件绝不能带空 sha（否则 422，宠物文件因此从未创建成功）
+function ghPutBody(msg,contentB64,sha){ // GitHub Contents API：更新已有文件才带 sha；新建文件绝不能带空 sha（否则 422，曾导致新建通道文件失败）
   var b={message:msg,content:contentB64};
   if(sha)b.sha=sha;
   return JSON.stringify(b);
 }
 
 /* ===== 统一同步通道（所有云端文件共用一套流程）=====
-   此前账本/打卡/宠物/专注/请求各写一套 GET→合并→PUT→重试，复制粘贴导致空 sha、409 冲突、
+   此前账本/打卡/专注/请求各写一套 GET→合并→PUT→重试，复制粘贴导致空 sha、409 冲突、
    覆盖丢失等事故在每条通道重复发生。现统一为：
      ghApiGet / ghApiPut        —— 底层读写（含 404、空 sha 规避、错误 message 提取）
      syncChannelPush           —— 通用推送：GET → 合并 → PUT → 409 重新拉取合并后重试
@@ -1682,130 +1636,6 @@ function syncPush(data){
     updateSyncUI();
   });
 }
-// ===== 宠物数据同步（独立文件 sync-pet.json，孩子端允许推送） =====
-//   宠物是孩子端专属功能，syncPush 对孩子端禁推（防旧账本覆盖云端），故宠物走独立文件：
-//   结构 { [phone]: 宠物状态对象(含 updatedAt 毫秒时间戳) }；冲突策略：updatedAt 较新者胜，
-//   合并：只增不减的累计值（eaten/hungryDays）取大；余额与库存（coins/food/cans/strips）按较新侧
-//   （它们是可消耗的，取大会让"喂食/购买"的消耗被旧值顶回来）；当日状态（fedToday/patN/toyN）按较新侧。
-//   推送失败标记 sp_pet_sync_pending，网络恢复/成功拉取后补推；未配置 token 时全部静默跳过。
-var GH_PET_API='https://api.github.com/repos/'+GH_REPO+'/contents/sync-pet.json';
-var PET_SYNC_PENDING_KEY='sp_pet_sync_pending';
-var petSyncSHA='',petSyncTimer=null,petSyncErr='',petSyncBusy=false; // petSyncErr：宠物同步失败原因（打卡页顶部状态行显示，供排查）
-function markPetPending(){try{localStorage.setItem(PET_SYNC_PENDING_KEY,'1')}catch(e){}}
-function clearPetPending(){try{localStorage.removeItem(PET_SYNC_PENDING_KEY)}catch(e){}}
-function hasPetPending(){try{return localStorage.getItem(PET_SYNC_PENDING_KEY)==='1'}catch(e){return false}}
-function petLocalState(){ // 本机当前账号宠物状态（键须与 pet.js PET_KEY_PREFIX 一致）
-  try{var r=localStorage.getItem('sp_pet__'+currentUser);return r?JSON.parse(r):null}catch(e){return null}
-}
-function petMerge(local,remote){ // 较新者为基础，累计资源取两设备较大值
-  var a=local||null,b=remote||null;
-  if(!a)return b;if(!b)return a;
-  var base=((b.updatedAt||0)>=(a.updatedAt||0))?b:a,other=(base===b)?a:b;
-  var m=JSON.parse(JSON.stringify(base)),k;
-  /* 只对【真正只增不减的累计值】取大：累计喂食次数 eaten、累计挨饿天数 hungryDays。
-     coins/food/cans/strips 是【余额与库存，可消耗】——喂食/喂零食/买东西都会减少它们，
-     若取大会让消耗被云端旧值顶回来（表现为"喂了猫粮猫粮没减少"、"花了金币金币又回来"），
-     故这些一律按较新侧（base）。
-     fedToday/patN/toyN 是【当日状态、跨天重置】，同样按较新侧，绝不取大。 */
-  ['eaten','hungryDays'].forEach(function(k2){
-    if(typeof other[k2]==='number'&&typeof m[k2]==='number')m[k2]=Math.max(m[k2],other[k2]);
-  });
-  /* 宠物名字：显式设置字段，按各自修改时间 nameAt 取新侧——
-     否则"在 A 改名、B 打开过（updatedAt 变新但名字仍旧）"会把名字覆盖回旧值（名字不同步的根因） */
-  var na=(a.nameAt||0),nb=(b.nameAt||0);
-  if(na||nb){
-    m.name=(na>=nb)?a.name:b.name;
-    m.nameAt=Math.max(na,nb);
-  }
-  /* 陪伴起始日：取更早——陪伴天数只增不减，绝不能被重置设备的新宠物覆盖（本轮事故根因） */
-  var c1=a.created||'',c2=b.created||'';
-  if(c1&&c2)m.created=(c1<c2)?c1:c2;else m.created=c1||c2||m.created;
-  /* 已拥有（owned）与玩具库存（toys）不可逆：并集。
-     placed（当前摆放）是可逆状态——收起家具后绝不能被旧快照并集复活，故按较新侧（base），
-     且只保留仍拥有的项（placed 恒为 owned 子集，防脏数据） */
-  var ow={};for(k in (a.owned||{}))if(a.owned[k])ow[k]=true;
-  for(k in (b.owned||{}))if(b.owned[k])ow[k]=true;
-  m.owned=ow;
-  var tg=[],seen={};
-  (a.toys||[]).concat(b.toys||[]).forEach(function(x){if(x&&!seen[x]){seen[x]=true;tg.push(x)}});
-  m.toys=tg;
-  if(Object.prototype.toString.call(m.placed)!=='[object Array]')m.placed=[];
-  m.placed=m.placed.filter(function(x){return x&&ow[x]});
-  m.tree=!!(a.tree||b.tree);
-  return m;
-}
-function petSyncBar(){ // 宠物页同步状态：正常时隐藏（安静），失败/待推时显示原因并可点击重试
-  var host=document.getElementById('p-pet');
-  if(!host)return;
-  var el=document.getElementById('petSyncBar');
-  if(!el){el=document.createElement('div');el.id='petSyncBar';el.className='pet-sync-bar';host.insertBefore(el,host.firstChild);}
-  var s='';
-  if(!getSyncToken())s='同步未开启（在打卡页配置令牌）';
-  else if(petSyncErr)s=petSyncErr+'（点击重试）';
-  else if(hasPetPending())s='宠物资料待同步…';
-  el.textContent=s;
-  el.style.display=s?'':'none';
-  el.onclick=function(){if(petSyncErr||hasPetPending())petSyncPush()};
-}
-function petSyncQueue(){ // ptSave 防抖入口：5 秒内的多次保存合并为一次推送
-  if(!currentUser)return;
-  markPetPending(); /* 先标记待推：即使当前未配 token（孩子先玩后配 token 的场景），之后配置/恢复网络也会补推 */
-  if(!getSyncToken())return;
-  if(petSyncTimer)clearTimeout(petSyncTimer);
-  petSyncTimer=setTimeout(petSyncPush,5000);
-}
-function petSyncPush(){
-  if(petSyncTimer){clearTimeout(petSyncTimer);petSyncTimer=null}
-  if(petSyncBusy||!hasPetPending()||!currentUser||!getSyncToken())return; // 串行：并发推送会拿同一个 sha 互相冲突（409）
-  var local0=petLocalState();
-  if(!local0)return;
-  petSyncBusy=true;
-  syncChannelPush({
-    api:GH_PET_API, msg:'pet-sync:'+currentUser, maxRetry:4,
-    local:function(){return petLocalState()||local0},
-    merge:function(local,remoteAll){
-      var remote=remoteAll[currentUser]||null;
-      var merged=petMerge(local,remote); // 按时间戳/只进不退合并，绝不简单覆盖
-      var needAdopt=!!(remote&&local&&((remote.updatedAt||0)>(local.updatedAt||0)||(remote.created&&local.created&&remote.created<local.created)));
-      var all={};for(var k in remoteAll)all[k]=remoteAll[k];
-      all[currentUser]=merged;
-      return {all:all,merged:merged,needAdopt:needAdopt};
-    }
-  }).then(function(res){
-    petSyncBusy=false;
-    if(res.ok){
-      clearPetPending();petSyncErr='';
-      if(res.extra&&res.extra.needAdopt&&typeof window.ptAdoptRemote==='function')window.ptAdoptRemote(res.merged);
-    }else{
-      markPetPending();
-      petSyncErr=res.code?('宠物同步推送失败（HTTP '+res.code+(res.msg?'：'+res.msg:'')+'）'):('宠物同步网络异常（GitHub API 连不上）');
-    }
-    if(curTab==='pet')petSyncBar();
-  });
-}
-function petSyncPull(){ // 进宠物页/登录时拉取：云端较新则吸收；有待推改动则补推
-  if(!currentUser||!getSyncToken())return;
-  fetch(GH_PET_API,{headers:{'Authorization':'token '+getSyncToken()}})
-    .then(function(r){
-      if(!r.ok){return r.json().then(function(j){petSyncErr='宠物同步失败（HTTP '+r.status+(j&&j.message?'：'+j.message:'')+'）';if(hasPetPending())petSyncPush();if(curTab==='pet')petSyncBar()}).catch(function(){petSyncErr='宠物同步失败（HTTP '+r.status+'）'})}
-      return r.json().then(function(meta){
-        petSyncSHA=meta.sha||'';
-        petSyncErr='';
-        if(!meta.content){if(hasPetPending())petSyncPush();return}
-        var allData={};try{allData=JSON.parse(b64ToUtf8(meta.content))}catch(e){}
-        var remote=allData[currentUser]||null,local=petLocalState();
-        if(remote&&typeof window.ptAdoptRemote==='function'){
-          var mergedPull=petMerge(local,remote); // 始终按时间戳/只进不退合并（两端任一方的成长与累计都不丢）
-          if(local&&JSON.stringify(mergedPull)!==JSON.stringify(local))window.ptAdoptRemote(mergedPull);
-          else if(!local)window.ptAdoptRemote(mergedPull);
-        }
-        if(hasPetPending())petSyncPush();
-        if(curTab==='pet')petSyncBar();
-      });
-    })
-    .catch(function(){petSyncErr='宠物同步网络异常（GitHub API 连不上）';if(curTab==='pet')petSyncBar()});
-}
-window.addEventListener('online',function(){if(hasPetPending())petSyncPush()});
 // 同步状态合并进用户胶囊：6px 色点（绿=已同步，黄=同步中，红=失败，灰=未配置）
 function updateSyncUI(){
   var el=document.getElementById('syncStatus');
@@ -1860,7 +1690,6 @@ function saveSyncToken(){
       render();
       retryPendingSync(); // token 修复/首次配置后立即补推待同步改动
     });
-    petSyncPush(); // 补推配置 token 前积压的宠物改动（先玩后配 token 的场景）
   }else{
     syncStatus='off';syncErr='';updateSyncUI();
   }
@@ -1933,7 +1762,7 @@ var du=[
 {id:'up_57',name:'帮忙倒垃圾',score:3,category:'家务'},
 {id:'up_58',name:'帮忙晾/收衣服',score:5,category:'家务'},
 {id:'up_59',name:'帮忙浇花',score:3,category:'家务'},
-{id:'up_60',name:'照顾宠物',score:8,category:'家务'},
+{id:'up_60',name:'照顾弟弟妹妹',score:8,category:'家务'},
 {id:'up_61',name:'整理衣柜/叠衣服',score:10,category:'家务'},
 {id:'up_62',name:'帮忙洗车',score:10,category:'家务'}
 ];
@@ -2562,9 +2391,9 @@ var dpSelectedEnd=null;
 
 function st(tab){
   if(sessionRole==='kid'){
-    // 孩子端五个页签：记录 / 商城 / 打卡 / 宠物 / 报告（刷题仍仅家长端开放，孩子端无入口，此处双保险拦截）
+    // 孩子端页签：记录 / 商城 / 打卡 / 专注 / 报告（刷题仍仅家长端开放，孩子端无入口，此处双保险拦截）
     if(tab==='quiz')return;
-    if(tab!=='records'&&tab!=='shop'&&tab!=='checkin'&&tab!=='focus'&&tab!=='pet'&&tab!=='report')return;
+    if(tab!=='records'&&tab!=='shop'&&tab!=='checkin'&&tab!=='focus'&&tab!=='report')return;
     if(tab==='focus')fxShow(); /* 不 return：继续走下方面板切换与页签高亮 */
     var pages=document.querySelectorAll('.pg');
     for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
@@ -2573,7 +2402,6 @@ function st(tab){
     for(var j=0;j<ktabs.length;j++) ktabs[j].classList.remove('on');
     document.getElementById('kt-'+tab).classList.add('on');
     curTab=tab;
-    if(tab==='pet'){ptShow();petSyncBar()} // 宠物页：本机状态渲染 + 同步状态条（正常时隐藏）
     if(tab==='checkin'){ckPullAt=0;ckShow();}   // 打卡页：强制拉取最新状态（超时重置+必打卡结算在云端合并后的回调里执行，避免误扣）
     if(tab==='report')renderReport(); // 先按当前数据渲染，拉取后刷新
     if(!currentUser){render();return}
@@ -2588,7 +2416,6 @@ function st(tab){
   }
   // 刷题页：进度按账号存本机（sp_quiz__<phone>）并随账号桶上云 → 先备好题目列表再显示页面，
   // 避免 syncPull 返回前的窗口期内判分按钮已可点、而 qzList 仍为空
-  if(tab==='pet')return; // 宠物页为孩子端专属：家长端无入口且不开放（双保险）
   if(tab==='checkin'){ckPullAt=0;ckReconcileAwards();ckShow();} // 打卡页：强制拉取最新状态 + 自愈补积分（超时重置+必打卡结算在云端合并后的回调里执行）
   if(tab==='focus'){fxShow();}
   if(tab==='quiz')qzShow();
@@ -3903,11 +3730,6 @@ function dataAudit(){ // 返回检查项列表：{name,ok,detail}
     }
   }
   out.push({name:'打卡加分记录齐全',ok:missAward===0,detail:missAward?(missAward+' 条完成记录缺加分流水（进打卡页会自动补回）'):'正常'});
-  /* ⑤ 宠物数据完整性 */
-  var pet=null;
-  try{pet=JSON.parse(localStorage.getItem('sp_pet__'+currentUser))||null}catch(e){}
-  if(pet)out.push({name:'宠物数据完整',ok:!!pet.name&&!!pet.created,detail:'起始 '+(pet.created||'未知')+' · 累计喂食 '+(pet.eaten||0)});
-  else out.push({name:'宠物数据完整',ok:true,detail:'本机暂无宠物数据'});
   return out;
 }
 function renderChannelStates(){ // 各同步通道状态一览（家长端排查用）
@@ -3916,7 +3738,6 @@ function renderChannelStates(){ // 各同步通道状态一览（家长端排查
   var list=[
     {n:'账本',bad:!!syncErr,txt:syncErr||(syncStatus==='loading'?'同步中…':(hasPendingSync()?'有改动待补推':'已同步'))},
     {n:'打卡',bad:!!ckSyncErr,txt:ckSyncErr||(hasCkPending()?'有改动待补推':'已同步')},
-    {n:'宠物',bad:!!petSyncErr,txt:petSyncErr||(hasPetPending()?'有改动待补推':'已同步')},
     {n:'专注',bad:!!fxSyncErr,txt:fxSyncErr||(hasFxPending()?'有改动待补推':'已同步')},
     {n:'兑换请求',bad:false,txt:'按需拉取'}
   ];
@@ -3959,7 +3780,6 @@ function retryAllChannels(){ // 触发各通道拉取与推送
   if(sessionRole!=='parent')return;
   try{syncPull(currentUser);}catch(e){}
   try{ckSyncPush();}catch(e){}
-  try{petSyncPush();}catch(e){}
   try{fxSyncPush();}catch(e){}
   toast('已触发各通道同步','ok');
 }
@@ -4066,7 +3886,6 @@ function exportBackup(){
     users:getUsers(),
     bucket:loadBucket(currentUser),
     checkin:(function(){try{return JSON.parse(localStorage.getItem('sp_ck__'+currentUser))||null}catch(e){return null}})(),
-    pet:(function(){try{return JSON.parse(localStorage.getItem('sp_pet__'+currentUser))||null}catch(e){return null}})(),
     focus:(function(){try{var r={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf('sp_fx__'+currentUser+':')===0)r[k]=localStorage.getItem(k)}return r}catch(e){return null}})(),
     quiz:(typeof qzAccStore==='function')?qzAccStore():null,
     customBanks:(typeof qzCustomBanks==='function')?qzCustomBanks():null
@@ -4092,15 +3911,12 @@ function importBackupFile(inp){
     var obj=null;
     try{obj=JSON.parse(rd.result)}catch(e){}
     if(!obj||obj.app!=='star-points'||!obj.bucket||typeof obj.bucket!=='object'){toast('备份文件格式不正确','err');return}
-    sc2('导入备份','将用备份覆盖当前账号「'+currentUser+'」的本机数据（含打卡、宠物、专注成绩、刷题进度与自定义题库），并同步到云端。确定继续吗？',function(){
+    sc2('导入备份','将用备份覆盖当前账号「'+currentUser+'」的本机数据（含打卡、专注成绩、刷题进度与自定义题库），并同步到云端。确定继续吗？',function(){
       try{localStorage.setItem(userKey(currentUser),JSON.stringify(obj.bucket))}
       catch(e){toast('导入失败：存储空间不足','err');return}
-      /* 打卡 / 宠物 / 专注：一并恢复（此前只恢复账本+刷题+题库） */
+      /* 打卡 / 专注：一并恢复（此前只恢复账本+刷题+题库） */
       if(obj.checkin&&typeof obj.checkin==='object'){
         try{localStorage.setItem('sp_ck__'+currentUser,JSON.stringify(obj.checkin))}catch(e){}
-      }
-      if(obj.pet&&typeof obj.pet==='object'){
-        try{localStorage.setItem('sp_pet__'+currentUser,JSON.stringify(obj.pet))}catch(e){}
       }
       if(obj.focus&&typeof obj.focus==='object'){
         for(var fk in obj.focus){try{localStorage.setItem(fk,obj.focus[fk])}catch(e){}}
@@ -4647,7 +4463,6 @@ setInterval(function(){if(hasCkPending()&&!ckSyncBusy)ckSyncPush()},60000); // �
 document.addEventListener('visibilitychange',function(){ // 切回页面/切换设备查看时立即对齐最新状态
   if(document.hidden)return;
   if(hasCkPending()&&!ckSyncBusy)ckSyncPush();
-  if(hasPetPending())petSyncPush(); /* 宠物待推补推：5秒防抖 timer 在锁屏/切后台会被冻结，切回立即补 */
   if(curTab==='checkin'){ckPullAt=0;ckShow()}
 });
 
@@ -5097,7 +4912,6 @@ function ckShow(){
   else if(ckSyncBusy)syncHtml='<span class="ck-sync">同步中…</span>';
   else if(ckSyncErr)syncHtml='<span class="ck-sync err" onclick="ckSyncPush()" title="点击立即重试">同步异常：'+escHtml(ckSyncErr)+'</span>';
   else if(hasCkPending())syncHtml='<span class="ck-sync">待同步…</span>'; // 已同步时不显示任何状态文字
-  if(petSyncErr)syncHtml+='<span class="ck-sync err" onclick="petSyncPush()" title="点击立即重试">'+escHtml(petSyncErr)+'</span>'; // 宠物同步失败独立显示（孩子端主要数据通道，静默失败难排查）
   var maxD=ckAddDays(today(),7);
   var html=''; /* 日期由下方日历选择：不再显示日期标题/进度条/统计行，避免信息冗余 */
   if(!tasks.length){ // 全新账号：无任务，引导家长自行创建
@@ -5329,6 +5143,5 @@ function ckTokSave(){
   });
 })();
 </script>
-<script src="pet.js?v=20261105a"></script>
 </body>
 </html>
