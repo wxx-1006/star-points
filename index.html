@@ -4516,7 +4516,8 @@ function ckBlindboxOpen(){ // 抽盲盒：家长端直接写账本；孩子端�
     /* 孩子端数据不落账本：把抽取结果写进打卡桶（会同步），家长端进打卡页时自动兑现积分 */
     var b=ckBucket();
     b._blind={week:w,name:nm,pts:pts,at:now};
-    ckSaveBucket(b);ckQueue();
+    ckSaveBucket(b);
+    markCkPending();ckSyncPush(); /* 立即上云，不等 4 秒防抖（防抖窗口内关 App 会丢标记） */
     toast('🎁 抽到「'+nm+'」！积分会在家长端同步后到账','ok');
   }else{
     ad.records.push({id:'ckb_'+w,date:today(),timestamp:now,type:'up',itemId:'ck_blindbox',name:nm,category:'打卡',score:pts,note:'上周全勤盲盒（'+nm+'）'});
@@ -4524,7 +4525,8 @@ function ckBlindboxOpen(){ // 抽盲盒：家长端直接写账本；孩子端�
     ad.ckBlindAt=now;
     sd(ad);
   }
-  render();ckShow();
+  if(sessionRole==='kid')ckShow(); /* 孩子端不写账本无需 render()；且孩子端 ad 可能尚未加载，调 render() 会因 ad.totalPoints 抛错导致界面不刷新 */
+  else{render();ckShow();}
   toast('🎁 抽到「'+nm+'」！'+(sessionRole==='kid'?'（家长端同步后到账）':''),'ok');
 }
 function ckMotivate(){ // 正向激励徽章：连续打卡天数 + 本周完成天数
@@ -5085,8 +5087,8 @@ function ckShow(){
   /* 结算时序：必须先拉云端合并孩子端的申请/完成状态，再跑超时重置与必打卡结算——
      否则本地缺刚提交的 c/d 状态会误扣（修复"明明打卡了还被扣分"）。
      30 秒内已拉过则本地状态新鲜，直接结算。 */
-  if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull(function(){ckSweepStale();ckMustSweep()})}
-  else{ckSweepStale();ckMustSweep()}
+  if(Date.now()-ckPullAt>30000){ckPullAt=Date.now();ckSyncPull(function(){ckSweepStale();ckMustSweep();ckReconcileAwards()})}
+  else{ckSweepStale();ckMustSweep();ckReconcileAwards()}
   var rb=ckRollbackWrongPenalties();
   if(rb>0)toast('已回滚 '+rb+' 条因修改任务产生的历史误扣','ok');
   var tasks=ckTasksFor(ckDate),b=ckBucket();

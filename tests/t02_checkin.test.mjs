@@ -506,3 +506,52 @@ test('孩子端抽盲盒后经同步合并，家长端仍能正常兑现（完�
   assert.equal(rec[0].score, 12, '分值是数字且正确');
   assert.equal(parent.ad.totalPoints, 12);
 });
+
+test('端到端：家长端进打卡页拉取到孩子端盲盒标记后应立即兑现积分（时序回归）', async () => {
+  const w = await loadIndex();
+  w.currentUser = PHONE;
+  w.sessionRole = 'parent';
+  w.localStorage.setItem('sp_gh_token', 'tok');
+  w.ad = mkAd();
+  const wk = w.ckWeekTag();
+  const cloudBucket = {
+    _cfg: { tasks: [], t: Date.now() }, /* 空任务：隔离掉必打卡扣分，聚焦盲盒兑现 */
+    _blind: { week: wk, name: '+15 分', pts: 15, at: Date.now() }
+  };
+  const cloudAll = { [PHONE]: cloudBucket };
+  const content = Buffer.from(JSON.stringify(cloudAll)).toString('base64');
+  w.fetch = async (url, opts) => {
+    if (opts && opts.method === 'PUT') return { ok: true, status: 200, json: async () => ({}) };
+    return { ok: true, status: 200, json: async () => ({ sha: 'sha1', content }) };
+  };
+  /* 家长端本地只有 _cfg，还没有孩子端刚 push 的 _blind */
+  w.localStorage.setItem('sp_ck__' + PHONE, JSON.stringify({ _cfg: cloudBucket._cfg }));
+  w.curTab = 'checkin';
+  w.ckPullAt = 0;
+  w.ckReconcileAwards();   /* 第一次：本地无 _blind，不兑现（真实场景：进入打卡页即调用） */
+  w.ckShow();              /* 触发 ckSyncPull 拉取云端 */
+  await sleep(150);        /* 等 fetch 完成 */
+  const rec = w.ad.records.filter((r) => r.itemId === 'ck_blindbox');
+  assert.equal(rec.length, 1, '拉取到孩子端盲盒后家长端应立即兑现');
+  assert.equal(rec[0].score, 15, '分值正确');
+  assert.equal(w.ad.totalPoints, 15, '总分到账');
+});
+
+test('孩子端账本尚未加载(ad=null)时抽盲盒不崩溃且状态锁定', async () => {
+  const w = await setup('kid');
+  const b = w.ckBucket();
+  const d = new Date();
+  const back = d.getDay() === 0 ? 7 : d.getDay();
+  d.setDate(d.getDate() - back - 6);
+  for (let i = 0; i < 7; i++) {
+    b[w.ckFmtD(d)] = { '6': { c: 1, d: 1, r: 1, t: Date.now() } };
+    d.setDate(d.getDate() + 1);
+  }
+  w.ckSaveBucket(b);
+  w.ad = null; /* 模拟孩子端刚登录、账本同步尚未返回 */
+  w.ckBlindboxOpen(); /* 不应抛错 */
+  const after = JSON.parse(w.localStorage.getItem('sp_ck__' + PHONE));
+  assert.ok(after._blind, '_blind 已写入打卡桶');
+  assert.equal(typeof after._blind.pts, 'number', '分值保持数字');
+  assert.equal(w.ckBlindIsThisWeek(), true, '抽完后状态锁定，不再重复抽');
+});
