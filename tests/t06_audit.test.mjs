@@ -113,3 +113,74 @@ test('导出备份：覆盖账本/打卡/专注三类数据', async () => {
   assert.ok(payload.checkin, '含打卡状态');
   assert.ok(payload.focus, '含专注成绩');
 });
+
+test('pushRequests：只保留 pending 申请上云（已处理的物理删除）', async () => {
+  const w = await loadIndex();
+  w.currentUser = PHONE;
+  w.sessionRole = 'parent';
+  w.localStorage.setItem('sp_gh_token', 'tok');
+  const original = {
+    [PHONE]: [
+      { id: 'r1', status: 'pending' },
+      { id: 'r2', status: 'approved' },
+      { id: 'r3', status: 'rejected' }
+    ],
+    '13900000000': [
+      { id: 'r4', status: 'pending' },
+      { id: 'r5', status: 'approved' }
+    ]
+  };
+  let putContent = null;
+  w.fetch = async (url, opts) => {
+    if (opts && opts.method === 'PUT') {
+      const body = JSON.parse(opts.body);
+      putContent = Buffer.from(body.content, 'base64').toString('utf8');
+      return { ok: true, status: 200, json: async () => ({}) };
+    }
+    return { ok: true, status: 200, json: async () => ({ sha: 's1' }) };
+  };
+  const ok = await w.pushRequests(original);
+  assert.equal(ok, true);
+  const written = JSON.parse(putContent);
+  assert.deepEqual(written[PHONE].map((x) => x.id), ['r1'], '本账号只保留 pending');
+  assert.deepEqual(written['13900000000'].map((x) => x.id), ['r4'], '他账号同样只保留 pending');
+});
+
+test('pushRequests：某账号申请全部处理完后该账号键消失', async () => {
+  const w = await loadIndex();
+  w.currentUser = PHONE;
+  w.sessionRole = 'parent';
+  w.localStorage.setItem('sp_gh_token', 'tok');
+  const original = {
+    [PHONE]: [{ id: 'r1', status: 'approved' }],
+    '13900000000': [{ id: 'r2', status: 'pending' }]
+  };
+  let putContent = null;
+  w.fetch = async (url, opts) => {
+    if (opts && opts.method === 'PUT') {
+      putContent = Buffer.from(JSON.parse(opts.body).content, 'base64').toString('utf8');
+      return { ok: true, status: 200, json: async () => ({}) };
+    }
+    return { ok: true, status: 200, json: async () => ({ sha: 's1' }) };
+  };
+  await w.pushRequests(original);
+  const written = JSON.parse(putContent);
+  assert.equal(written[PHONE], undefined, '全部处理完的账号不再写入');
+  assert.deepEqual(written['13900000000'].map((x) => x.id), ['r2']);
+});
+
+test('体检：数据量级项显示流水条数与估算大小（始终 ok，不参与一键修复）', async () => {
+  const w = await setup();
+  const acc = mkAd();
+  acc.records.push(rec(w, { id: 'r1', score: 10 }));
+  acc.records.push(rec(w, { id: 'r2', score: 5 }));
+  acc.exchanges.push({ id: 'ex1', cost: 3, date: w.today(), timestamp: Date.now() });
+  acc.totalPoints = 12;
+  setBucket(w, acc);
+  const item = w.dataAudit().find((i) => i.name === '数据量级');
+  assert.ok(item, '应存在「数据量级」项');
+  assert.equal(item.ok, true, '始终 ok');
+  assert.ok(item.detail.includes('流水 2 条'), item.detail);
+  assert.ok(item.detail.includes('兑换 1 条'), item.detail);
+  assert.ok(item.detail.includes('账本约'), item.detail);
+});

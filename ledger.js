@@ -649,7 +649,17 @@ function pullRequests(){
 function pushRequests(obj){
   var token=getSyncToken();
   if(!token)return Promise.resolve(false);
-  /* 整体写入 requests.json（last-write-wins，家庭规模可接受）：先取最新 sha 再写，避免 sha 冲突 */
+  /* 只保留 pending 的申请上云：已处理（通过/拒绝）的申请物理删除，避免 requests.json 无限堆积 */
+  var clean={};
+  for(var ph in obj){
+    var arr=obj[ph];
+    if(Object.prototype.toString.call(arr)==='[object Array]'){
+      var kept=arr.filter(function(q){return q&&q.status==='pending'});
+      if(kept.length)clean[ph]=kept;
+    }
+  }
+  obj=clean;
+  /* 整体写入（last-write-wins，家庭规模可接受）：先取最新 sha 再写，避免 sha 冲突 */
   return ghApiGet(GH_REQ_API)
     .then(function(g){ return ghApiPut(GH_REQ_API,obj,g.sha,'sync:requests'); })
     .then(function(p){ return !!p.ok; })
@@ -1268,6 +1278,13 @@ function dataAudit(){ // 返回检查项列表：{name,ok,detail}
     }
   }
   out.push({name:'打卡加分记录齐全',ok:missAward===0,detail:missAward?(missAward+' 条完成记录缺加分流水（进打卡页会自动补回）'):'正常'});
+  /* ⑤ 数据量级：流水条数 + 本机账本估算大小 + 1MB 同步门槛预警（始终 ok，仅作提示，不参与一键修复） */
+  var nRec=(acc.records||[]).length, nEx=(acc.exchanges||[]).length;
+  var bytes=0;
+  try{bytes=unescape(encodeURIComponent(JSON.stringify(acc))).length}catch(e){}
+  var scale=bytes<1024?(bytes+' B'):(bytes<1048576?(bytes/1024).toFixed(1)+' KB':(bytes/1048576).toFixed(2)+' MB');
+  var warn=bytes>=800*1024;
+  out.push({name:'数据量级',ok:true,detail:'流水 '+nRec+' 条 · 兑换 '+nEx+' 条 · 账本约 '+scale+(warn?' · ⚠ 已接近 1MB 同步门槛，建议归档历史流水':' · 距 1MB 同步门槛还有余量')});
   return out;
 }
 function renderChannelStates(){ // 各同步通道状态一览（家长端排查用）
