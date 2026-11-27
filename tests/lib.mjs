@@ -13,9 +13,17 @@ export const FOCUS_PATH = path.join(ROOT, 'focus.html');
 
 export const notFoundFetch = () => Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
 
+/* 拆分后 index.html 里是 <script src="xxx.js">，jsdom 默认不加载外部脚本；
+   这里把业务脚本内联回 HTML 让其按原顺序执行（quiz.js 保持 src，jsdom 跳过，与拆分前行为一致） */
+const INLINE_FILES = ['core.js', 'sync.js', 'ledger.js', 'checkin.js', 'focus-sync.js'];
+
 /** 加载 index.html 到 jsdom（默认 fetch 全部 404，不触网） */
 export async function loadIndex(opts = {}) {
-  const html = readFileSync(INDEX_PATH, 'utf8');
+  let html = readFileSync(INDEX_PATH, 'utf8');
+  for (const f of INLINE_FILES) {
+    const code = readFileSync(path.join(ROOT, f), 'utf8');
+    html = html.replace(`<script src="${f}"></script>`, () => `<script>\n${code}\n</script>`);
+  }
   const dom = new JSDOM(html, {
     url: opts.url || 'https://star.test/',
     runScripts: 'dangerously',
